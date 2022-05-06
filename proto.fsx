@@ -1,3 +1,6 @@
+open System.Reflection.Metadata
+
+
 
 #r "nuget: FParsec"
 
@@ -41,7 +44,7 @@ let tmplExpr =
 
     beginExpr >>. blanks >>. body .>> blanks .>> endExpr |>> Expr
 let textOnly = many1Chars anyChar |>> Text
-let textBeforeExpr = charsTillString "{{" false Int32.MaxValue |>> Text
+let textBeforeExpr = charsTillString Consts.beginExpr false Int32.MaxValue |>> Text
 let exprOrText = choice [ tmplExpr; attempt textBeforeExpr; textOnly ]
 let template = many exprOrText .>> eof
 
