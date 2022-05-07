@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.32014.148
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Trulla", "Trulla\Trulla.fsproj", "{7AA8BF26-2B04-440F-A581-53E40A0A0291}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Tests", "Tests\Tests.fsproj", "{A2DA73DB-F573-49B0-9252-6CA4F9F6C0A7}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7AA8BF26-2B04-440F-A581-53E40A0A0291}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7AA8BF26-2B04-440F-A581-53E40A0A0291}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7AA8BF26-2B04-440F-A581-53E40A0A0291}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7AA8BF26-2B04-440F-A581-53E40A0A0291}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A2DA73DB-F573-49B0-9252-6CA4F9F6C0A7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A2DA73DB-F573-49B0-9252-6CA4F9F6C0A7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A2DA73DB-F573-49B0-9252-6CA4F9F6C0A7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A2DA73DB-F573-49B0-9252-6CA4F9F6C0A7}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {31B03B52-7B87-4BEA-957A-9CFD25936243}
+	EndGlobalSection
+EndGlobal

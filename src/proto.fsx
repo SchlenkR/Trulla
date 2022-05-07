@@ -1,11 +1,18 @@
-open System.Reflection.Metadata
-
-
 
 #r "nuget: FParsec"
 
 open System
 open FParsec
+
+let (<!>) (p: Parser<_,_>) label : Parser<_,_> =
+    fun stream ->
+        printfn "%A: Entering %s" stream.Position label
+        let reply = p stream
+        printfn "%A: Leaving %s (%A)" stream.Position label reply.Status
+        reply
+
+// this does NOT consume endp, but only tests for it.
+let chars1Until endp = many1Chars (notFollowedBy endp >>. anyChar)
 
 type Token =
     | Text of string
@@ -25,8 +32,8 @@ type PUnit<'a> = Parser<'a, unit>
 
 let blanks : PUnit<_> = skipMany (skipChar ' ')
 let blanks1 : PUnit<_> = skipMany1 (skipChar ' ')
+let beginExpr = pstring Consts.beginExpr .>> notFollowedBy (pstring "{")
 let tmplExpr =
-    let beginExpr = pstring Consts.beginExpr
     let endExpr = pstring Consts.endExpr
     
     let ident = many1Chars2 letter (letter <|> digit)
@@ -42,10 +49,13 @@ let tmplExpr =
 
         choice [ forExpr; ifExpr; endExpr; fillExpr ]
 
-    beginExpr >>. blanks >>. body .>> blanks .>> endExpr |>> Expr
-let textOnly = many1Chars anyChar |>> Text
-let textBeforeExpr = charsTillString Consts.beginExpr false Int32.MaxValue |>> Text
-let exprOrText = choice [ tmplExpr; attempt textBeforeExpr; textOnly ]
+    beginExpr .>> blanks >>. body .>> blanks .>> endExpr |>> Expr
+let exprOrText = 
+    choice [
+        tmplExpr                                                   // <!> "tmpl expression"
+        chars1Until beginExpr |>> Text                             // <!> "chars til beginExp"
+        many1Chars anyChar |>> Text                                // <!> "text only"
+    ]
 let template = many exprOrText .>> eof
 
 
@@ -66,8 +76,8 @@ let shouldFail str =
 
 
 
-"""abc {{ hello }} def {{xx}}"""
-|> shouldEqual [ Text "abc "; Expr(Fill ["hello"]); Text " def "; Expr(Fill ["xx"]) ]
+"""abc {{ hello }} def {{xyz}}"""
+|> shouldEqual [ Text "abc "; Expr(Fill ["hello"]); Text " def "; Expr(Fill ["xyz"]) ]
 
 
 """abc"""
@@ -104,4 +114,7 @@ let shouldFail str =
 
 """abc {{ for x in y }}"""
 |> shouldEqual [ Text "abc "; Expr(For {| ident = "x"; source = ["y"]; |}) ]
+
+
+// TODO: Test {{{ (triple)
 

@@ -9,6 +9,7 @@ The approach of Trulla is:
   * conditionals
 * Trulla infers a model type for the template
 * An instance of the model is provided by the user for rendering the final template.
+* The begin and end character sequence for template expressions are configurable, and there is no way escaping them. Choose an appropriate sequence of characters that won't occur in your template.
 
 Limitations
 
