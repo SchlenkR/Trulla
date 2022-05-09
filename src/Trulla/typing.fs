@@ -12,7 +12,7 @@ and PolyTyp =
     | List of MonoTyp
 
 type SymbolContext = Map<string, Typ>
-    
+
 type Node =
     | Token of Token
     | Scope of ScopedNode
@@ -32,7 +32,7 @@ let toTree (tokens: Token list) =
                     while run && pointer < tokens.Length do
                         let token = tokens[pointer]
                         do pointer <- pointer + 1
-                        match token with
+                        match token.value with
                         | Text _
                         | PExp (Hole _) ->
                             yield Token token
