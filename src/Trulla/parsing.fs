@@ -11,8 +11,8 @@ and PExp =
     | Hole of Access
     | For of ident: string * source: Access
     | If of Access
-    | ElseIf of Access
-    | Else
+    //| ElseIf of Access
+    //| Else
     | End
 and Access = string * string list
 
@@ -44,17 +44,21 @@ let beginExp = pstring Consts.beginExp .>> notFollowedBy (pstring "{")
 let tmplExp =
     let endExp = pstring Consts.endExp
     let ident = many1Chars2 letter (letter <|> digit)
-    let propAccess = sepBy1 ident (pchar '.') |>> fun (root :: rest) -> root,rest
+    let propAccess =
+        sepBy1 ident (pchar '.')
+        |>> function
+            | (root :: rest) -> root,rest
+            | _ -> failwith "Should never happen: information loss in sepBy1 parser"
     let body =
         let forExp =
             pstring Keywords.for' >>. blanks1 >>. ident .>> blanks1 .>> pstring Keywords.in' .>> blanks1 .>>. propAccess
             |>> fun (ident,source) -> For (ident, source)
         let ifExp = pstring Keywords.if' >>. blanks1 >>. propAccess |>> If
-        let elseIfExp = pstring Keywords.elseIf' >>. blanks1 >>. propAccess |>> ElseIf
-        let elseExp = pstring Keywords.else' |>> fun _ -> Else
+        //let elseIfExp = pstring Keywords.elseIf' >>. blanks1 >>. propAccess |>> ElseIf
+        //let elseExp = pstring Keywords.else' |>> fun _ -> Else
         let endExp = pstring Keywords.end' >>. preturn End
         let fillExp = propAccess |>> Hole
-        choice [ forExp; ifExp; elseIfExp; elseExp; endExp; fillExp ]
+        choice [ forExp; ifExp; (*elseIfExp; elseExp;*) endExp; fillExp ]
     beginExp .>> blanks >>. body .>> blanks .>> endExp |>> PExp
 let expOrText = 
     choice [

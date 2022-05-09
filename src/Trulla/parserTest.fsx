@@ -2,10 +2,8 @@
 #r "nuget: FParsec"
 open FParsec
 
-#load "parser.fs"
-open Trulla
-
-let template = Parser.template
+#load "parsing.fs"
+open Trulla.Parsing
 
 let test p str =
     match run p str with
@@ -24,7 +22,7 @@ let shouldFail str =
 
 
 """abc {{ hello }} def {{xyz}}"""
-|> shouldEqual [ Text "abc "; Expr(Hole ["hello"]); Text " def "; Expr(Hole ["xyz"]) ]
+|> shouldEqual [ Text "abc "; PExp(Hole ("hello", [])); Text " def "; PExp(Hole ("xyz", [])) ]
 
 
 """abc"""
@@ -46,21 +44,21 @@ let shouldFail str =
 
 
 """ {{ x}}"""
-|> shouldEqual [Text " "; Expr(Hole ["x"]) ]
+|> shouldEqual [Text " "; PExp(Hole ("x", [])) ]
 
 
 """{{x}}"""
-|> shouldEqual [ Expr(Hole ["x"]) ]
+|> shouldEqual [ PExp(Hole ("x", [])) ]
 
 
 
 """abc {{ if x }}"""
-|> shouldEqual [ Text "abc "; Expr(If ["x"]) ]
+|> shouldEqual [ Text "abc "; PExp(If ("x", [])) ]
 
 
 
 """abc {{ for x in y }}"""
-|> shouldEqual [ Text "abc "; Expr(For {| ident = "x"; source = ["y"]; |}) ]
+|> shouldEqual [ Text "abc "; PExp(For ("x", ("y",[]))) ]
 
 
 // TODO: Test {{{ (triple)

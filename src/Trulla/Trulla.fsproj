@@ -6,9 +6,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="parserTest.fsx" />
     <Compile Include="parsing.fs" />
+    <None Include="parserTest.fsx" />
     <Compile Include="typing.fs" />
+    <None Include="typingTests.fsx" />
   </ItemGroup>
 
   <ItemGroup>
