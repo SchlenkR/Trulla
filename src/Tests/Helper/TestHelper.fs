@@ -1,8 +1,6 @@
 ﻿[<AutoOpen>]
 module Tests.TestHelper
 
-open System.Text
-
 open FsUnit
 
 let inline raiseExn (msg: string) =
