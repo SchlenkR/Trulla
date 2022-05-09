@@ -16,7 +16,7 @@ type SymbolContext = Map<string, Typ>
 type Node =
     | Token of Token
     | Scope of ScopedNode
-and ScopedNode = { root: PExp; children: Node list }
+and ScopedNode = { root: Token; children: Node list }
 
 // TODO: meaningful error messages + location
 // TODO: Performance?
@@ -36,10 +36,10 @@ let toTree (tokens: Token list) =
                         | Text _
                         | PExp (Hole _) ->
                             yield Token token
-                        | PExp (For _ as pexp)
-                        | PExp (If _ as pexp) ->
+                        | PExp (For _)
+                        | PExp (If _) ->
                             let newPointer,children = toTree pointer
-                            yield Scope { root = pexp; children = children }
+                            yield Scope { root = token; children = children }
                             pointer <- newPointer
                         | PExp End ->
                             do run <- false
