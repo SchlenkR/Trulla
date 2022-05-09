@@ -1,6 +1,5 @@
 ﻿
 #r "nuget: FParsec"
-open FParsec
 
 #load "parsing.fs"
 #load "typing.fs"
@@ -8,24 +7,18 @@ open Trulla.Parsing
 open Trulla.Typing
 
 
-let test p str =
-    match run p str with
-    | Success (result, _, _) -> result
-    | Failure (errorMsg, _, _) -> failwith errorMsg
 let tok number tokenValue =
     let pos = { index = number; line = 0; column = 0 }
     { value = tokenValue; start = pos; finish = pos }
-let setTokenPos (tokenValues: TokenValue list) =
-    tokenValues |> List.mapi (fun i x ->
-        let pos = { index = i; line = 0; column = 0 }
-        { value = x; start = pos; finish = pos })
+let withTokenPos (tokenValues: TokenValue list) =
+    tokenValues |> List.mapi (fun i x -> tok i x)
 let shouldEqual expected actual =
     if expected <> actual 
         then failwith $"Not equal.\nExpected = {expected}\nActual = {actual}"
         else ()
 
 
-toTree (setTokenPos [ 
+toTree (withTokenPos [ 
     Text "Text1"
     PExp(Hole ("hello", []))
     PExp(If ("cond1", []))
@@ -63,13 +56,13 @@ toTree (setTokenPos [
 
 
 // Fails because of unclosed scope
-toTree (setTokenPos [
+toTree (withTokenPos [
     PExp(If ("cond1", []))
     Text "Text1"
     ])
 
 // Fails because of unopened scope
-toTree (setTokenPos [
+toTree (withTokenPos [
     PExp(If ("cond1", []))
     Text "Text1"
     PExp End
