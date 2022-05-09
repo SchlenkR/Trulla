@@ -12,6 +12,7 @@ let tok number tokenValue =
     { value = tokenValue; start = pos; finish = pos }
 let withTokenPos (tokenValues: TokenValue list) =
     tokenValues |> List.mapi (fun i x -> tok i x)
+let node number tokenValue = tok number tokenValue |> Token
 let shouldEqual expected actual =
     if expected <> actual 
         then failwith $"Not equal.\nExpected = {expected}\nActual = {actual}"
@@ -34,24 +35,24 @@ toTree (withTokenPos [
     ])
 |> shouldEqual 
     [
-        Token (tok 0 (Text "Text1"))
-        Token (tok 1 (PExp (Hole ("hello", []))))
+        node 0 (Text "Text1")
+        node 1 (PExp (Hole ("hello", [])))
         Scope
             { root = tok 2 (PExp (If ("cond1", [])))
               children = [
-                Token (tok 3 (Text "cond1_Text1"))
-                Token (tok 4 (Text "cond1_Text2"))
+                node 3 (Text "cond1_Text1")
+                node 4 (Text "cond1_Text2")
                 Scope
                     { root = tok 5 (PExp (For ("x", ("y", []))))
                       children = [
-                        Token (tok 6 (Text "cond1_For1_Text1"))
-                        Token (tok 7 (Text "cond1_For1_Text2"))
+                        node 6 (Text "cond1_For1_Text1")
+                        node 7 (Text "cond1_For1_Text2")
                         ]
                     }
-                Token (tok 9 (Text "cond1_Text3"))
+                node 9 (Text "cond1_Text3")
                 ]
             }
-        Token (tok 11 (Text "Text2"))
+        node 11 (Text "Text2")
     ]
 
 
