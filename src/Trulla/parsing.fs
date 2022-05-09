@@ -2,14 +2,13 @@
 
 open FParsec
 
-// TODO: IfNot
-// TODO: Col+Row -> meaningful error messages in Typing
-type Token = { value: TokenValue; position: Position }
+type Position = { index: int64; line: int64; column: int64 }
+
+type Token = { value: TokenValue; start: Position; finish: Position }
 and TokenValue =
     | Text of string
     | PExp of PExp
 and Access = string * string list
-and Position = { index: int64; line: int64; column: int64 }
 and PExp =
     | Hole of Access
     | For of ident: string * source: Access
@@ -30,27 +29,22 @@ module Keywords =
     let else' = "else"
     let end' = "end"
 
+module Position =
+    let none = { index = -1L; line = -1L; column = -1L }
+
 [<AutoOpen>]
 module ParserHelper =
-    type WithPos<'a> = { value: 'a; start: Position; finish: Position }
-    
-    /// Wrap a parser to include the position
-    let withPos (p: Parser<'a, 'state>) : Parser<WithPos<'a>, 'state> =
+    /// Wrap a token parser to include the position.
+    let withPos (p: Parser<_,_>) : Parser<_,_> =
         let posFromFParsec offset (p: FParsec.Position) =
             { index = p.Index - offset; line = p.Line; column = p.Column - offset }
         let leftOf (p: FParsec.Position) =
             let offset = if p.Column > 1L then 1L else 0L
             p |> posFromFParsec offset
         pipe3 getPosition p getPosition (fun start value finish ->
-            {
-                value = value
-                start = posFromFParsec 0L start
-                finish = leftOf finish
-            })
-    let (|..>) parser f =
-        parser
-        |> withPos
-        |>> fun { value = value; start = start } -> { value = f value; position = start }
+            value, posFromFParsec 0L start, leftOf finish)
+    let (|..>) parser f = parser |> withPos |>> fun (value, start, finish) ->
+        { value = f value; start = start; finish = finish }
     let (<!>) (p: Parser<_,_>) label : Parser<_,_> =
         fun stream ->
             printfn "%A: Entering %s" stream.Position label
