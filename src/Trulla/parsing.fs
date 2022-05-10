@@ -3,13 +3,12 @@
 open FParsec
 
 type Position = { index: int64; line: int64; column: int64 }
+type Token<'a> = { value: 'a; start: Position; finish: Position }
 
-type Token = { value: TokenValue; start: Position; finish: Position }
+type TmplToken = Token<TokenValue>
+and Access = string * string list
 and TokenValue =
     | Text of string
-    | PExp of PExp
-and Access = string * string list
-and PExp =
     | Hole of Access
     | For of ident: string * source: Access
     | If of Access
@@ -69,14 +68,14 @@ let tmplExp =
     let body =
         let forExp =
             pstring Keywords.for' >>. blanks1 >>. ident .>> blanks1 .>> pstring Keywords.in' .>> blanks1 .>>. propAccess
-            |..> fun identAndSource -> PExp(For identAndSource)
+            |..> For
         let ifExp = 
             pstring Keywords.if' >>. blanks1 >>. propAccess
-            |..> fun x -> PExp (If x)
+            |..> If
         //let elseIfExp = pstring Keywords.elseIf' >>. blanks1 >>. propAccess |>> ElseIf
         //let elseExp = pstring Keywords.else' |>> fun _ -> Else
-        let endExp = pstring Keywords.end' |..> fun _ -> PExp End
-        let fillExp = propAccess |..> fun x -> PExp (Hole x)
+        let endExp = pstring Keywords.end' |..> fun _ -> End
+        let fillExp = propAccess |..> Hole
         choice [ 
             forExp
             ifExp

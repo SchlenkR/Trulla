@@ -9,7 +9,7 @@ let test p str =
     match run p str with
     | Success (result, _, _) -> result
     | Failure (errorMsg, _, _) -> failwith errorMsg
-let clearTokenPos (tokens: Token list) =
+let clearTokenPos (tokens: TmplToken list) =
     [ for t in tokens do { t with start = Position.none; finish = Position.none } ]
 let tok t = { value = t; start = Position.none; finish = Position.none }
 let shouldEqual expected str =
@@ -27,8 +27,9 @@ let shouldFail str =
 |> shouldEqual
     [
         Text "abc "
-        PExp(Hole ("hello", []))
-        Text " def "; PExp(Hole ("xyz", []))
+        Hole ("hello", [])
+        Text " def "
+        Hole ("xyz", [])
     ]
 
 
@@ -51,21 +52,21 @@ let shouldFail str =
 
 
 """ {{ x}}"""
-|> shouldEqual [Text " "; PExp(Hole ("x", [])) ]
+|> shouldEqual [Text " "; Hole ("x", []) ]
 
 
 """{{x}}"""
-|> shouldEqual [ PExp(Hole ("x", [])) ]
+|> shouldEqual [ Hole ("x", []) ]
 
 
 
 """abc {{ if x }}"""
-|> shouldEqual [ Text "abc "; PExp(If ("x", [])) ]
+|> shouldEqual [ Text "abc "; If ("x", []) ]
 
 
 
 """abc {{ for x in y }}"""
-|> shouldEqual [ Text "abc "; PExp(For ("x", ("y",[]))) ]
+|> shouldEqual [ Text "abc "; For ("x", ("y",[])) ]
 
 
 // TODO: Test {{{ (triple)
