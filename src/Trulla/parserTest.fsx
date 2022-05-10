@@ -9,7 +9,7 @@ let test p str =
     match run p str with
     | Success (result, _, _) -> result
     | Failure (errorMsg, _, _) -> failwith errorMsg
-let clearTokenPos (tokens: TmplToken list) =
+let clearTokenPos tokens =
     [ for t in tokens do { t with start = Position.none; finish = Position.none } ]
 let tok t = { value = t; start = Position.none; finish = Position.none }
 let shouldEqual expected str =
@@ -26,15 +26,18 @@ let shouldFail str =
 """abc {{ hello }} def {{xyz}}"""
 |> shouldEqual
     [
-        Text "abc "
-        Hole ("hello", [])
-        Text " def "
-        Hole ("xyz", [])
+        LeafToken (Text "abc ")
+        LeafToken (Hole ("hello", []))
+        LeafToken (Text " def ")
+        LeafToken (Hole ("xyz", []))
     ]
 
 
 """abc"""
-|> shouldEqual [ Text "abc" ]
+|> shouldEqual
+    [
+        LeafToken (Text "abc")
+    ]
 
 
 """abc {{ """
@@ -52,21 +55,36 @@ let shouldFail str =
 
 
 """ {{ x}}"""
-|> shouldEqual [Text " "; Hole ("x", []) ]
+|> shouldEqual
+    [
+        LeafToken (Text " ")
+        LeafToken (Hole ("x", []))
+    ]
 
 
 """{{x}}"""
-|> shouldEqual [ Hole ("x", []) ]
+|> shouldEqual
+    [ 
+        LeafToken (Hole ("x", []))
+    ]
 
 
 
 """abc {{ if x }}"""
-|> shouldEqual [ Text "abc "; If ("x", []) ]
+|> shouldEqual 
+    [ 
+        LeafToken (Text "abc ")
+        ScopeToken (If ("x", []))
+    ]
 
 
 
 """abc {{ for x in y }}"""
-|> shouldEqual [ Text "abc "; For ("x", ("y",[])) ]
+|> shouldEqual 
+    [
+        LeafToken (Text "abc ")
+        ScopeToken (For ("x", ("y",[])))
+    ]
 
 
 // TODO: Test {{{ (triple)

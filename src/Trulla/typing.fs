@@ -3,14 +3,8 @@
 open Parsing
 
 type Tree =
-    | LeafNode of Token<LeafToken>
-    | InternalNode of Token<InternalToken> * Tree list
-and LeafToken =
-    | Text of string
-    | Hole of Access
-and InternalToken =
-    | For of ident: string * source: Access
-    | If of Access
+    | LeafNode of PositionalValue<LeafToken>
+    | InternalNode of PositionalValue<ScopeToken> * Tree list
 
 type Typ =
     | Mono of MonoTyp
@@ -23,7 +17,7 @@ and PolyTyp =
 
 // TODO: meaningful error messages + location
 // TODO: Performance?
-let toTree (tokens: TmplToken list) : Tree list =
+let toTree (tokens: ParseResult) : Tree list =
     let res,openScopesCount =
         let mutable openScopesCount = -1
         let rec toTree (pointer: int) =
@@ -34,23 +28,15 @@ let toTree (tokens: TmplToken list) : Tree list =
                     let mutable run = true
                     while run && pointer < tokens.Length do
                         let token = tokens[pointer]
-                        let tok x = { value = x; start = token.start; finish = token.finish }
                         pointer <- pointer + 1
-                        let descent x =
-                            let newPointer,children = toTree pointer
-                            let res = InternalNode (x, children)
-                            pointer <- newPointer
-                            res
                         match token.value with
-                        | Parsing.Text text ->
-                            yield LeafNode (Text text |> tok)
-                        | Parsing.Hole exp ->
-                            yield LeafNode (Hole exp|> tok)
-                        | Parsing.For (ident, source) ->
-                            yield descent (For (ident, source) |> tok)
-                        | Parsing.If exp ->
-                            yield descent (If exp |> tok)
-                        | Parsing.End ->
+                        | LeafToken x ->
+                            yield LeafNode { value = x; start = token.start; finish = token.finish }
+                        | ScopeToken x ->
+                            let newPointer,children = toTree pointer
+                            yield InternalNode ({ value = x; start = token.start; finish = token.finish }, children)
+                            pointer <- newPointer
+                        | StupidToken End ->
                             run <- false
                             openScopesCount <- openScopesCount - 1
                             if openScopesCount < 0 then

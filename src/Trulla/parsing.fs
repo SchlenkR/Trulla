@@ -3,18 +3,24 @@
 open FParsec
 
 type Position = { index: int64; line: int64; column: int64 }
-type Token<'a> = { value: 'a; start: Position; finish: Position }
+type PositionalValue<'a> = { value: 'a; start: Position; finish: Position }
 
-type TmplToken = Token<TokenValue>
-and Access = string * string list
-and TokenValue =
+type ParseResult = PositionalValue<ParserToken> list
+and ParserToken =
+    | LeafToken of LeafToken
+    | ScopeToken of ScopeToken
+    | StupidToken of StupidToken
+and LeafToken =
     | Text of string
     | Hole of Access
+and ScopeToken =
     | For of ident: string * source: Access
     | If of Access
     //| ElseIf of Access
     //| Else
+and StupidToken =
     | End
+and Access = string * string list
 
 module Consts =
     let beginExp = "{{"
@@ -68,14 +74,18 @@ let tmplExp =
     let body =
         let forExp =
             pstring Keywords.for' >>. blanks1 >>. ident .>> blanks1 .>> pstring Keywords.in' .>> blanks1 .>>. propAccess
-            |..> For
+            |..> (For >> ScopeToken)
         let ifExp = 
             pstring Keywords.if' >>. blanks1 >>. propAccess
-            |..> If
+            |..> (If >> ScopeToken)
         //let elseIfExp = pstring Keywords.elseIf' >>. blanks1 >>. propAccess |>> ElseIf
         //let elseExp = pstring Keywords.else' |>> fun _ -> Else
-        let endExp = pstring Keywords.end' |..> fun _ -> End
-        let fillExp = propAccess |..> Hole
+        let endExp = 
+            pstring Keywords.end' 
+            |..> (fun _ -> StupidToken End)
+        let fillExp = 
+            propAccess
+            |..> (Hole >> LeafToken)
         choice [ 
             forExp
             ifExp
@@ -88,7 +98,7 @@ let tmplExp =
 let expOrText = 
     choice [
         tmplExp
-        chars1Until beginExp |..> Text
-        many1Chars anyChar |..> Text
+        chars1Until beginExp |..> (Text >> LeafToken)
+        many1Chars anyChar |..> (Text >> LeafToken)
         ]
 let template = many expOrText .>> eof

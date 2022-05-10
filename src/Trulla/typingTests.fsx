@@ -10,10 +10,10 @@ open Trulla.Typing
 let tree number tokenValue =
     let pos = { index = number; line = 0; column = 0 }
     { value = tokenValue; start = pos; finish = pos }
-let withTokenPos (tokenValues: TokenValue list) =
+let withTokenPos tokenValues =
     tokenValues |> List.mapi (fun i x -> tree i x)
 let leaf number tokenValue =
-    tree number tokenValue |> LeafNode
+    LeafNode (tree number tokenValue)
 let node number tokenValue children =
     InternalNode (tree number tokenValue, children)
 let shouldEqual expected actual =
@@ -24,18 +24,18 @@ let shouldEqual expected actual =
 
 toTree (withTokenPos
     [
-        Parsing.Text "Text1"
-        Parsing.Hole ("hello", [])
-        Parsing.If ("cond1", [])
-        Parsing.Text "cond1_Text1"
-        Parsing.Text "cond1_Text2"
-        Parsing.For ("x", ("y",[]))
-        Parsing.Text "cond1_For1_Text1"
-        Parsing.Text "cond1_For1_Text2"
-        End
-        Parsing.Text "cond1_Text3"
-        End
-        Parsing.Text "Text2"
+        LeafToken (Text "Text1")
+        LeafToken (Hole ("hello", []))
+        ScopeToken (If ("cond1", []))
+        LeafToken (Text "cond1_Text1")
+        LeafToken (Text "cond1_Text2")
+        ScopeToken (For ("x", ("y",[])))
+        LeafToken (Text "cond1_For1_Text1")
+        LeafToken (Text "cond1_For1_Text2")
+        StupidToken End
+        LeafToken (Text "cond1_Text3")
+        StupidToken End
+        LeafToken (Text "Text2")
     ]
 )
 |> shouldEqual
@@ -57,14 +57,14 @@ toTree (withTokenPos
 
 // Fails because of unclosed scope
 toTree (withTokenPos [
-    Parsing.If ("cond1", [])
-    Parsing.Text "Text1"
+    ScopeToken (If ("cond1", []))
+    LeafToken (Text "Text1")
     ])
 
 // Fails because of unopened scope
 toTree (withTokenPos [
-    Parsing.If ("cond1", [])
-    Parsing.Text "Text1"
-    End
-    End
+    ScopeToken (If ("cond1", []))
+    LeafToken (Text "Text1")
+    StupidToken End
+    StupidToken End
     ])
