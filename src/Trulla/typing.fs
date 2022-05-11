@@ -5,6 +5,12 @@ open Parsing
 type Tree =
     | LeafNode of PositionalValue<LeafToken>
     | InternalNode of PositionalValue<ScopeToken> * Tree list
+and LeafToken =
+    | Text of string
+    | Hole of Access
+and ScopeToken =
+    | For of ident: string * source: Access
+    | If of Access
 
 type Typ =
     | Mono of MonoTyp
@@ -29,14 +35,23 @@ let toTree (tokens: ParseResult) : Tree list =
                     while run && pointer < tokens.Length do
                         let token = tokens[pointer]
                         pointer <- pointer + 1
-                        match token.value with
-                        | LeafToken x ->
-                            yield LeafNode { value = x; start = token.start; finish = token.finish }
-                        | ScopeToken x ->
+                        let newToken value =
+                            { value = value; start = token.start; finish = token.finish }
+                        let descent value =
                             let newPointer,children = toTree pointer
-                            yield InternalNode ({ value = x; start = token.start; finish = token.finish }, children)
+                            let res = InternalNode (newToken value, children)
                             pointer <- newPointer
-                        | StupidToken End ->
+                            res
+                        match token.value with
+                        | ParserToken.Text x ->
+                            yield LeafNode (newToken (Text x))
+                        | ParserToken.Hole x ->
+                            yield LeafNode (newToken (Hole x))
+                        | ParserToken.For (ident, acc) ->
+                            yield descent (For (ident, acc))
+                        | ParserToken.If acc ->
+                            yield descent (If acc)
+                        | ParserToken.End ->
                             run <- false
                             openScopesCount <- openScopesCount - 1
                             if openScopesCount < 0 then

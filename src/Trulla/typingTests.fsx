@@ -24,18 +24,18 @@ let shouldEqual expected actual =
 
 toTree (withTokenPos
     [
-        LeafToken (Text "Text1")
-        LeafToken (Hole ("hello", []))
-        ScopeToken (If ("cond1", []))
-        LeafToken (Text "cond1_Text1")
-        LeafToken (Text "cond1_Text2")
-        ScopeToken (For ("x", ("y",[])))
-        LeafToken (Text "cond1_For1_Text1")
-        LeafToken (Text "cond1_For1_Text2")
-        StupidToken End
-        LeafToken (Text "cond1_Text3")
-        StupidToken End
-        LeafToken (Text "Text2")
+        ParserToken.Text "Text1"
+        ParserToken.Hole ("hello", [])
+        ParserToken.If ("cond1", [])
+        ParserToken.Text "cond1_Text1"
+        ParserToken.Text "cond1_Text2"
+        ParserToken.For ("x", ("y",[]))
+        ParserToken.Text "cond1_For1_Text1"
+        ParserToken.Text "cond1_For1_Text2"
+        ParserToken.End
+        ParserToken.Text "cond1_Text3"
+        ParserToken.End
+        ParserToken.Text "Text2"
     ]
 )
 |> shouldEqual
@@ -57,14 +57,14 @@ toTree (withTokenPos
 
 // Fails because of unclosed scope
 toTree (withTokenPos [
-    ScopeToken (If ("cond1", []))
-    LeafToken (Text "Text1")
+    ParserToken.If ("cond1", [])
+    ParserToken.Text "Text1"
     ])
 
 // Fails because of unopened scope
 toTree (withTokenPos [
-    ScopeToken (If ("cond1", []))
-    LeafToken (Text "Text1")
-    StupidToken End
-    StupidToken End
+    ParserToken.If ("cond1", [])
+    ParserToken.Text "Text1"
+    ParserToken.End
+    ParserToken.End
     ])

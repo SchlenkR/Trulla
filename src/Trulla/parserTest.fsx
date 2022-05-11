@@ -26,17 +26,17 @@ let shouldFail str =
 """abc {{ hello }} def {{xyz}}"""
 |> shouldEqual
     [
-        LeafToken (Text "abc ")
-        LeafToken (Hole ("hello", []))
-        LeafToken (Text " def ")
-        LeafToken (Hole ("xyz", []))
+        Text "abc "
+        Hole ("hello", [])
+        Text " def "
+        Hole ("xyz", [])
     ]
 
 
 """abc"""
 |> shouldEqual
     [
-        LeafToken (Text "abc")
+        Text "abc"
     ]
 
 
@@ -57,15 +57,15 @@ let shouldFail str =
 """ {{ x}}"""
 |> shouldEqual
     [
-        LeafToken (Text " ")
-        LeafToken (Hole ("x", []))
+        Text " "
+        Hole ("x", [])
     ]
 
 
 """{{x}}"""
 |> shouldEqual
     [ 
-        LeafToken (Hole ("x", []))
+        Hole ("x", [])
     ]
 
 
@@ -73,8 +73,8 @@ let shouldFail str =
 """abc {{ if x }}"""
 |> shouldEqual 
     [ 
-        LeafToken (Text "abc ")
-        ScopeToken (If ("x", []))
+        Text "abc "
+        If ("x", [])
     ]
 
 
@@ -82,8 +82,8 @@ let shouldFail str =
 """abc {{ for x in y }}"""
 |> shouldEqual 
     [
-        LeafToken (Text "abc ")
-        ScopeToken (For ("x", ("y",[])))
+        Text "abc "
+        For ("x", ("y",[]))
     ]
 
 

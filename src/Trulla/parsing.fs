@@ -7,18 +7,12 @@ type PositionalValue<'a> = { value: 'a; start: Position; finish: Position }
 
 type ParseResult = PositionalValue<ParserToken> list
 and ParserToken =
-    | LeafToken of LeafToken
-    | ScopeToken of ScopeToken
-    | StupidToken of StupidToken
-and LeafToken =
     | Text of string
     | Hole of Access
-and ScopeToken =
     | For of ident: string * source: Access
     | If of Access
     //| ElseIf of Access
     //| Else
-and StupidToken =
     | End
 and Access = string * string list
 
@@ -74,18 +68,18 @@ let tmplExp =
     let body =
         let forExp =
             pstring Keywords.for' >>. blanks1 >>. ident .>> blanks1 .>> pstring Keywords.in' .>> blanks1 .>>. propAccess
-            |..> (For >> ScopeToken)
+            |..> For
         let ifExp = 
             pstring Keywords.if' >>. blanks1 >>. propAccess
-            |..> (If >> ScopeToken)
+            |..> If
         //let elseIfExp = pstring Keywords.elseIf' >>. blanks1 >>. propAccess |>> ElseIf
         //let elseExp = pstring Keywords.else' |>> fun _ -> Else
         let endExp = 
             pstring Keywords.end' 
-            |..> (fun _ -> StupidToken End)
+            |..> (fun _ -> End)
         let fillExp = 
             propAccess
-            |..> (Hole >> LeafToken)
+            |..> Hole
         choice [ 
             forExp
             ifExp
@@ -98,7 +92,7 @@ let tmplExp =
 let expOrText = 
     choice [
         tmplExp
-        chars1Until beginExp |..> (Text >> LeafToken)
-        many1Chars anyChar |..> (Text >> LeafToken)
+        chars1Until beginExp |..> Text
+        many1Chars anyChar |..> Text
         ]
 let template = many expOrText .>> eof
