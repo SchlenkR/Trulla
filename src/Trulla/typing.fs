@@ -7,17 +7,18 @@ type Tree =
     | InternalNode of PositionalValue<ScopeToken> * Tree list
 and LeafToken =
     | Text of string
-    | Hole of Access
+    | Hole of AccessExp
 and ScopeToken =
-    | For of ident: string * source: Access
-    | If of Access
+    | For of ident: string * exp: AccessExp
+    | If of AccessExp
 
-type Typ =
+type Type =
     | Mono of MonoTyp
     | Poly of PolyTyp
 and MonoTyp =
     | Bool
     | String
+    | Record of {| propName: string; type': Type |} list
 and PolyTyp =
     | List of MonoTyp
 
@@ -43,14 +44,10 @@ let toTree (tokens: ParseResult) : Tree list =
                             pointer <- newPointer
                             res
                         match token.value with
-                        | ParserToken.Text x ->
-                            yield LeafNode (newToken (Text x))
-                        | ParserToken.Hole x ->
-                            yield LeafNode (newToken (Hole x))
-                        | ParserToken.For (ident, acc) ->
-                            yield descent (For (ident, acc))
-                        | ParserToken.If acc ->
-                            yield descent (If acc)
+                        | ParserToken.Text x -> yield LeafNode (newToken (Text x))
+                        | ParserToken.Hole x -> yield LeafNode (newToken (Hole x))
+                        | ParserToken.For (ident, acc) -> yield descent (For (ident, acc))
+                        | ParserToken.If acc -> yield descent (If acc)
                         | ParserToken.End ->
                             run <- false
                             openScopesCount <- openScopesCount - 1
@@ -63,10 +60,21 @@ let toTree (tokens: ParseResult) : Tree list =
         then failwith "TODO: Unclosed scope detected."
     res
 
-//let typeTree (Root tree) =
-//    let rec typeTree (nodes: Node list) =
-//        for node in nodes do
-//            match node with
-//            | Token token -> token.value
-//    ()
-
+let typeTree tree =
+    let rec typeTree (trees: Tree list) typeConstraints (boundSymbols: List<string * AccessExp>) =
+        for tree in trees do
+            match tree with
+            | LeafNode {value = Text _} ->
+                typeConstraints
+            | LeafNode ({value = Hole exp} as posToken) ->
+                typeConstraints
+            | InternalNode (positionalToken, trees) ->
+                match positionalToken.value with
+                | For (ident, exp) ->
+                    let typeConstraints = typeConstraints
+                    let boundSymbols = (ident, exp) :: boundSymbols
+                    typeTree trees typeConstraints boundSymbols
+                | If ident ->
+                    let typeConstraints = typeConstraints
+                    typeTree trees typeConstraints boundSymbols
+    ()

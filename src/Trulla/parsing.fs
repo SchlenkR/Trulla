@@ -8,13 +8,13 @@ type PositionalValue<'a> = { value: 'a; start: Position; finish: Position }
 type ParseResult = PositionalValue<ParserToken> list
 and ParserToken =
     | Text of string
-    | Hole of Access
-    | For of ident: string * source: Access
-    | If of Access
+    | Hole of AccessExp
+    | For of ident: string * exp: AccessExp
+    | If of AccessExp
     //| ElseIf of Access
     //| Else
     | End
-and Access = string * string list
+and AccessExp = { ident: string; propPath: string list }
 
 module Consts =
     let beginExp = "{{"
@@ -63,7 +63,7 @@ let tmplExp =
     let propAccess =
         sepBy1 ident (pchar '.')
         |>> function
-            | (root :: rest) -> root,rest
+            | (root :: rest) -> { ident = root; propPath = rest }
             | _ -> failwith "Should never happen: information loss in sepBy1 parser"
     let body =
         let forExp =
