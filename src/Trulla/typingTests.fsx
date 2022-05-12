@@ -18,7 +18,6 @@ let x =
         ParserToken.End
         ParserToken.End
     ]
-    |> typeTree
-
+    |> symbolLinks
 x[range 4]
 

@@ -12,21 +12,8 @@ and ScopeToken =
     | For of ident: PVal<string> * exp: PVal<AccessExp>
     | If of PVal<AccessExp>
 
-type Type =
-    | Mono of MonoTyp
-    | Poly of PolyTyp
-and MonoTyp =
-    | Bool
-    | String
-    | Record of RecordDef
-and PolyTyp =
-    | List of MonoTyp
-and RecordDef = { name: string; fields: FieldDef list }
-and FieldDef = { name: string; type': Type }
-
 
 // TODO: meaningful error messages + location
-// TODO: Performance?
 let tree (tokens: ParseResult) : Tree list =
     let res,openScopesCount =
         let mutable openScopesCount = -1
@@ -76,8 +63,10 @@ let resolveType (symName: string) (boundSymbols: List<string * AccessExp>) =
     tryResolve symName boundSymbols
     |> Option.defaultValue [symName]
 
-let typeTree (trees: Tree list) =
-    let rec typeTree (trees: Tree list) (boundSymbols: List<string * AccessExp>) =
+type SymbolicLinks = Map<Range, string list>
+
+let symbolLinks (trees: Tree list) : SymbolicLinks =
+    let rec symbolLinks (trees: Tree list) (boundSymbols: List<string * AccessExp>) =
         [ for tree in trees do
             match tree with
             | LeafNode (Text _) -> ()
@@ -86,9 +75,78 @@ let typeTree (trees: Tree list) =
             | InternalNode (For (ident,source), children) ->
                 yield ident.range, resolveType ident.value boundSymbols
                 let boundSymbols = (ident.value, source.value) :: boundSymbols
-                yield! typeTree children boundSymbols
+                yield! symbolLinks children boundSymbols
             | InternalNode (If ident, children) ->
                 yield ident.range, resolveType ident.value.ident boundSymbols
-                yield! typeTree children boundSymbols
+                yield! symbolLinks children boundSymbols
         ]
-    typeTree trees [] |> Map.ofList
+    symbolLinks trees [] |> Map.ofList
+
+type Type =
+    | Mono of MonoTyp
+    | Poly of PolyTyp
+    | Var of TyVar
+and MonoTyp =
+    | Bool
+    | String
+    | Record of RecordDef
+and PolyTyp =
+    | Sequence of Type
+and RecordDef = { name: string; fields: FieldDef list }
+and FieldDef = { name: string; type': Type }
+and TyVar = int
+
+type X =
+    | VarLink of Range * TyVar
+    | TypeConstraint of TyVar * Type
+
+let symbolTypes (trees: Tree list) =
+    let newTyvar =
+        let mutable x = -1
+        fun () -> x <- x + 1; x
+    let rec symbolTypes (trees: Tree list) =
+        [ for tree in trees do
+            match tree with
+            | LeafNode (Text _) -> ()
+            | LeafNode (Hole hole) ->
+                let var = newTyvar()
+                yield VarLink (hole.range, var)
+                yield TypeConstraint (var, Mono String)
+            | InternalNode (For (ident,source), children) ->
+                let varIdent = newTyvar()
+                yield VarLink (ident.range, varIdent)
+                yield TypeConstraint (varIdent, Var varIdent)
+                let varSource = newTyvar()
+                yield TypeConstraint (varSource, Poly (Sequence (Var varIdent)))
+
+                yield! symbolTypes children
+            | InternalNode (If ident, children) ->
+                let var = newTyvar()
+                yield VarLink (ident.range, var)
+                yield TypeConstraint (var, Mono Bool)
+                
+                yield! symbolTypes children
+        ]
+    symbolTypes trees
+
+//let symbolTypes (trees: Tree list) (symLinks: SymbolicLinks) =
+//    let newTyvar =
+//        let mutable x = -1
+//        fun () -> x <- x + 1; x
+//    let rec symbolTypes (trees: Tree list) =
+//        let typeOf pval = Map.find pval.range symLinks
+//        [ for tree in trees do
+//            match tree with
+//            | LeafNode (Text _) -> ()
+//            | LeafNode (Hole hole) ->
+//                yield typeOf hole, Mono String
+//            | InternalNode (For (ident,source), children) ->
+//                let var = newTyvar()
+//                yield typeOf ident, Var var
+//                yield typeOf source, Poly (Sequence (Var var))
+//                yield! symbolTypes children
+//            | InternalNode (If ident, children) ->
+//                yield typeOf ident, Mono Bool
+//                yield! symbolTypes children
+//        ]
+//    symbolTypes trees
