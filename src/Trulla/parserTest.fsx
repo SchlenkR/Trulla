@@ -9,13 +9,23 @@ let test p str =
     match run p str with
     | Success (result, _, _) -> result
     | Failure (errorMsg, _, _) -> failwith errorMsg
-let clearTokenPos tokens =
-    [ for t in tokens do { t with start = Position.none; finish = Position.none } ]
-let tok t = { value = t; start = Position.none; finish = Position.none }
-let shouldEqual expected str =
-    let actual = test template str |> clearTokenPos
-    let expected = expected |> List.map tok
-    if expected <> actual then failwith $"Not equal.\nExpected = {expected}\nActual = {actual}"
+let tok t = 
+    { value = t; start = Position.none; finish = Position.none }
+let accessExp ident propPath = 
+    tok { ident = ident; propPath = propPath }
+let shouldEqual (expected: ParserToken list) str =
+    let clearPos p = { p with start = Position.none; finish = Position.none }
+    let actual = 
+        [ for token in test template str do
+            match token with
+            | Text _ -> token
+            | Hole x -> Hole (clearPos x)
+            | For (i,s) -> For (clearPos i, clearPos s)
+            | If x -> If (clearPos x)
+            | End -> token
+        ]
+    if expected <> actual then
+        failwith $"Not equal.\nExpected = {expected}\nActual = {actual}"
 let shouldFail str =
     match run template str with
     | Success (result, _, _) -> failwith $"Expected failure. Was: {result}"
@@ -27,9 +37,9 @@ let shouldFail str =
 |> shouldEqual
     [
         Text "abc "
-        Hole ("hello", [])
+        Hole (accessExp "hello" [])
         Text " def "
-        Hole ("xyz", [])
+        Hole (accessExp "xyz" [])
     ]
 
 
@@ -58,14 +68,14 @@ let shouldFail str =
 |> shouldEqual
     [
         Text " "
-        Hole ("x", [])
+        Hole (accessExp "x" [])
     ]
 
 
 """{{x}}"""
 |> shouldEqual
     [ 
-        Hole ("x", [])
+        Hole (accessExp "x" [])
     ]
 
 
@@ -74,7 +84,7 @@ let shouldFail str =
 |> shouldEqual 
     [ 
         Text "abc "
-        If ("x", [])
+        If (accessExp "x" [])
     ]
 
 
@@ -83,10 +93,8 @@ let shouldFail str =
 |> shouldEqual 
     [
         Text "abc "
-        For ("x", ("y",[]))
+        For (tok "x", accessExp "y" [])
     ]
 
 
 // TODO: Test {{{ (triple)
-
-

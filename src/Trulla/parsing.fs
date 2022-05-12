@@ -3,14 +3,14 @@
 open FParsec
 
 type Position = { index: int64; line: int64; column: int64 }
-type PositionalValue<'a> = { value: 'a; start: Position; finish: Position }
+type PVal<'a> = { value: 'a; start: Position; finish: Position }
 
-type ParseResult = PositionalValue<ParserToken> list
+type ParseResult = ParserToken list
 and ParserToken =
     | Text of string
-    | Hole of AccessExp
-    | For of ident: string * exp: AccessExp
-    | If of AccessExp
+    | Hole of PVal<AccessExp>
+    | For of ident: PVal<string> * exp: PVal<AccessExp>
+    | If of PVal<AccessExp>
     //| ElseIf of Access
     //| Else
     | End
@@ -34,16 +34,17 @@ module Position =
 [<AutoOpen>]
 module ParserHelper =
     /// Wrap a token parser to include the position.
-    let withPos (p: Parser<_,_>) : Parser<_,_> =
+    let withPos parser =
         let posFromFParsec offset (p: FParsec.Position) =
             { index = p.Index - offset; line = p.Line; column = p.Column - offset }
         let leftOf (p: FParsec.Position) =
             let offset = if p.Column > 1L then 1L else 0L
             p |> posFromFParsec offset
-        pipe3 getPosition p getPosition (fun start value finish ->
-            value, posFromFParsec 0L start, leftOf finish)
-    let (|..>) parser f = parser |> withPos |>> fun (value, start, finish) ->
-        { value = f value; start = start; finish = finish }
+        pipe3 getPosition parser getPosition (fun start value finish ->
+            { value = value
+              start = posFromFParsec 0L start
+              finish = leftOf finish }
+        )
     let (<!>) (p: Parser<_,_>) label : Parser<_,_> =
         fun stream ->
             printfn "%A: Entering %s" stream.Position label
@@ -67,19 +68,19 @@ let tmplExp =
             | _ -> failwith "Should never happen: information loss in sepBy1 parser"
     let body =
         let forExp =
-            pstring Keywords.for' >>. blanks1 >>. ident .>> blanks1 .>> pstring Keywords.in' .>> blanks1 .>>. propAccess
-            |..> For
+            pstring Keywords.for' >>. blanks1 >>. withPos ident .>> blanks1 .>> pstring Keywords.in' .>> blanks1 .>>. withPos propAccess
+            |>> For
         let ifExp = 
-            pstring Keywords.if' >>. blanks1 >>. propAccess
-            |..> If
+            pstring Keywords.if' >>. blanks1 >>. withPos propAccess
+            |>> If
         //let elseIfExp = pstring Keywords.elseIf' >>. blanks1 >>. propAccess |>> ElseIf
         //let elseExp = pstring Keywords.else' |>> fun _ -> Else
         let endExp = 
             pstring Keywords.end' 
-            |..> (fun _ -> End)
+            |>> (fun _ -> End)
         let fillExp = 
-            propAccess
-            |..> Hole
+            withPos propAccess
+            |>> Hole
         choice [ 
             forExp
             ifExp
@@ -92,7 +93,7 @@ let tmplExp =
 let expOrText = 
     choice [
         tmplExp
-        chars1Until beginExp |..> Text
-        many1Chars anyChar |..> Text
+        chars1Until beginExp |>> Text
+        many1Chars anyChar |>> Text
         ]
 let template = many expOrText .>> eof
