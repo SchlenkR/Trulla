@@ -10,11 +10,11 @@ let test p str =
     | Success (result, _, _) -> result
     | Failure (errorMsg, _, _) -> failwith errorMsg
 let tok t = 
-    { value = t; start = Position.none; finish = Position.none }
+    { value = t; range = { start = Position.none; finish = Position.none } }
 let accessExp ident propPath = 
     tok { ident = ident; propPath = propPath }
 let shouldEqual (expected: ParserToken list) str =
-    let clearPos p = { p with start = Position.none; finish = Position.none }
+    let clearPos p = { p with range = { start = Position.none; finish = Position.none } }
     let actual = 
         [ for token in test template str do
             match token with
@@ -34,20 +34,18 @@ let shouldFail str =
 
 
 """abc {{ hello }} def {{xyz}}"""
-|> shouldEqual
-    [
-        Text "abc "
-        Hole (accessExp "hello" [])
-        Text " def "
-        Hole (accessExp "xyz" [])
-    ]
+|> shouldEqual [
+    Text "abc "
+    Hole (accessExp "hello" [])
+    Text " def "
+    Hole (accessExp "xyz" [])
+]
 
 
 """abc"""
-|> shouldEqual
-    [
-        Text "abc"
-    ]
+|> shouldEqual [
+    Text "abc"
+]
 
 
 """abc {{ """
@@ -65,36 +63,32 @@ let shouldFail str =
 
 
 """ {{ x}}"""
-|> shouldEqual
-    [
-        Text " "
-        Hole (accessExp "x" [])
-    ]
+|> shouldEqual [
+    Text " "
+    Hole (accessExp "x" [])
+]
 
 
 """{{x}}"""
-|> shouldEqual
-    [ 
-        Hole (accessExp "x" [])
-    ]
+|> shouldEqual [ 
+    Hole (accessExp "x" [])
+]
 
 
 
 """abc {{ if x }}"""
-|> shouldEqual 
-    [ 
-        Text "abc "
-        If (accessExp "x" [])
-    ]
+|> shouldEqual [ 
+    Text "abc "
+    If (accessExp "x" [])
+]
 
 
 
 """abc {{ for x in y }}"""
-|> shouldEqual 
-    [
-        Text "abc "
-        For (tok "x", accessExp "y" [])
-    ]
+|> shouldEqual [
+    Text "abc "
+    For (tok "x", accessExp "y" [])
+]
 
 
 // TODO: Test {{{ (triple)

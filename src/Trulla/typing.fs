@@ -5,9 +5,6 @@ open Parsing
 type Tree =
     | LeafNode of LeafToken
     | InternalNode of root: ScopeToken * children: Tree list
-and Token =
-    | LeafToken of LeafToken
-    | ScopeToken of ScopeToken
 and LeafToken =
     | Text of string
     | Hole of PVal<AccessExp>
@@ -27,9 +24,10 @@ and PolyTyp =
 and RecordDef = { name: string; fields: FieldDef list }
 and FieldDef = { name: string; type': Type }
 
+
 // TODO: meaningful error messages + location
 // TODO: Performance?
-let toTree (tokens: ParseResult) : Tree list =
+let tree (tokens: ParseResult) : Tree list =
     let res,openScopesCount =
         let mutable openScopesCount = -1
         let rec toTree (pointer: int) =
@@ -78,17 +76,19 @@ let resolveType (symName: string) (boundSymbols: List<string * AccessExp>) =
     tryResolve symName boundSymbols
     |> Option.defaultValue [symName]
 
-let rec typeTree (trees: Tree list) (boundSymbols: List<string * AccessExp>) =
-    [ for tree in trees do
-        match tree with
-        | LeafNode (Text _) -> ()
-        | LeafNode (Hole hole as token) ->
-            yield LeafToken token, resolveType hole.value.ident boundSymbols
-        | InternalNode (For (ident,source) as token, children) ->
-            yield ScopeToken token, resolveType ident.value boundSymbols
-            let boundSymbols = (ident.value, source.value) :: boundSymbols
-            yield! typeTree children boundSymbols
-        | InternalNode (If ident as token, children) ->
-            yield ScopeToken token, resolveType ident.value.ident boundSymbols
-            yield! typeTree children boundSymbols
-    ]
+let typeTree (trees: Tree list) =
+    let rec typeTree (trees: Tree list) (boundSymbols: List<string * AccessExp>) =
+        [ for tree in trees do
+            match tree with
+            | LeafNode (Text _) -> ()
+            | LeafNode (Hole hole) ->
+                yield hole.range, resolveType hole.value.ident boundSymbols
+            | InternalNode (For (ident,source), children) ->
+                yield ident.range, resolveType ident.value boundSymbols
+                let boundSymbols = (ident.value, source.value) :: boundSymbols
+                yield! typeTree children boundSymbols
+            | InternalNode (If ident, children) ->
+                yield ident.range, resolveType ident.value.ident boundSymbols
+                yield! typeTree children boundSymbols
+        ]
+    typeTree trees [] |> Map.ofList

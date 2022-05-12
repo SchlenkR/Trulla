@@ -3,7 +3,8 @@
 open FParsec
 
 type Position = { index: int64; line: int64; column: int64 }
-type PVal<'a> = { value: 'a; start: Position; finish: Position }
+type Range = { start: Position; finish: Position }
+type PVal<'a> = { value: 'a; range: Range }
 
 type ParseResult = ParserToken list
 and ParserToken =
@@ -42,8 +43,11 @@ module ParserHelper =
             p |> posFromFParsec offset
         pipe3 getPosition parser getPosition (fun start value finish ->
             { value = value
-              start = posFromFParsec 0L start
-              finish = leftOf finish }
+              range = {
+                  start = posFromFParsec 0L start
+                  finish = leftOf finish 
+              }
+            }
         )
     let (<!>) (p: Parser<_,_>) label : Parser<_,_> =
         fun stream ->
