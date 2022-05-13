@@ -19,7 +19,7 @@ let x =
         ParserToken.End
     ]
     |> tree
-    |> symbolTypes 
+    |> constraints 
 
 //[
 //    (["contexts"], Poly (Sequence (Var "'T0")));

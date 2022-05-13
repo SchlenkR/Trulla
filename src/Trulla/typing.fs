@@ -66,33 +66,52 @@ and TypeId = TypeId of string list
 and Ident = string
 and Tyvar = string
 
-let symbolTypes (trees: Tree list) =
+// TODO: split into (range - typeId), (typeId - constr) and get rid of option(range)?
+type Constraint = { range: Range option; typeId: TypeId; constr: Type }
+
+let constraints (trees: Tree list) : Constraint list =
     let newTypeId =
         let mutable x = -1
         fun () ->
             x <- x + 1
             $"'T{x}"
-    let resolve boundSymbols acc =
+    let resolve boundSymbols acc : TypeId =
         let head =
             match boundSymbols |> Map.tryFind acc.ident with
             | None -> acc.ident
             | Some tyvar -> tyvar
         TypeId (head :: acc.propPath)
+    let constraintsFromTypeId (TypeId tid) =
+        let rec constrain (tid: string list) =
+            match tid with
+            | [] -> failwith "TODO: TypeId must not be a list, but root * list" // TODO
+            | [rootTypeId] as tid -> { range = None; typeId = TypeId tid; constr = Any }
+            | x :: xs -> failwith ""
+        constrain tid
     let rec symbolTypes (trees: Tree list) (boundSymbols: Map<Ident, Tyvar>) =
-        let typeAccessExp pvalAccExp typ = pvalAccExp.range, resolve boundSymbols pvalAccExp.value, typ
+        let constrainAccessExp pvalAccExp typ =
+            let typeId = resolve boundSymbols pvalAccExp.value
+            let typeConstraints = constraintsFromTypeId typeId
+            let constr = { range = Some pvalAccExp.range; typeId = typeId; constr = typ }
+            constr :: typeConstraints
         [ for tree in trees do
             match tree with
             | LeafNode (Text _) -> ()
             | LeafNode (Hole hole) ->
-                yield typeAccessExp hole (Mono Str)
+                yield! constrainAccessExp hole (Mono Str)
             | InternalNode (For (ident,source), children) ->
                 let newTypeId = newTypeId()
                 let boundSymbols = boundSymbols |> Map.add ident.value newTypeId
-                let resolvedSourceType = resolve boundSymbols source.value
-                yield (source.range, resolvedSourceType, Poly (Sequence (Var newTypeId)))
+                let sourceTypeId = resolve boundSymbols source.value
+                let sourceExprConstraints = constraintsFromTypeId sourceTypeId
+                yield! sourceExprConstraints
+                yield { range = Some source.range
+                        typeId = sourceTypeId
+                        constr = Poly (Sequence (Var newTypeId))
+                        }
                 yield! symbolTypes children boundSymbols
             | InternalNode (If cond, children) ->
-                yield typeAccessExp cond (Mono Bool)
+                yield! constrainAccessExp cond (Mono Bool)
                 yield! symbolTypes children boundSymbols
         ]
     symbolTypes trees Map.empty
