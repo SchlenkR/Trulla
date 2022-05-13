@@ -15,7 +15,7 @@ and ScopeToken =
 
 
 // TODO: meaningful error messages + location
-let toRenderTree (tokens: ParseResult) : Tree list =
+let tree (tokens: ParseResult) : Tree list =
     let res,openScopesCount =
         let mutable openScopesCount = -1
         let rec toTree (pointer: int) =
@@ -61,7 +61,7 @@ and PolyTyp =
     | Sequence of Type
 and RecordDef = { id: TypeId; fields: FieldDef list }
 and FieldDef = { name: string; type': Type }
-and TypeId = string list
+and TypeId = TypeId of string list
 // TODO: DU
 and Ident = string
 and Tyvar = string
@@ -77,22 +77,22 @@ let symbolTypes (trees: Tree list) =
             match boundSymbols |> Map.tryFind acc.ident with
             | None -> acc.ident
             | Some tyvar -> tyvar
-        head :: acc.propPath
+        TypeId (head :: acc.propPath)
     let rec symbolTypes (trees: Tree list) (boundSymbols: Map<Ident, Tyvar>) =
-        let typeAccessExp accExp typ = (resolve boundSymbols accExp, typ)
+        let typeAccessExp pvalAccExp typ = pvalAccExp.range, resolve boundSymbols pvalAccExp.value, typ
         [ for tree in trees do
             match tree with
             | LeafNode (Text _) -> ()
             | LeafNode (Hole hole) ->
-                yield typeAccessExp hole.value (Mono Str)
+                yield typeAccessExp hole (Mono Str)
             | InternalNode (For (ident,source), children) ->
                 let newTypeId = newTypeId()
                 let boundSymbols = boundSymbols |> Map.add ident.value newTypeId
                 let resolvedSourceType = resolve boundSymbols source.value
-                yield (resolvedSourceType, Poly (Sequence (Var newTypeId)))
+                yield (source.range, resolvedSourceType, Poly (Sequence (Var newTypeId)))
                 yield! symbolTypes children boundSymbols
             | InternalNode (If cond, children) ->
-                yield typeAccessExp cond.value (Mono Bool)
+                yield typeAccessExp cond (Mono Bool)
                 yield! symbolTypes children boundSymbols
         ]
     symbolTypes trees Map.empty
