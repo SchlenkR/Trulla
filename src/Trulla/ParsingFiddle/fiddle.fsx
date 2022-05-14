@@ -1,6 +1,7 @@
-﻿#r "nuget: FParsec"
+﻿
+#r "nuget: FParsec"
 
-#load "parsing.fs"
+#load "../parsing.fs"
 open Trulla
 open Trulla.Parsing
 

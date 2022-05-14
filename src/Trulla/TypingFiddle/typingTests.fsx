@@ -18,14 +18,22 @@ let x =
         ParserToken.End
         ParserToken.End
     ]
-    |> tree
-    |> constraints 
+    |> buildTree
+    |> buildConstraints 
 
-//[
-//    (["contexts"], Poly (Sequence (Var "'T0")));
-//    (["'T0"; "collections"], Poly (Sequence (Var "'T1")));
-//    (["'T1"; "masterData"; "orders"], Poly (Sequence (Var "'T2")));
-//    (["'T2"; "number"], Mono Str); 
-//    (["'T2"; "isDispatched"], Mono Bool);
-//    (["user"; "address"; "street"], Mono Str)
-//]
+
+
+[
+    [contexts] : Sequence (Ref (TypeId ["'T0"]))
+    ['T0] : Record
+    ['T0] : RecordField ("collections", Sequence (Ref (TypeId ["'T1"])))
+    ['T1; masterData] : Record;
+    ['T1; masterData] : RecordField ("orders", Sequence (Ref (TypeId ["'T2"])))
+    ['T2] : Record;
+    ['T2] : RecordField ("number", Prim Str)
+    ['T2] : Record;
+    ['T2] : RecordField ("isDispatched", Prim Bool)
+    [user; address] : Record;
+    [user; address] : RecordField ("street", Prim Str)
+]
+

@@ -6,7 +6,7 @@ open Trulla.Typing
 open TypingTestsBase
 
 
-toRenderTree [
+buildTree [
     ParserToken.Text "Text1"
     ParserToken.Hole (accessExp 0 "hello" [])
     ParserToken.If (accessExp 1 "cond1" [])
@@ -37,13 +37,13 @@ toRenderTree [
 
 
 // Fails because of unclosed scope
-toRenderTree [
+buildTree [
     ParserToken.If (accessExp 0 "cond1" [])
     ParserToken.Text "Text1"
     ]
 
 // Fails because of unopened scope
-toRenderTree [
+buildTree [
     ParserToken.If (accessExp 0 "cond1" [])
     ParserToken.Text "Text1"
     ParserToken.End

@@ -6,13 +6,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="fiddle.fsx" />
     <Compile Include="parsing.fs" />
-    <None Include="parserTest.fsx" />
+    <None Include="ParsingFiddle\parserTest.fsx" />
+    <None Include="ParsingFiddle\fiddle.fsx" />
     <Compile Include="typing.fs" />
-    <None Include="typingTestsBase.fsx" />
-    <None Include="treeTests.fsx" />
-    <None Include="typingTests.fsx" />
+    <None Include="TypingFiddle\typingTestsBase.fsx" />
+    <None Include="TypingFiddle\treeTests.fsx" />
+    <None Include="TypingFiddle\typingTests.fsx" />
   </ItemGroup>
 
   <ItemGroup>
