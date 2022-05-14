@@ -53,20 +53,23 @@ type TypeId = TypeId of string list
 type Type =
     | Prim of PrimTyp
     | Sequence of Type
-    | Record
-    | RecordField of name: string * type': Type
     | Ref of TypeId
-    | Any
 and PrimTyp =
     | Bool
     | Str
 
+type Constraint =
+    | IsType of Type
+    | IsRecord
+    | HasField of name: string * type': Type
+
+// TODO: DU
 type Ident = string
 
 // TODO: split into (range - typeId), (typeId - constr) and get rid of option(range)?
-type Constraint = { range: Range ; typeId: TypeId; constr: Type }
+type TypeConstraint = { range: Range ; typeId: TypeId; constr: Constraint }
 
-let buildConstraints (trees: Tree list) : Constraint list =
+let buildConstraints (trees: Tree list) : TypeConstraint list =
     let newTypeId =
         let mutable x = -1
         fun () ->
@@ -86,10 +89,10 @@ let buildConstraints (trees: Tree list) : Constraint list =
                 [
                     match last,curr,remaining with
                     | [], curr, [] ->
-                        yield { range = range; typeId = TypeId [curr]; constr = finalType }
+                        yield { range = range; typeId = TypeId [curr]; constr = IsType finalType }
                     | last, curr, [] ->
-                        yield { range = range; typeId = TypeId last; constr = Record }
-                        yield { range = range; typeId = TypeId last; constr = RecordField (curr, finalType) }
+                        yield { range = range; typeId = TypeId last; constr = IsRecord }
+                        yield { range = range; typeId = TypeId last; constr = HasField (curr, finalType) }
                     | last, curr, x::xs ->
                         yield! constrain (last @ [curr]) x xs
                 ]
