@@ -26,8 +26,8 @@ let shouldEqual expected actual =
 
 fsi.AddPrinter(fun (x: Position) -> $"({x.index})")
 fsi.AddPrinter(fun (x: Range) -> $"[{x.start}-{x.finish}]")
-fsi.AddPrinter(fun (x: Constraint) ->
-    let (TypeId tid) = x.typeId
+fsi.AddPrinter(fun (x: ExprConstraint) ->
+    let (TypeId tid) = fst x.typeIdAndRange
     $"{tid} : {x.constr}")
 //fsi.AddPrinter(fun (x: System.Collections.IEnumerable) ->
 //    let sb = System.Text.StringBuilder()

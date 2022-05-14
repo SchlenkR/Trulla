@@ -21,19 +21,16 @@ let x =
     |> buildTree
     |> buildConstraints 
 
-
-
 [
-    [contexts] : Sequence (Ref (TypeId ["'T0"]))
-    ['T0] : Record
-    ['T0] : RecordField ("collections", Sequence (Ref (TypeId ["'T1"])))
-    ['T1; masterData] : Record;
-    ['T1; masterData] : RecordField ("orders", Sequence (Ref (TypeId ["'T2"])))
-    ['T2] : Record;
-    ['T2] : RecordField ("number", Prim Str)
-    ['T2] : Record;
-    ['T2] : RecordField ("isDispatched", Prim Bool)
-    [user; address] : Record;
-    [user; address] : RecordField ("street", Prim Str)
+    [contexts] : IsType (Sequence (Ref (TypeId ["'T0"])))
+    ['T0] : IsRecord;
+    ['T0] : HasField ("collections", Sequence (Ref (TypeId ["'T1"])))
+    ['T1; masterData] : IsRecord;
+    ['T1; masterData] : HasField ("orders", Sequence (Ref (TypeId ["'T2"])))
+    ['T2] : IsRecord;
+    ['T2] : HasField ("number", Prim Str)
+    ['T2] : IsRecord;
+    ['T2] : HasField ("isDispatched", Prim Bool)
+    [user; address] : IsRecord;
+    [user; address] : HasField ("street", Prim Str)
 ]
-

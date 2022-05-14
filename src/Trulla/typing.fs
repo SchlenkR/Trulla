@@ -13,7 +13,6 @@ and ScopeToken =
     | For of ident: PVal<string> * exp: PVal<AccessExp>
     | If of PVal<AccessExp>
 
-
 // TODO: meaningful error messages + location
 let buildTree (tokens: ParseResult) : Tree list =
     let res,openScopesCount =
@@ -54,64 +53,70 @@ type Type =
     | Prim of PrimTyp
     | Sequence of Type
     | Ref of TypeId
+    | Record of {| id: TypeId; fields: RecordField list |}
 and PrimTyp =
     | Bool
     | Str
+and RecordField = { name: string; typ: Type }
 
 type Constraint =
     | IsType of Type
     | IsRecord
-    | HasField of name: string * type': Type
+    | HasField of RecordField
 
 // TODO: DU
 type Ident = string
 
-// TODO: split into (range - typeId), (typeId - constr) and get rid of option(range)?
-type TypeConstraint = { range: Range ; typeId: TypeId; constr: Constraint }
+type ExprConstraint = { typeIdAndRange: TypeId * Range; constr: Constraint }
 
-let buildConstraints (trees: Tree list) : TypeConstraint list =
+let buildConstraints (trees: Tree list) : ExprConstraint list =
     let newTypeId =
         let mutable x = -1
         fun () ->
             x <- x + 1
             TypeId [ $"'T{x}" ]
-    let resolve boundSymbols acc : TypeId =
+    let resolveAccExp boundSymbols acc : TypeId =
         let head =
             match boundSymbols |> Map.tryFind acc.ident with
             | None -> [acc.ident]
             | Some (TypeId tid) -> tid
         TypeId (head @ acc.propPath)
+    let constrainAccessExp (boundSymbols: Map<Ident, TypeId>) pvalAccExp finalType =
+        let (TypeId tid) = resolveAccExp boundSymbols pvalAccExp.value
+        let makeConstraint tid constr = { typeIdAndRange = TypeId tid,pvalAccExp.range; constr = constr }
+        let rec constrain (last: string list) curr (remaining: string list) =
+            [
+                match last,curr,remaining with
+                | [], curr, [] ->
+                    yield makeConstraint [curr] (IsType finalType)
+                | last, curr, [] ->
+                    yield makeConstraint last IsRecord
+                    yield makeConstraint last (HasField { name = curr; typ = finalType })
+                | last, curr, x::xs ->
+                    yield! constrain (last @ [curr]) x xs
+            ]
+        match tid with
+        | x::xs -> constrain [] x xs
+        | [] -> failwith "TODO: fix modelling error (see comment above)" // TODO
     let rec symbolTypes (trees: Tree list) (boundSymbols: Map<Ident, TypeId>) =
-        let constrainAccessExp pvalAccExp finalType =
-            let (TypeId tid) = resolve boundSymbols pvalAccExp.value
-            let range = pvalAccExp.range
-            let rec constrain (last: string list) curr (remaining: string list) =
-                [
-                    match last,curr,remaining with
-                    | [], curr, [] ->
-                        yield { range = range; typeId = TypeId [curr]; constr = IsType finalType }
-                    | last, curr, [] ->
-                        yield { range = range; typeId = TypeId last; constr = IsRecord }
-                        yield { range = range; typeId = TypeId last; constr = HasField (curr, finalType) }
-                    | last, curr, x::xs ->
-                        yield! constrain (last @ [curr]) x xs
-                ]
-            match tid with
-            | x::xs -> constrain [] x xs
-            | [] -> failwith "TODO: fix modelling error (see comment above)" // TODO
         [ for tree in trees do
             match tree with
             | LeafNode (Text _) ->
                 ()
             | LeafNode (Hole hole) ->
-                yield! constrainAccessExp hole (Prim Str)
+                yield! constrainAccessExp boundSymbols hole (Prim Str)
             | InternalNode (For (ident,source), children) ->
                 let newTypeId = newTypeId()
-                yield! constrainAccessExp source (Sequence (Ref newTypeId))
+                yield! constrainAccessExp boundSymbols source (Sequence (Ref newTypeId))
                 let newBoundSymbols = boundSymbols |> Map.add ident.value newTypeId
                 yield! symbolTypes children newBoundSymbols
             | InternalNode (If cond, children) ->
-                yield! constrainAccessExp cond (Prim Bool)
+                yield! constrainAccessExp boundSymbols cond (Prim Bool)
                 yield! symbolTypes children boundSymbols
         ]
     symbolTypes trees Map.empty
+
+let solve (constraints: ExprConstraint list) =
+
+    let groupedConstraints = constraints |> List.groupBy (fun x -> x.typeIdAndRange)
+
