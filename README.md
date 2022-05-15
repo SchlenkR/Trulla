@@ -18,3 +18,7 @@ Limitations
   * string (for template holes)
   * bool 
 * There are currently no partials supported
+
+TODO
+* Shadowing (Explanation)
+* Wildcards in bindings

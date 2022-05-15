@@ -41,23 +41,23 @@ module ParserHelper =
         let leftOf (p: FParsec.Position) =
             let offset = if p.Column > 1L then 1L else 0L
             p |> posFromFParsec offset
-        pipe3 getPosition parser getPosition (fun start value finish ->
+        pipe3 getPosition parser getPosition <| fun start value finish ->
             { value = value
               range = {
                   start = posFromFParsec 0L start
                   finish = leftOf finish 
               }
             }
-        )
-    let (<!>) (p: Parser<_,_>) label : Parser<_,_> =
-        fun stream ->
-            printfn "%A: Entering %s" stream.Position label
-            let reply = p stream
-            printfn "%A: Leaving %s (%A)" stream.Position label reply.Status
-            reply
+    ////let (<!>) (p: Parser<_,_>) label : Parser<_,_> =
+    ////    fun stream ->
+    ////        printfn "%A: Entering %s" stream.Position label
+    ////        let reply = p stream
+    ////        printfn "%A: Leaving %s (%A)" stream.Position label reply.Status
+    ////        reply
 
-    // this does NOT consume endp, but only tests for it.
+    /// This does NOT consume endp, but only tests for it.
     let chars1Until endp = many1Chars (notFollowedBy endp >>. anyChar)
+
     let blanks : Parser<_, unit> = skipMany (skipChar ' ')
     let blanks1 : Parser<_, unit> = skipMany1 (skipChar ' ')
 
