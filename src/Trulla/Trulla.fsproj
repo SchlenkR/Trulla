@@ -12,7 +12,8 @@
     <Compile Include="typing.fs" />
     <None Include="TypingFiddle\typingTestsBase.fsx" />
     <None Include="TypingFiddle\treeTests.fsx" />
-    <None Include="TypingFiddle\typingTests.fsx" />
+    <None Include="TypingFiddle\constrainingTests.fsx" />
+    <None Include="TypingFiddle\inferenceTests.fsx" />
   </ItemGroup>
 
   <ItemGroup>

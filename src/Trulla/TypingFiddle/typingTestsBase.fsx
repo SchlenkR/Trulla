@@ -25,10 +25,20 @@ let shouldEqual expected actual =
         else ()
 
 fsi.AddPrinter(fun (x: Position) -> $"({x.index})")
-fsi.AddPrinter(fun (x: Range) -> $"[{x.start}-{x.finish}]")
+fsi.AddPrinter(fun (x: Range) -> $"[{x.start.index}-{x.finish.index}]")
+fsi.AddPrinter(fun (tid: TypeId) -> let (TypeId tid) = tid in tid |> String.concat "__")
+fsi.AddPrinter(fun (typ: Type) ->
+    match typ with
+    | Mono (TypeId x) -> sprintf "%A" x
+    | Poly (name,tid) -> sprintf "%s<%A>" name tid
+    | Record r ->
+        let fields = r.fields |> List.map (fun f -> sprintf "%s:%A" f.name f.typ) |> String.concat "; "
+        sprintf "{ %s }" fields
+    | x -> string x
+)
 fsi.AddPrinter(fun (x: ExprConstraint) ->
-    let (TypeId tid) = fst x.typeIdAndRange
-    $"{tid} : {x.constr}")
+    let (TypeId tid) = x.typeId
+    sprintf "%A : %A" tid x.constr)
 //fsi.AddPrinter(fun (x: System.Collections.IEnumerable) ->
 //    let sb = System.Text.StringBuilder()
 //    sb.AppendLine "[" |> ignore

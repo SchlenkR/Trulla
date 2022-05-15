@@ -2,9 +2,8 @@
 
 open Parsing
 
-type TemplateError = { message: string; range: Range } // TODO: Position, not range
+type TemplateError = { message: string; range: Range }
 
-// scopes are oriented to rendering; not to typing (e.g. IF would not be internal node in typing)
 type Tree =
     | LeafNode of LeafToken
     | InternalNode of root: ScopeToken * children: Tree list
@@ -51,27 +50,30 @@ let buildTree (tokens: ParseResult) : Tree list =
 type TypeId = TypeId of string list
 
 type Type =
-    | Prim of PrimTyp
-    | Sequence of Type
-    | Ref of TypeId
-    | Record of {| id: TypeId; fields: RecordField list |}
+    | Mono of TypeId
+    | Poly of name:string * typParam:TypeId
+    | Record of RecordDef
     | Any
-and PrimTyp =
-    | Bool
-    | Str
-and RecordField = { name: string; typ: Type }
+and RecordDef = { id: TypeId; fields: FieldDef list }
+and FieldDef = { name: string; typ: Type }
+
+module KnownTypes =
+    // TODO: reserve these keywords
+    let string = TypeId ["string"]
+    let bool = TypeId ["bool"]
+    let sequence elemTypId = "sequence", elemTypId
 
 type Constraint =
     | IsOfType of Type
     | IsRecord
-    | HasField of RecordField
+    | HasField of FieldDef
 
 // TODO: DU
 type Ident = string
 
 type ExprConstraint = { typeId: TypeId; range: Range; constr: Constraint }
 
-let buildConstraints (trees: Tree list) : ExprConstraint list =
+let buildConstraints (trees: Tree list) : ExprConstraint list * Map<Range, Type> =
     let newTypeId =
         let mutable x = -1
         fun () ->
@@ -86,64 +88,83 @@ let buildConstraints (trees: Tree list) : ExprConstraint list =
     let constrainAccessExp (boundSymbols: Map<Ident, TypeId>) pvalAccExp finalType =
         let (TypeId tid) = resolveAccExp boundSymbols pvalAccExp.value
         let makeConstraint tid constr = { typeId = TypeId tid; range = pvalAccExp.range; constr = constr }
-        let rec constrain (last: string list) curr (remaining: string list) =
+        let rec constrain (left: string list) (remaining: string list) =
             [
-                match last,curr,remaining with
-                | [], curr, [] ->
-                    yield makeConstraint [curr] (IsOfType finalType)
-                | last, curr, [] ->
-                    yield makeConstraint last IsRecord
-                    yield makeConstraint last (HasField { name = curr; typ = finalType })
-                | last, curr, x::xs ->
-                    yield! constrain (last @ [curr]) x xs
+                match remaining with
+                | [x] ->
+                    yield makeConstraint left (HasField { name = x; typ = finalType })
+                | a :: xs ->
+                    let newLeft = left @ [a]
+                    yield makeConstraint newLeft IsRecord
+                    yield! constrain newLeft xs
+                | [] -> ()
             ]
-        match tid with
-        | x::xs -> constrain [] x xs
-        | [] -> failwith "TODO: fix modelling error (see comment above)" // TODO
+        constrain [] tid
+    let mutable rangesToTypes = Map.empty<Range, Type>
     let rec symbolTypes (trees: Tree list) (boundSymbols: Map<Ident, TypeId>) =
         [ for tree in trees do
             match tree with
             | LeafNode (Text _) ->
                 ()
             | LeafNode (Hole hole) ->
-                yield! constrainAccessExp boundSymbols hole (Prim Str)
+                let typ = Mono  KnownTypes.string
+                yield! constrainAccessExp boundSymbols hole typ
+                do rangesToTypes <- rangesToTypes |> Map.add hole.range typ
             | InternalNode (For (ident,source), children) ->
                 let newTypeId = newTypeId()
-                yield! constrainAccessExp boundSymbols source (Sequence (Ref newTypeId))
+                let sourceTyp = Poly (KnownTypes.sequence newTypeId)
+                yield! constrainAccessExp boundSymbols source sourceTyp
+                do rangesToTypes <- rangesToTypes |> Map.add source.range sourceTyp
+                
                 let newBoundSymbols = boundSymbols |> Map.add ident.value newTypeId
+                do rangesToTypes <- rangesToTypes |> Map.add ident.range (Mono newTypeId) // TODO: TyVar, not MONO!
                 yield! symbolTypes children newBoundSymbols
             | InternalNode (If cond, children) ->
-                yield! constrainAccessExp boundSymbols cond (Prim Bool)
+                let typ = Mono KnownTypes.bool
+                yield! constrainAccessExp boundSymbols cond typ
+                do rangesToTypes <- rangesToTypes |> Map.add cond.range typ
                 yield! symbolTypes children boundSymbols
         ]
-    symbolTypes trees Map.empty
+    let res = symbolTypes trees Map.empty
+    res,rangesToTypes
 
 type UnificationResult =
-    { errors: TemplateError list
+    { typeId: TypeId
+      errors: TemplateError list
       resultingTyp: Type }
 
 let buildTypes (constraints: ExprConstraint list) =
     constraints
     |> List.groupBy (fun x -> x.typeId)
-    |> List.collect (fun (typeId,constraints) ->
-        let result =
-            ({ errors = []; resultingTyp = Any }, constraints)
-            ||> List.fold (fun state constr ->
-                match constr with
-                | IsOfType typ ->
-                    match state.resultingTyp, typ with
-                    | Any,typ
-                    | typ,Any -> { state with resultingTyp = typ }
-                    | a,b when a = b -> state
-                    | a,b ->
-                        let err = // TODO: Message
-                            { message = $"TODO: Should be '{a}', but is infered to be '{b}'."
-                              range = snd constr.typeIdAndRange }
-                        { state with errors = () :: state.errors }
-                | IsRecord ->
-                    match state.resultingTyp with
-                    | Any -> { state with resultingTyp = Record {| id = typeId; fields = [] |} }
-                    | Record -> state
-            )
-        result
+    |> List.map (fun (typeId,constraints) ->
+        ({ typeId = typeId; errors = []; resultingTyp = Any }, constraints)
+        ||> List.fold (fun state expConstr ->
+            let addRecordExpectedError () =
+                // TODO: Message
+                let err =
+                    { message = $"TODO: Record expected; mono or sequence infered."
+                      range = expConstr.range }
+                { state with errors = err :: state.errors }
+            match expConstr.constr with
+            | IsOfType typ ->
+                match typ,state.resultingTyp with
+                | Any,typ
+                | typ,Any -> { state with resultingTyp = typ }
+                | a,b when a = b -> state
+                | a,b ->
+                    let err = // TODO: Message
+                        { message = $"TODO: Should be '{a}', but is infered to be '{b}'."
+                          range = expConstr.range }
+                    { state with errors = err :: state.errors }
+            | IsRecord ->
+                match state.resultingTyp with
+                | Any -> { state with resultingTyp = Record { id = typeId; fields = [] }}
+                | Record _ -> state
+                | _ -> addRecordExpectedError ()
+            | HasField field ->
+                match state.resultingTyp with
+                | Any -> { state with resultingTyp = Record { id = typeId; fields = [field] }}
+                | Record r -> { state with resultingTyp = Record { r with fields = field :: r.fields }}
+                | _ -> addRecordExpectedError ()
+        )
     )
