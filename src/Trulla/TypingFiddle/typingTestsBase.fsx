@@ -27,7 +27,7 @@ let shouldEqual expected actual =
 let rec print (o: obj) =
     match o with
     | :? Position as pos -> $"({pos.index})"
-    | :? Range as range -> $"[{print range}-{print range}]"
+    | :? Range as range -> $"[{print range.start}-{print range.finish}]"
     | :? TypeId as tid -> let (TypeId tid) = tid in tid |> String.concat "__"
     | :? ExprConstraint as x -> $"{print x.typeId} : {print x.constr}"
     | :? Type as typ ->

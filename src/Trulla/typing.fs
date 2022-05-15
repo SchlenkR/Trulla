@@ -91,15 +91,12 @@ let buildConstraints (trees: Tree list) : ExprConstraint list * Map<Range, Type>
                 let makeConstraint tid constr = { typeId = TypeId tid; range = pvalAccExp.range; constr = constr }
                 match remaining with
                 | [x] ->
+                    yield makeConstraint left IsRecord
                     yield makeConstraint left (HasField { name = x; typ = finalType })
-                | [x;y] ->
+                | x::_::xs ->
                     let newLeft = left @ [x]
-                    yield makeConstraint newLeft IsRecord
-                    yield makeConstraint newLeft (HasField { name = y; typ = finalType })
-                | x::y::xs ->
-                    let newLeft = left @ [x]
-                    yield makeConstraint newLeft IsRecord
-                    yield makeConstraint newLeft (HasField { name = y; typ = Mono (TypeId (newLeft @ [y])) })
+                    yield makeConstraint left IsRecord
+                    yield makeConstraint left (HasField { name = x; typ = Mono (TypeId newLeft) })
                     yield! constrain newLeft xs
                 | [] -> ()
             ]
