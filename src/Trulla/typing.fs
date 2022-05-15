@@ -101,6 +101,7 @@ let buildConstraints (trees: Tree list) : ExprConstraint list * Map<Range, Type>
                 | [] -> ()
             ]
         let tid = resolveAccExp boundSymbols pvalAccExp.value
+        printfn "RESOLVED: %A" tid
         constrain [] tid
     let mutable rangesToTypes = Map.empty<Range, Type>
     let rec symbolTypes (trees: Tree list) (boundSymbols: Map<Ident, TypeId>) =
