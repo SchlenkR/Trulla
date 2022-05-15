@@ -93,9 +93,10 @@ let buildConstraints (trees: Tree list) : ExprConstraint list * Map<Range, Type>
                 match remaining with
                 | [x] ->
                     yield makeConstraint left (HasField { name = x; typ = finalType })
-                | a :: xs ->
-                    let newLeft = left @ [a]
+                | x :: xs ->
+                    let newLeft = left @ [x]
                     yield makeConstraint newLeft IsRecord
+                    //yield makeConstraint left (HasField { name = x; typ = finalType })
                     yield! constrain newLeft xs
                 | [] -> ()
             ]

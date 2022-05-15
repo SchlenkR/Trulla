@@ -32,7 +32,7 @@ fsi.AddPrinter(fun (typ: Type) ->
     | Mono (TypeId x) -> sprintf "%A" x
     | Poly (name,tid) -> sprintf "%s<%A>" name tid
     | Record r ->
-        let fields = r.fields |> List.map (fun f -> sprintf "%s:%A" f.name f.typ) |> String.concat "; "
+        let fields = r.fields |> List.map (fun f -> sprintf "%s: %A" f.name f.typ) |> String.concat "; "
         sprintf "{ %s }" fields
     | x -> string x
 )

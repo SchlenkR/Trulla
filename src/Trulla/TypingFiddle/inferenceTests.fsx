@@ -51,19 +51,14 @@ buildConstraints:
 
 (*
 
-[
-(contexts, List<TypeId ["'T0"]>);
-('T0, {rec:TypeId ["'T0"]| collections:Sequence (TypeId ["'T1"]) });
-('T0__collections, {rec:TypeId ["'T0"; "collections"]|  });
-('T1, {rec:TypeId ["'T1"]| masterData:Sequence (TypeId ["'T2"]) });
-('T1__masterData, {rec:TypeId ["'T1"; "masterData"]| orders:Sequence (TypeId ["'T2"]) });
-('T1__masterData__orders, {rec:TypeId ["'T1"; "masterData"; "orders"]|  });
-('T2, {rec:TypeId ["'T2"]| isDispatched:Mono Bool; number:Mono Str });
-('T2__number, {rec:TypeId ["'T2"; "number"]|  });
-('T2__isDispatched, {rec:TypeId ["'T2"; "isDispatched"]|  });
-(user, {rec:TypeId ["user"]| address:Mono Str });
-(user__address, {rec:TypeId ["user"; "address"]| street:Mono Str });
-(user__address__street, {rec:TypeId ["user"; "address"; "street"]|  })
+[(, { address: Mono (TypeId ["user"; "address"]); 
+      isDispatched: Mono (TypeId ["'T2"; "isDispatched"]); 
+      number: Mono (TypeId ["'T2"; "number"]); 
+      masterData: Mono (TypeId ["'T1"; "masterData"]); 
+      collections: Mono (TypeId ["'T0"; "collections"]); 
+      contexts:Poly ("sequence", TypeId ["'T0"]) });
+ ('T0, {  }); ('T1, { orders:Poly ("sequence", TypeId ["'T2"]) }); ('T2, {  });
+ (user, { street:Mono (TypeId ["string"]) })
 ]
 
 *)
