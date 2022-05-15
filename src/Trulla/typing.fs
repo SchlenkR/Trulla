@@ -79,27 +79,31 @@ let buildConstraints (trees: Tree list) : ExprConstraint list * Map<Range, Type>
         fun () ->
             x <- x + 1
             TypeId [ $"'T{x}" ]
-    let resolveAccExp boundSymbols acc : TypeId =
+    let resolveAccExp boundSymbols acc =
         let head =
             match boundSymbols |> Map.tryFind acc.ident with
             | None -> [acc.ident]
             | Some (TypeId tid) -> tid
-        TypeId (head @ acc.propPath)
-    let constrainAccessExp (boundSymbols: Map<Ident, TypeId>) pvalAccExp finalType =
-        let (TypeId tid) = resolveAccExp boundSymbols pvalAccExp.value
-        let makeConstraint tid constr = { typeId = TypeId tid; range = pvalAccExp.range; constr = constr }
+        head @ acc.propPath
+    let constrainAccessExp (boundSymbols: Map<Ident, TypeId>) (pvalAccExp: PVal<_>) finalType =
         let rec constrain (left: string list) (remaining: string list) =
             [
+                let makeConstraint tid constr = { typeId = TypeId tid; range = pvalAccExp.range; constr = constr }
                 match remaining with
                 | [x] ->
                     yield makeConstraint left (HasField { name = x; typ = finalType })
-                | x :: xs ->
+                | [x;y] ->
                     let newLeft = left @ [x]
                     yield makeConstraint newLeft IsRecord
-                    //yield makeConstraint left (HasField { name = x; typ = finalType })
+                    yield makeConstraint newLeft (HasField { name = y; typ = finalType })
+                | x::y::xs ->
+                    let newLeft = left @ [x]
+                    yield makeConstraint newLeft IsRecord
+                    yield makeConstraint newLeft (HasField { name = y; typ = Mono (TypeId (newLeft @ [y])) })
                     yield! constrain newLeft xs
                 | [] -> ()
             ]
+        let tid = resolveAccExp boundSymbols pvalAccExp.value
         constrain [] tid
     let mutable rangesToTypes = Map.empty<Range, Type>
     let rec symbolTypes (trees: Tree list) (boundSymbols: Map<Ident, TypeId>) =

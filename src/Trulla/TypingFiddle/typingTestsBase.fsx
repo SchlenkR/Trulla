@@ -24,34 +24,27 @@ let shouldEqual expected actual =
         then failwith $"Not equal.\nExpected = {expected}\nActual = {actual}"
         else ()
 
-fsi.AddPrinter(fun (x: Position) -> $"({x.index})")
-fsi.AddPrinter(fun (x: Range) -> $"[{x.start.index}-{x.finish.index}]")
-fsi.AddPrinter(fun (tid: TypeId) -> let (TypeId tid) = tid in tid |> String.concat "__")
-fsi.AddPrinter(fun (typ: Type) ->
-    match typ with
-    | Mono (TypeId x) -> sprintf "%A" x
-    | Poly (name,tid) -> sprintf "%s<%A>" name tid
-    | Record r ->
-        let fields = r.fields |> List.map (fun f -> sprintf "%s: %A" f.name f.typ) |> String.concat "; "
-        sprintf "{ %s }" fields
-    | x -> string x
-)
-fsi.AddPrinter(fun (x: ExprConstraint) ->
-    let (TypeId tid) = x.typeId
-    sprintf "%A : %A" tid x.constr)
-//fsi.AddPrinter(fun (x: System.Collections.IEnumerable) ->
-//    let sb = System.Text.StringBuilder()
-//    sb.AppendLine "[" |> ignore
-//    let (TypeId tid) = x.typeId
-//    $"{tid} : {x.constr}")
-//fsi.AddPrintTransformer(fun x ->
-//    if x = null then null else
-//    let t = x.GetType()
-//    if t.Name = "PVal`1" then
-//        let value = t.GetProperty("value").GetValue(x)
-//        let s = t.GetProperty("start").GetValue(x)
-//        let f = t.GetProperty("finish").GetValue(x)
-//        $"{value} ({s}..{f})"
-//    else
-//        null
-//)
+let rec print (o: obj) =
+    match o with
+    | :? Position as pos -> $"({pos.index})"
+    | :? Range as range -> $"[{print range}-{print range}]"
+    | :? TypeId as tid -> let (TypeId tid) = tid in tid |> String.concat "__"
+    | :? ExprConstraint as x -> $"{print x.typeId} : {print x.constr}"
+    | :? Type as typ ->
+        match typ with
+        | Mono x -> print x
+        | Poly (name,tid) -> $"{name}<{print tid}>"
+        | Record r ->
+            let fields = 
+                r.fields
+                |> List.map (fun f -> $"{f.name}: {print f.typ}")
+                |> String.concat "; "
+            sprintf "{ %s }" fields
+        | x -> string x
+    | _ -> sprintf "%A" o
+
+fsi.AddPrinter <| fun (x: Position) -> print x
+fsi.AddPrinter <| fun (x: Range) -> print x
+fsi.AddPrinter <| fun (x: TypeId) -> print x
+fsi.AddPrinter <| fun (x: Type) -> print x
+fsi.AddPrinter <| fun (x: ExprConstraint) -> print x
