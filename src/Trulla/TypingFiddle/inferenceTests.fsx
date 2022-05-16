@@ -9,7 +9,7 @@ let tree =
     [
         ParserToken.For (pval 0 "matchingContext", accessExp 1 "contexts" [])
         ParserToken.For (pval 2 "customer", accessExp 3 "matchingContext" ["customers"])
-        ParserToken.For (pval 4 "order", accessExp 5 "customer" ["masterData"; "orders"])
+        ParserToken.For (pval 4 "order", accessExp 5 "customer" ["activeItems"; "orders"])
         ParserToken.Hole (accessExp 6 "order" ["number"])
         ParserToken.If (accessExp 7 "order" ["isDispatched"])
         ParserToken.End
@@ -36,8 +36,8 @@ buildConstraints:
     ['T0] : IsRecord;
     ['T0] : HasField { name = "customers" typ = Sequence (TypeId ["'T1"]) };
     ['T1] : IsRecord; 
-    ['T1; masterData] : IsRecord;
-    ['T1; masterData] : HasField { name = "orders" typ = Sequence (TypeId ["'T2"]) };
+    ['T1; activeItems] : IsRecord;
+    ['T1; activeItems] : HasField { name = "orders" typ = Sequence (TypeId ["'T2"]) };
     ['T2] : IsRecord; 
     ['T2] : HasField { name = "number" typ = Mono Str };
     ['T2] : IsRecord; 
@@ -54,7 +54,7 @@ buildConstraints:
 [(, { address: Mono (TypeId ["user"; "address"]); 
       isDispatched: Mono (TypeId ["'T2"; "isDispatched"]); 
       number: Mono (TypeId ["'T2"; "number"]); 
-      masterData: Mono (TypeId ["'T1"; "masterData"]); 
+      activeItems: Mono (TypeId ["'T1"; "activeItems"]); 
       collections: Mono (TypeId ["'T0"; "customers"]); 
       contexts:Poly ("sequence", TypeId ["'T0"]) });
  ('T0, {  }); ('T1, { orders:Poly ("sequence", TypeId ["'T2"]) }); ('T2, {  });

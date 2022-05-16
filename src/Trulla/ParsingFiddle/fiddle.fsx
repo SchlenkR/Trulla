@@ -28,7 +28,7 @@ let rec tryResolveType (symName: string) (boundSymbols: List<string * AccessExp>
 Hello World
 {{ for matchingContext in contexts }}
 {{ for customer in matchingContext.customers }}
-{{ for order in customer.masterData.orders }}
+{{ for order in customer.activeItems.orders }}
 Order Nr.: {{order.number}}
 {{ if order.isDispatched }}
 	-> IS DISPATCHED!
@@ -41,7 +41,7 @@ Order Nr.: {{order.number}}
 *)
 let boundSymbols =
     [
-        "order", { ident = "customer"; propPath = ["masterData"; "orders"] }
+        "order", { ident = "customer"; propPath = ["activeItems"; "orders"] }
         "customer", { ident = "matchingContext"; propPath = ["customers"] }
         "matchingContext", { ident = "contexts"; propPath = [] }
     ]
