@@ -86,19 +86,25 @@ let buildConstraints (trees: Tree list) : ExprConstraint list * Map<Range, Type>
             | Some (TypeId tid) -> tid
         head @ acc.propPath
     let constrainAccessExp (boundSymbols: Map<Ident, TypeId>) (pvalAccExp: PVal<_>) finalType =
+        // TODO: Try revert lists and use "::" instead of " @ []"
         let rec constrain (left: string list) (remaining: string list) =
             [
-                let makeConstraint tid constr = { typeId = TypeId tid; range = pvalAccExp.range; constr = constr }
-                match remaining with
-                | [x] ->
-                    yield makeConstraint left IsRecord
-                    yield makeConstraint left (HasField { name = x; typ = finalType })
-                | x::_::xs ->
+                let makeConstraint tid constr =
+                    { typeId = TypeId tid; range = pvalAccExp.range; constr = constr }
+                match left,remaining with
+                | [], [x] ->
+                    // edge case for field of root record
+                    yield makeConstraint [] (HasField { name = x; typ = finalType })
+                | _, x :: (y :: xs as remaining) ->
                     let newLeft = left @ [x]
-                    yield makeConstraint left IsRecord
-                    yield makeConstraint left (HasField { name = x; typ = Mono (TypeId newLeft) })
-                    yield! constrain newLeft xs
-                | [] -> ()
+                    yield makeConstraint newLeft IsRecord
+                    let fieldType =
+                        match xs with
+                        | [] -> finalType
+                        | _ -> Mono (TypeId (newLeft @ [y]))
+                    yield makeConstraint left (HasField { name = x; typ = fieldType })
+                    yield! constrain newLeft remaining
+                | _ -> ()
             ]
         let tid = resolveAccExp boundSymbols pvalAccExp.value
         printfn "RESOLVED: %A" tid

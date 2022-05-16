@@ -28,14 +28,18 @@ let rec print (o: obj) =
     match o with
     | :? Position as pos -> $"({pos.index})"
     | :? Range as range -> $"[{print range.start}-{print range.finish}]"
-    | :? TypeId as tid -> let (TypeId tid) = tid in tid |> String.concat "__"
+    | :? TypeId as tid ->
+        let (TypeId tid) = tid
+        match tid with
+        | [] -> "$$ROOT$$"
+        | tid -> tid |> String.concat "__"
     | :? ExprConstraint as x -> $"{print x.typeId} : {print x.constr}"
     | :? Type as typ ->
         match typ with
         | Mono x -> print x
         | Poly (name,tid) -> $"{name}<{print tid}>"
         | Record r ->
-            let fields = 
+            let fields =
                 r.fields
                 |> List.map (fun f -> $"{f.name}: {print f.typ}")
                 |> String.concat "; "
