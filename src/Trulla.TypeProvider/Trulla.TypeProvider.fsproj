@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="TpSdk\ProvidedTypes.fsi" />
+    <Compile Include="TpSdk\ProvidedTypes.fs" />
+    <Compile Include="TrullaProvider.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Trulla\Trulla.fsproj" />
+  </ItemGroup>
+
+</Project>
