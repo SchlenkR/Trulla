@@ -20,9 +20,9 @@ let buildTree (tokens: ParseResult) : Tree list =
     let mutable scopeStack = []
     let rec toTree (pointer: int) =
         let mutable pointer = pointer
-        let nodes = [
+        let nodes = 
             let mutable endTokenDetected = false
-            while not endTokenDetected && pointer < tokens.Length do
+            [ while not endTokenDetected && pointer < tokens.Length do
                 let token = tokens[pointer]
                 pointer <- pointer + 1
                 let descentWithNewScope scopeToken =
@@ -58,7 +58,7 @@ and RecordDef = { id: TypeId; fields: FieldDef list }
 and FieldDef = { name: string; typ: Type }
 
 module KnownTypes =
-    // TODO: reserve these keywords
+    // TODO: reserve these keywords + parser tests
     let string = TypeId ["string"]
     let bool = TypeId ["bool"]
     let sequence elemTypId = "sequence", elemTypId
@@ -73,82 +73,85 @@ type Ident = string
 
 type ExprConstraint = { typeId: TypeId; range: Range; constr: Constraint }
 
+module private List =
+    let rollOut elements =
+        let buildRes path curr isLast = {| path = path; curr = curr; isLast = isLast |}
+        let rec rollOut elements current =
+            [ match elements with
+              | [] -> ()
+              | x :: (_::_ as remaining) ->
+                  yield buildRes current x false
+                  yield! rollOut remaining (current @ [x])
+              | [x] ->
+                  yield buildRes current x true
+            ]
+        rollOut elements []
+
 let buildConstraints (trees: Tree list) : ExprConstraint list * Map<Range, Type> =
+    let constrainAccessExp (boundSymbols: Map<Ident, TypeId>) (pvalAccExp: PVal<_>) finalType =
+        // TODO: Try revert lists and use "::" instead of " @ []"
+        let isRooted,resolvedTypeId =
+            let acc = pvalAccExp.value
+            let isRooted,head =
+                match boundSymbols |> Map.tryFind acc.ident with
+                | None -> true, [acc.ident]
+                | Some (TypeId tid) -> false, tid
+            let res = head @ acc.propPath
+            ////printfn $"RESOLVED (rooted={isRooted}): '{acc.ident}' -> {res}"
+            isRooted,res
+        [ for x in List.rollOut resolvedTypeId do
+            let buildConstraint tid constr =
+                { typeId = TypeId tid; range = pvalAccExp.range; constr = constr }
+            
+            match x.path with
+            | _::_ as path ->
+                yield buildConstraint path IsRecord
+            | _ -> ()
+            
+            match isRooted, x.path, x.curr, x.isLast with
+            | _, path, curr, true ->
+                yield buildConstraint path (HasField { name = curr; typ = finalType })
+            | true, [], curr, false ->
+                yield buildConstraint [] (HasField { name = curr; typ = Mono (TypeId [curr]) })
+            | _, (_::_ as path), curr, false ->
+                yield buildConstraint path (HasField { name = curr; typ = Mono (TypeId (path @ [curr])) })
+            | _ -> ()
+        ]
     let newTypeId =
         let mutable x = -1
         fun (ident: string) ->
             x <- x + 1
             TypeId [ $"T{x}'{ident}" ]
-    let resolveAccExp boundSymbols acc =
-        let isRooted,head =
-            match boundSymbols |> Map.tryFind acc.ident with
-            | None -> true, [acc.ident]
-            | Some (TypeId tid) -> false, tid
-        let res = head @ acc.propPath
-        printfn $"RESOLVED (rooted={isRooted}): '{acc.ident}' -> {res}"
-        isRooted,res
-    let constrainAccessExp (boundSymbols: Map<Ident, TypeId>) (pvalAccExp: PVal<_>) finalType =
-        // TODO: Try revert lists and use "::" instead of " @ []"
-        let rollOut elements =
-            let makeRes path curr isLast = {| path = path; curr = curr; isLast = isLast |}
-            let rec rollOut elements current =
-                [
-                    match elements with
-                    | [] -> ()
-                    | x :: (_::_ as remaining) ->
-                        yield makeRes current x false
-                        yield! rollOut remaining (current @ [x])
-                    | [x] ->
-                        yield makeRes current x true
-                ]
-            rollOut elements []
-        let isRooted,tid = resolveAccExp boundSymbols pvalAccExp.value
-        [
-            let makeConstraint tid constr = { typeId = TypeId tid; range = pvalAccExp.range; constr = constr }
-            for x in rollOut tid do
-                //yield makeConstraint [] (HasField { name = curr; typ = finalType })
-                //yield makeConstraint [] (HasField { name = curr; typ = Mono (TypeId [curr]) })
-         
-                match x.path with
-                | _::_ as path ->
-                    yield makeConstraint path IsRecord
-                | _ -> ()
-         
-                match isRooted, x.path, x.curr, x.isLast with
-                | _, path, curr, true ->
-                    yield makeConstraint path (HasField { name = curr; typ = finalType })
-                | true, [], curr, false ->
-                    yield makeConstraint [] (HasField { name = curr; typ = Mono (TypeId [curr]) })
-                | _, (_::_ as path), curr, false ->
-                    yield makeConstraint path (HasField { name = curr; typ = Mono (TypeId (path @ [curr])) })
-                | _ -> ()
-        ]
+    // TODO: is that good + do we need that? It's an optimization and the mutability seems unobsious here.
     let mutable rangesToTypes = Map.empty<Range, Type>
-    let rec symbolTypes (trees: Tree list) (boundSymbols: Map<Ident, TypeId>) =
+    let rec buildConstraints (trees: Tree list) (boundSymbols: Map<Ident, TypeId>) =
         [ for tree in trees do
+            let addR2T range typ =
+                do rangesToTypes <- rangesToTypes |> Map.add range typ
             match tree with
             | LeafNode (Text _) ->
                 ()
             | LeafNode (Hole hole) ->
                 let typ = Mono  KnownTypes.string
                 yield! constrainAccessExp boundSymbols hole typ
-                do rangesToTypes <- rangesToTypes |> Map.add hole.range typ
+                do addR2T hole.range typ
             | InternalNode (For (ident,source), children) ->
                 let newTypeId = newTypeId ident.value
                 let sourceTyp = Poly (KnownTypes.sequence newTypeId)
                 yield! constrainAccessExp boundSymbols source sourceTyp
-                do rangesToTypes <- rangesToTypes |> Map.add source.range sourceTyp
-                
+                do addR2T source.range sourceTyp
+
                 let newBoundSymbols = boundSymbols |> Map.add ident.value newTypeId
-                do rangesToTypes <- rangesToTypes |> Map.add ident.range (Mono newTypeId) // TODO: TyVar, not MONO!
-                yield! symbolTypes children newBoundSymbols
+                // TODO: TyVar, not MONO!
+                do addR2T ident.range (Mono newTypeId)
+                yield! buildConstraints children newBoundSymbols
             | InternalNode (If cond, children) ->
                 let typ = Mono KnownTypes.bool
                 yield! constrainAccessExp boundSymbols cond typ
-                do rangesToTypes <- rangesToTypes |> Map.add cond.range typ
-                yield! symbolTypes children boundSymbols
+                do addR2T cond.range typ
+                yield! buildConstraints children boundSymbols
         ]
-    let res = symbolTypes trees Map.empty
+    let res = buildConstraints trees Map.empty
     res,rangesToTypes
 
 type UnificationResult =
