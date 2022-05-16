@@ -32,33 +32,42 @@ let requiredTypes =
 buildConstraints:
 
 [
-    [] : HasField { name = "contexts" typ = Sequence (TypeId ["'T0"]) }; 
-    ['T0] : IsRecord;
-    ['T0] : HasField { name = "customers" typ = Sequence (TypeId ["'T1"]) };
-    ['T1] : IsRecord; 
-    ['T1; activeItems] : IsRecord;
-    ['T1; activeItems] : HasField { name = "orders" typ = Sequence (TypeId ["'T2"]) };
-    ['T2] : IsRecord; 
-    ['T2] : HasField { name = "number" typ = Mono Str };
-    ['T2] : IsRecord; 
-    ['T2] : HasField { name = "isDispatched" typ = Mono Bool };
-    [user] : IsRecord; 
-    [user; address] : IsRecord;
-    [user; address] : HasField { name = "street" typ = Mono Str }]
+    $$ROOT$$ : HasField { name = "contexts" typ = Poly ("sequence", TypeId ["'T0#MATCHINGCONTEXT"]) };
+    'T0#MATCHINGCONTEXT : IsRecord;
+    'T0#MATCHINGCONTEXT : HasField { name = "customers" typ = Poly ("sequence", TypeId ["'T1#CUSTOMER"]) };
+    'T1#CUSTOMER : IsRecord;
+    'T1#CUSTOMER : HasField { name = "activeItems" typ = Mono (TypeId ["'T1#CUSTOMER"; "activeItems"]) };
+    'T1#CUSTOMER__activeItems : IsRecord;
+    'T1#CUSTOMER__activeItems : HasField { name = "orders" typ = Poly ("sequence", TypeId ["'T2#ORDER"]) };
+    'T2#ORDER : IsRecord;
+    'T2#ORDER : HasField { name = "number" typ = Mono (TypeId ["string"]) };
+    'T2#ORDER : IsRecord;
+    'T2#ORDER : HasField { name = "isDispatched" typ = Mono (TypeId ["bool"]) };
+    $$ROOT$$ : HasField { name = "user" typ = Mono (TypeId ["user"]) }; 
+    user : IsRecord;
+    user : HasField { name = "address" typ = Mono (TypeId ["user"; "address"]) };
+    user__address : IsRecord;
+    user__address : HasField { name = "street" typ = Mono (TypeId ["string"]) }
+]
 
 *)
 
 
+
+
+
 (*
 
-[(, { address: Mono (TypeId ["user"; "address"]); 
-      isDispatched: Mono (TypeId ["'T2"; "isDispatched"]); 
-      number: Mono (TypeId ["'T2"; "number"]); 
-      activeItems: Mono (TypeId ["'T1"; "activeItems"]); 
-      collections: Mono (TypeId ["'T0"; "customers"]); 
-      contexts:Poly ("sequence", TypeId ["'T0"]) });
- ('T0, {  }); ('T1, { orders:Poly ("sequence", TypeId ["'T2"]) }); ('T2, {  });
- (user, { street:Mono (TypeId ["string"]) })
+requiredTypes
+
+
+[
+    ($$ROOT$$, { user: user; contexts: sequence<'T0#MATCHINGCONTEXT> });
+    ('T0#MATCHINGCONTEXT, { customers: sequence<'T1#CUSTOMER> });
+    ('T1#CUSTOMER, { activeItems: 'T1#CUSTOMER__activeItems });
+    ('T1#CUSTOMER__activeItems, { orders: sequence<'T2#ORDER> });
+    ('T2#ORDER, { isDispatched: bool; number: string }); (user, { address: user__address });
+    (user__address, { street: string })
 ]
 
 *)
