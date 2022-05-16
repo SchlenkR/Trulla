@@ -8,6 +8,7 @@
   <ItemGroup>
     <Compile Include="TpSdk\ProvidedTypes.fsi" />
     <Compile Include="TpSdk\ProvidedTypes.fs" />
+    <None Include="TrullaProvider - Copy.fs.bak" />
     <Compile Include="TrullaProvider.fs" />
   </ItemGroup>
 
