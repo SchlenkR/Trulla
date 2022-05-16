@@ -80,11 +80,11 @@ let buildConstraints (trees: Tree list) : ExprConstraint list * Map<Range, Type>
             x <- x + 1
             TypeId [ $"'T{x}" ]
     let resolveAccExp boundSymbols acc =
-        let head =
+        let isRooted,head =
             match boundSymbols |> Map.tryFind acc.ident with
-            | None -> [acc.ident]
-            | Some (TypeId tid) -> tid
-        head @ acc.propPath
+            | None -> true, [acc.ident]
+            | Some (TypeId tid) -> false, tid
+        isRooted, head @ acc.propPath
     let constrainAccessExp (boundSymbols: Map<Ident, TypeId>) (pvalAccExp: PVal<_>) finalType =
         // TODO: Try revert lists and use "::" instead of " @ []"
         let rec constrain (left: string list) (remaining: string list) =
@@ -106,8 +106,8 @@ let buildConstraints (trees: Tree list) : ExprConstraint list * Map<Range, Type>
                     yield! constrain newLeft remaining
                 | _ -> ()
             ]
-        let tid = resolveAccExp boundSymbols pvalAccExp.value
-        printfn "RESOLVED: %A" tid
+        let isRooted,tid = resolveAccExp boundSymbols pvalAccExp.value
+        printfn $"RESOLVED (rooted={isRooted}): {tid}"
         constrain [] tid
     let mutable rangesToTypes = Map.empty<Range, Type>
     let rec symbolTypes (trees: Tree list) (boundSymbols: Map<Ident, TypeId>) =
