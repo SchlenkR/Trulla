@@ -8,7 +8,7 @@ open TypingTestsBase
 let tree =
     [
         ParserToken.For (pval 0 "matchingContext", accessExp 1 "contexts" [])
-        ParserToken.For (pval 2 "customer", accessExp 3 "matchingContext" ["collections"])
+        ParserToken.For (pval 2 "customer", accessExp 3 "matchingContext" ["customers"])
         ParserToken.For (pval 4 "order", accessExp 5 "customer" ["masterData"; "orders"])
         ParserToken.Hole (accessExp 6 "order" ["number"])
         ParserToken.If (accessExp 7 "order" ["isDispatched"])
@@ -34,7 +34,7 @@ buildConstraints:
 [
     [] : HasField { name = "contexts" typ = Sequence (TypeId ["'T0"]) }; 
     ['T0] : IsRecord;
-    ['T0] : HasField { name = "collections" typ = Sequence (TypeId ["'T1"]) };
+    ['T0] : HasField { name = "customers" typ = Sequence (TypeId ["'T1"]) };
     ['T1] : IsRecord; 
     ['T1; masterData] : IsRecord;
     ['T1; masterData] : HasField { name = "orders" typ = Sequence (TypeId ["'T2"]) };
@@ -55,7 +55,7 @@ buildConstraints:
       isDispatched: Mono (TypeId ["'T2"; "isDispatched"]); 
       number: Mono (TypeId ["'T2"; "number"]); 
       masterData: Mono (TypeId ["'T1"; "masterData"]); 
-      collections: Mono (TypeId ["'T0"; "collections"]); 
+      collections: Mono (TypeId ["'T0"; "customers"]); 
       contexts:Poly ("sequence", TypeId ["'T0"]) });
  ('T0, {  }); ('T1, { orders:Poly ("sequence", TypeId ["'T2"]) }); ('T2, {  });
  (user, { street:Mono (TypeId ["string"]) })
