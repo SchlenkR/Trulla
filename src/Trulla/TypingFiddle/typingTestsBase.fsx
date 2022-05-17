@@ -15,8 +15,8 @@ let range number =
     { start = pos number; finish = pos number }
 let pval number t =
     { value = t; range = range number }
-let accessExp number ident propPath =
-    pval number { ident = ident; propPath = propPath }
+let accessExp number segments =
+    pval number (Exp.createFromSegments segments)
 let leaf tokenValue = LeafNode tokenValue
 let node tokenValue children =
     InternalNode (tokenValue, children)
@@ -28,8 +28,8 @@ let newGen() =
     let mutable x = -1
     let newNum() = x <- x + 1; x
     let toAcc (path: string) =
-        let path = path.Split [|'.'|] |> Array.toList
-        accessExp (newNum()) path.Head path.Tail
+        let segments = path.Split [|'.'|] |> Array.toList
+        accessExp (newNum()) segments
     let for' ident path = ParserToken.For (pval (newNum()) ident, toAcc path)
     let if' path = ParserToken.If (toAcc path)
     let hole path = ParserToken.Hole (toAcc path)
@@ -40,16 +40,15 @@ let constr x =
     x gen
     |> buildTree
     |> collectConstraints
-    |> fst
-let unify constraints =
-    let u = constraints |> unifyConstraints
-    let types = u |> List.choose (fun x ->
-        if x.errors.Length > 0 then None else Some (x.typeId,x.resultingTyp))
-    let errors =
-        u 
-        |> List.collect (fun x -> if x.errors.Length > 0 then x.errors else [])
-        |> List.map (fun e -> e.message)
-    types,errors
+////let unify constraints =
+////    let u = constraints |> unifyConstraints
+////    let types = u |> List.choose (fun x ->
+////        if x.errors.Length > 0 then None else Some (x.typeId,x.resultingTyp))
+////    let errors =
+////        u 
+////        |> List.collect (fun x -> if x.errors.Length > 0 then x.errors else [])
+////        |> List.map (fun e -> e.message)
+////    types,errors
 
 
 let indentWith i = String.replicate (i * 4) " "
@@ -68,7 +67,11 @@ let rec print (o: obj) =
         match tid with
         | [] -> "$$ROOT$$"
         | tid -> tid |> String.concat "__"
-    | :? ExprConstraint as x -> $"{print x.typeId} : {print x.constr}"
+    | :? (Problem list) as x ->
+        x
+        |> List.map (fun (Problem (TVar tvar, constr)) ->
+            $"TVAR-{tvar} : {print constr}")
+        |> printList "[" "]" 0 false
     | :? Type as typ ->
         match typ with
         | Mono x -> print x
@@ -90,8 +93,7 @@ fsi.AddPrinter <| fun (x: Position) -> print x
 fsi.AddPrinter <| fun (x: Range) -> print x
 fsi.AddPrinter <| fun (x: TypeId) -> print x
 fsi.AddPrinter <| fun (x: Type) -> print x
-fsi.AddPrinter <| fun (x: ExprConstraint) -> print x
-fsi.AddPrinter <| fun (x: ExprConstraint list) -> x |> List.map print |> printList "[" "]" 0 false
+fsi.AddPrinter <| fun (x: Problem list) -> print x
 fsi.AddPrinter <| fun (x: (TypeId * Type) list) ->
     x
     |> List.map (fun (tid,typ) -> $"{print tid} =\n{printi 1 typ}")

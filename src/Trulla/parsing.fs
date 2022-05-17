@@ -9,13 +9,15 @@ type PVal<'a> = { value: 'a; range: Range }
 type ParseResult = ParserToken list
 and ParserToken =
     | Text of string
-    | Hole of PVal<AccessExp>
-    | For of ident: PVal<string> * exp: PVal<AccessExp>
-    | If of PVal<AccessExp>
+    | Hole of PVal<Exp>
+    | For of ident: PVal<string> * exp: PVal<Exp>
+    | If of PVal<Exp>
     //| ElseIf of Access
     //| Else
     | End
-and AccessExp = { ident: string; propPath: string list }
+and Exp =
+    | AccessExp of {| instanceExp: Exp; memberName: string |}
+    | IdentExp of string
 
 module Consts =
     let beginExp = "{{"
@@ -31,6 +33,21 @@ module Keywords =
 
 module Position =
     let none = { index = -1L; line = -1L; column = -1L }
+    let right offset pos = { pos with index = pos.index + offset; column = pos.column + offset }
+
+module Exp =
+    let createFromSegments =
+        function
+        | x::xs ->
+            (IdentExp x, xs)
+            ||> List.fold (fun state x -> AccessExp {| instanceExp = state; memberName = x |})
+        | [] -> failwith "Should never happen: information loss in sepBy1 parser"
+
+////module Range =
+////    let slice offsetL length (range: Range) =
+////        { range with 
+////            start = Position.right offsetL range.start
+////            finish = Position.right (offsetL + length - 1L) range.start }
 
 [<AutoOpen>]
 module ParserHelper =
@@ -66,10 +83,9 @@ let tmplExp =
     let endExp = pstring Consts.endExp
     let ident = many1Chars2 letter (letter <|> digit)
     let propAccess =
-        sepBy1 ident (pchar '.')
-        |>> function
-            | (root :: rest) -> { ident = root; propPath = rest }
-            | _ -> failwith "Should never happen: information loss in sepBy1 parser"
+        withPos (sepBy1 ident (pchar '.'))
+        |>> fun segments -> Exp.createFromSegments segments.value
+
     let body =
         let forExp =
             pstring Keywords.for' >>. blanks1 >>. withPos ident .>> blanks1 .>> pstring Keywords.in' .>> blanks1 .>>. withPos propAccess
