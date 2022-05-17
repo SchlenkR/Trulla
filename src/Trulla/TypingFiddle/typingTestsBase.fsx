@@ -35,6 +35,22 @@ let newGen() =
     let hole path = ParserToken.Hole (toAcc path)
     let end' = End
     {| for' = for'; if' = if'; hole = hole; end' = end' |}
+let constr x =
+    let gen = newGen()
+    x gen
+    |> buildTree
+    |> collectConstraints
+    |> fst
+let unify constraints =
+    let u = constraints |> unifyConstraints
+    let types = u |> List.choose (fun x ->
+        if x.errors.Length > 0 then None else Some (x.typeId,x.resultingTyp))
+    let errors =
+        u 
+        |> List.collect (fun x -> if x.errors.Length > 0 then x.errors else [])
+        |> List.map (fun e -> e.message)
+    types,errors
+
 
 let indentWith i = String.replicate (i * 4) " "
 let printList o c indent singleLine l =
