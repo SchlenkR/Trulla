@@ -84,19 +84,18 @@ constr <| fun gen ->
         gen.for' "a" "rootColl"
         gen.for' "b" "a"
         gen.for' "c" "b"
-        gen.hole "c.name"
+        gen.hole "c.firstName"
         gen.end'
         gen.end'
         gen.end'
         gen.for' "k" "rootColl"
-        gen.for' "l" ""
+        gen.for' "l" "k"
         gen.for' "m" "l"
-        gen.hole "m.name"
+        gen.hole "m.lastName"
         gen.end'
         gen.end'
         gen.end'
     ]
-|> unify
 (*
     "$$ROOT$$ : IsRecordDefinition"
     "$$ROOT$$ : HasField { name = "rootColl"

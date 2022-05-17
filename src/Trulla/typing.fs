@@ -105,7 +105,7 @@ let collectConstraints (trees: Tree list) : ExprConstraint list * Map<Range, Typ
                         if exp.isLast
                         then finalType
                         else Mono (TypeId (exp.parent @ [exp.fieldName]))
-                    buildConstraint exp.parent (HasField { name = exp.fieldName; typ = fieldType })
+                    buildConstraint exp.parent (HasField { name = "aa-" + exp.fieldName; typ = fieldType })
                 )
             | Some (TypeId boundTypeId) ->
                 match exp.parent with
@@ -119,7 +119,7 @@ let collectConstraints (trees: Tree list) : ExprConstraint list * Map<Range, Typ
                         let fieldType =
                             if exp.isLast
                             then finalType
-                            else Mono (TypeId (exp.parent @ [exp.fieldName]))
+                            else Mono (TypeId (resolvedParent @ [exp.fieldName]))
                         buildConstraint exp.parent (HasField { name = exp.fieldName; typ = fieldType })
                     )
         ]
