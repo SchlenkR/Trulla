@@ -87,6 +87,7 @@ module private List =
             ]
         rollOut elements []
 
+// TODO: Don't allow shadowing
 let buildConstraints (trees: Tree list) : ExprConstraint list * Map<Range, Type> =
     let constrainAccessExp (boundSymbols: Map<Ident, TypeId>) (pvalAccExp: PVal<_>) finalType =
         // TODO: Try revert lists and use "::" instead of " @ []"

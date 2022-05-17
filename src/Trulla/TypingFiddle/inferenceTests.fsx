@@ -14,6 +14,11 @@ let tree =
         ParserToken.If (accessExp 7 "order" ["isDispatched"])
         ParserToken.End
         ParserToken.Hole (accessExp 8 "user" ["address"; "street"])
+        ParserToken.For (pval 9 "x", accessExp 10 "order" ["closedItems"])
+        ParserToken.For (pval 11 "y", accessExp 12 "x" [])
+        ParserToken.Hole (accessExp 13 "y" [])
+        ParserToken.End
+        ParserToken.End
         ParserToken.End
         ParserToken.End
         ParserToken.End
@@ -62,12 +67,38 @@ requiredTypes
 
 
 [
-    ($$ROOT$$, { user: user; contexts: sequence<'T0#MATCHINGCONTEXT> });
-    ('T0#MATCHINGCONTEXT, { customers: sequence<'T1#CUSTOMER> });
-    ('T1#CUSTOMER, { activeItems: 'T1#CUSTOMER__activeItems });
-    ('T1#CUSTOMER__activeItems, { orders: sequence<'T2#ORDER> });
-    ('T2#ORDER, { isDispatched: bool; number: string }); (user, { address: user__address });
-    (user__address, { street: string })
-]
+    ($$ROOT$$,
+        { 
+            T4'y: string; 
+            T3'x: sequence<T4'y>; 
+            user: user; 
+            contexts: sequence<T0'matchingContext> 
+        });
+    (T0'matchingContext, 
+        { 
+            customers: sequence<T1'customer> 
+        });
+    (T1'customer, 
+        { 
+            activeItems: T1'customer__activeItems 
+        });
+    (T1'customer__activeItems, 
+        { 
+            orders: sequence<T2'order> 
+        });
+    (T2'order, 
+        { 
+            closedItems: sequence<T3'x>; 
+            isDispatched: bool; 
+            number: string 
+        });
+    (user, 
+        { 
+            address: user__address 
+        }); 
+    (user__address, 
+        { 
+            street: string 
+        })]
 
 *)
