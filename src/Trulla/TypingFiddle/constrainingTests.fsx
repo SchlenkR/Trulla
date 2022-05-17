@@ -18,12 +18,14 @@ constr <| fun gen ->
     ]
 |> unify
 
+
 constr <| fun gen ->
     [
         gen.if' "customer.isActive"
         gen.hole "customer.address.street"
         gen.end'
     ]
+|> unify
 
 
 constr <| fun gen ->
