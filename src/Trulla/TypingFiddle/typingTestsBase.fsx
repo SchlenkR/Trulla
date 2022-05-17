@@ -1,12 +1,13 @@
 ﻿
+fsi.PrintWidth <- 170
+fsi.PrintLength <- 150
+
 #r "nuget: FParsec"
 
 #load "../parsing.fs"
 #load "../typing.fs"
 open Trulla.Parsing
 open Trulla.Typing
-
-fsi.PrintWidth <- 100
 
 
 let range number =
@@ -24,10 +25,17 @@ let shouldEqual expected actual =
         then failwith $"Not equal.\nExpected = {expected}\nActual = {actual}"
         else ()
 
+let indentWith i = String.replicate (i * 4) " "
+let printList o c indent singleLine l =
+    let indent = indentWith indent
+    let l = l |> List.map (sprintf "%A")
+    if singleLine 
+        then l |> String.concat "; " |> fun x -> $"{indent}{o} {x} {c}"
+        else l |> List.map (fun x -> $"{indent}    {x}") |> String.concat $"\n" |> fun x -> $"{indent}{o}\n{x}\n{indent}{c}"
 let rec print (o: obj) =
     match o with
     | :? Position as pos -> $"({pos.index})"
-    | :? Range as range -> $"[{print range.start}-{print range.finish}]"
+    | :? Range as range -> $"({print range.start}-{print range.finish})"
     | :? TypeId as tid ->
         let (TypeId tid) = tid
         match tid with
@@ -39,16 +47,25 @@ let rec print (o: obj) =
         | Mono x -> print x
         | Poly (name,tid) -> $"{name}<{print tid}>"
         | Record r ->
-            let fields =
-                r.fields
-                |> List.map (fun f -> $"{f.name}: {print f.typ}")
-                |> String.concat "; "
-            sprintf "{ %s }" fields
+            r.fields
+            |> List.map (fun f -> $"{f.name}: {print f.typ}")
+            |> printList "{" "}" 1 false
         | x -> string x
     | _ -> sprintf "%A" o
+let printi indent o =
+    let indent = indentWith indent
+    print o 
+    |> fun s -> s.Split [|'\n'|] 
+    |> Array.map (fun x -> $"{indent}{x}")
+    |> String.concat "\n"
 
 fsi.AddPrinter <| fun (x: Position) -> print x
 fsi.AddPrinter <| fun (x: Range) -> print x
 fsi.AddPrinter <| fun (x: TypeId) -> print x
 fsi.AddPrinter <| fun (x: Type) -> print x
 fsi.AddPrinter <| fun (x: ExprConstraint) -> print x
+fsi.AddPrinter <| fun (x: ExprConstraint list) -> x |> List.map print |> printList "[" "]" 0 false
+fsi.AddPrinter <| fun (x: (TypeId * Type) list) ->
+    x
+    |> List.map (fun (tid,typ) -> $"{print tid} =\n{printi 1 typ}")
+    |> printList "[" "]" 0 false

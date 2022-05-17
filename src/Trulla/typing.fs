@@ -88,7 +88,7 @@ module private List =
         rollOut elements []
 
 // TODO: Don't allow shadowing
-let buildConstraints (trees: Tree list) : ExprConstraint list * Map<Range, Type> =
+let collectConstraints (trees: Tree list) : ExprConstraint list * Map<Range, Type> =
     let constrainAccessExp (boundSymbols: Map<Ident, TypeId>) (pvalAccExp: PVal<_>) finalType =
         // TODO: Try revert lists and use "::" instead of " @ []"
         let isRooted,resolvedTypeId =
@@ -98,7 +98,7 @@ let buildConstraints (trees: Tree list) : ExprConstraint list * Map<Range, Type>
                 | None -> true, [acc.ident]
                 | Some (TypeId tid) -> false, tid
             let res = head @ acc.propPath
-            ////printfn $"RESOLVED (rooted={isRooted}): '{acc.ident}' -> {res}"
+            printfn $"RESOLVED (rooted={isRooted}): '{acc.ident}' -> {res}"
             isRooted,res
         [ for x in List.rollOut resolvedTypeId do
             let buildConstraint tid constr =
@@ -110,12 +110,12 @@ let buildConstraints (trees: Tree list) : ExprConstraint list * Map<Range, Type>
             | _ -> ()
             
             match isRooted, x.path, x.curr, x.isLast with
-            | _, path, curr, true ->
-                yield buildConstraint path (HasField { name = curr; typ = finalType })
+            | true, path, curr, true ->
+                yield buildConstraint path (HasField { name = "a" + curr; typ = finalType })
             | true, [], curr, false ->
-                yield buildConstraint [] (HasField { name = curr; typ = Mono (TypeId [curr]) })
+                yield buildConstraint [] (HasField { name = "b" + curr; typ = Mono (TypeId [curr]) })
             | _, (_::_ as path), curr, false ->
-                yield buildConstraint path (HasField { name = curr; typ = Mono (TypeId (path @ [curr])) })
+                yield buildConstraint path (HasField { name = "c" + curr; typ = Mono (TypeId (path @ [curr])) })
             | _ -> ()
         ]
     let newTypeId =
@@ -160,7 +160,7 @@ type UnificationResult =
       errors: TemplateError list
       resultingTyp: Type }
 
-let buildTypes (constraints: ExprConstraint list) =
+let unifyConstraints (constraints: ExprConstraint list) =
     constraints
     |> List.groupBy (fun x -> x.typeId)
     |> List.map (fun (typeId,constraints) ->
