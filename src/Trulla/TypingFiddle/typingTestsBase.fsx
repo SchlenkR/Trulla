@@ -40,15 +40,13 @@ let constr x =
     x gen
     |> buildTree
     |> collectConstraints
-////let unify constraints =
-////    let u = constraints |> unifyConstraints
-////    let types = u |> List.choose (fun x ->
-////        if x.errors.Length > 0 then None else Some (x.typeId,x.resultingTyp))
-////    let errors =
-////        u 
-////        |> List.collect (fun x -> if x.errors.Length > 0 then x.errors else [])
-////        |> List.map (fun e -> e.message)
-////    types,errors
+let unify constraints =
+    let u = constraints |> unifyConstraints
+    let types = u |> List.choose (fun x ->
+        if x.errors.Length > 0 then None else Some (x.tvar, x.resultingTyp))
+    let errors =
+        u |> List.collect (fun x -> if x.errors.Length > 0 then x.errors else [])
+    types,errors
 
 
 let indentWith i = String.replicate (i * 4) " "
@@ -62,11 +60,11 @@ let rec print (o: obj) =
     match o with
     | :? Position as pos -> $"({pos.index})"
     | :? Range as range -> $"({print range.start}-{print range.finish})"
-    | :? TypeId as tid ->
-        let (TypeId tid) = tid
-        match tid with
-        | [] -> "$$ROOT$$"
-        | tid -> tid |> String.concat "__"
+    //| :? TypeId as tid ->
+    //    let (TypeId tid) = tid
+    //    match tid with
+    //    | [] -> "$$ROOT$$"
+    //    | tid -> tid |> String.concat "__"
     | :? (Problem list) as x ->
         x
         |> List.map (fun (Problem (TVar tvar, constr)) ->
@@ -91,10 +89,9 @@ let printi indent o =
 
 fsi.AddPrinter <| fun (x: Position) -> print x
 fsi.AddPrinter <| fun (x: Range) -> print x
-fsi.AddPrinter <| fun (x: TypeId) -> print x
 fsi.AddPrinter <| fun (x: Type) -> print x
 fsi.AddPrinter <| fun (x: Problem list) -> print x
-fsi.AddPrinter <| fun (x: (TypeId * Type) list) ->
+fsi.AddPrinter <| fun (x: (TVar * Type) list) ->
     x
-    |> List.map (fun (tid,typ) -> $"{print tid} =\n{printi 1 typ}")
+    |> List.map (fun (tvar,typ) -> $"{print tvar} =\n{printi 2 typ}")
     |> printList "[" "]" 0 false
