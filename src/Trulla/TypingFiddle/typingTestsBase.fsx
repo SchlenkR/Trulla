@@ -24,6 +24,17 @@ let shouldEqual expected actual =
     if expected <> actual 
         then failwith $"Not equal.\nExpected = {expected}\nActual = {actual}"
         else ()
+let newGen() =
+    let mutable x = -1
+    let newNum() = x <- x + 1; x
+    let toAcc (path: string) =
+        let path = path.Split [|'.'|] |> Array.toList
+        accessExp (newNum()) path.Head path.Tail
+    let for' ident path = ParserToken.For (pval (newNum()) ident, toAcc path)
+    let if' path = ParserToken.If (toAcc path)
+    let hole path = ParserToken.Hole (toAcc path)
+    let end' = End
+    {| for' = for'; if' = if'; hole = hole; end' = end' |}
 
 let indentWith i = String.replicate (i * 4) " "
 let printList o c indent singleLine l =

@@ -65,7 +65,7 @@ module KnownTypes =
 
 type Constraint =
     | IsOfType of Type
-    | IsRecord
+    | IsRecordDefinition
     | HasField of FieldDef
 
 // TODO: DU
@@ -73,50 +73,55 @@ type Ident = string
 
 type ExprConstraint = { typeId: TypeId; range: Range; constr: Constraint }
 
-module private List =
+module List =
     let rollOut elements =
-        let buildRes path curr isLast = {| path = path; curr = curr; isLast = isLast |}
-        let rec rollOut elements current =
+        let buildRes parent fieldName isLast = {| parent = parent; fieldName = fieldName; isLast = isLast |}
+        let rec rollOut elements fieldName =
             [ match elements with
               | [] -> ()
               | x :: (_::_ as remaining) ->
-                  yield buildRes current x false
-                  yield! rollOut remaining (current @ [x])
+                  yield buildRes fieldName x false
+                  yield! rollOut remaining (fieldName @ [x])
               | [x] ->
-                  yield buildRes current x true
+                  yield buildRes fieldName x true
             ]
         rollOut elements []
 
 // TODO: Don't allow shadowing
 let collectConstraints (trees: Tree list) : ExprConstraint list * Map<Range, Type> =
+    let buildConstraint range tid constr = { typeId = tid; range = range; constr = constr }
     let constrainAccessExp (boundSymbols: Map<Ident, TypeId>) (pvalAccExp: PVal<_>) finalType =
         // TODO: Try revert lists and use "::" instead of " @ []"
-        let isRooted,resolvedTypeId =
-            let acc = pvalAccExp.value
-            let isRooted,head =
-                match boundSymbols |> Map.tryFind acc.ident with
-                | None -> true, [acc.ident]
-                | Some (TypeId tid) -> false, tid
-            let res = head @ acc.propPath
-            printfn $"RESOLVED (rooted={isRooted}): '{acc.ident}' -> {res}"
-            isRooted,res
-        [ for x in List.rollOut resolvedTypeId do
-            let buildConstraint tid constr =
-                { typeId = TypeId tid; range = pvalAccExp.range; constr = constr }
-            
-            match x.path with
-            | _::_ as path ->
-                yield buildConstraint path IsRecord
-            | _ -> ()
-            
-            match isRooted, x.path, x.curr, x.isLast with
-            | true, path, curr, true ->
-                yield buildConstraint path (HasField { name = "a" + curr; typ = finalType })
-            | true, [], curr, false ->
-                yield buildConstraint [] (HasField { name = "b" + curr; typ = Mono (TypeId [curr]) })
-            | _, (_::_ as path), curr, false ->
-                yield buildConstraint path (HasField { name = "c" + curr; typ = Mono (TypeId (path @ [curr])) })
-            | _ -> ()
+        let buildConstraint tid = buildConstraint pvalAccExp.range (TypeId tid)
+        [ for exp in List.rollOut (pvalAccExp.value.ident :: pvalAccExp.value.propPath) do
+            match boundSymbols |> Map.tryFind pvalAccExp.value.ident with
+            | None ->
+                // root
+                yield buildConstraint exp.parent IsRecordDefinition
+
+                // TODO: redundant
+                yield (
+                    let fieldType =
+                        if exp.isLast
+                        then finalType
+                        else Mono (TypeId (exp.parent @ [exp.fieldName]))
+                    buildConstraint exp.parent (HasField { name = exp.fieldName; typ = fieldType })
+                )
+            | Some (TypeId boundTypeId) ->
+                match exp.parent with
+                | [] ->
+                    if exp.isLast then
+                        yield buildConstraint boundTypeId (IsOfType finalType)
+                | skipIdent::parent ->
+                    let resolvedParent = boundTypeId @ parent
+                    yield buildConstraint resolvedParent IsRecordDefinition
+                    yield (
+                        let fieldType =
+                            if exp.isLast
+                            then finalType
+                            else Mono (TypeId (exp.parent @ [exp.fieldName]))
+                        buildConstraint exp.parent (HasField { name = exp.fieldName; typ = fieldType })
+                    )
         ]
     let newTypeId =
         let mutable x = -1
@@ -141,6 +146,7 @@ let collectConstraints (trees: Tree list) : ExprConstraint list * Map<Range, Typ
                 let sourceTyp = Poly (KnownTypes.sequence newTypeId)
                 yield! constrainAccessExp boundSymbols source sourceTyp
                 do addR2T source.range sourceTyp
+                yield buildConstraint ident.range newTypeId (IsOfType Any)
 
                 let newBoundSymbols = boundSymbols |> Map.add ident.value newTypeId
                 // TODO: TyVar, not MONO!
@@ -183,7 +189,7 @@ let unifyConstraints (constraints: ExprConstraint list) =
                         { message = $"TODO: Should be '{a}', but is infered to be '{b}'."
                           range = expConstr.range }
                     { state with errors = err :: state.errors }
-            | IsRecord ->
+            | IsRecordDefinition ->
                 match state.resultingTyp with
                 | Any -> { state with resultingTyp = Record { id = typeId; fields = [] }}
                 | Record _ -> state

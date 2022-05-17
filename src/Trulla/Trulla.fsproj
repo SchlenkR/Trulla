@@ -11,6 +11,7 @@
     <None Include="ParsingFiddle\fiddle.fsx" />
     <Compile Include="typing.fs" />
     <None Include="TypingFiddle\typingTestsBase.fsx" />
+    <None Include="TypingFiddle\helperTests.fsx" />
     <None Include="TypingFiddle\treeTests.fsx" />
     <None Include="TypingFiddle\constrainingTests.fsx" />
     <None Include="TypingFiddle\inferenceTests.fsx" />

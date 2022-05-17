@@ -30,6 +30,6 @@ let constraints,rangeToTypes = tree |> collectConstraints
 let requiredTypes =
     constraints
     |> unifyConstraints
-    |> List.map (fun x -> if x.errors.Length > 0 then failwith "ERROR" else x.typeId,x.resultingTyp)
+    //|> List.map (fun x -> if x.errors.Length > 0 then failwith "ERROR" else x.typeId,x.resultingTyp)
 
 
