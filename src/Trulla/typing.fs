@@ -58,7 +58,7 @@ and RecordId = RecordId of string
 and Field = string * Type
 
 type Constraint =
-    | IsOfType of Type
+    | IsType of Type
     | HasField of Field
 
 type BindingContext = Map<string, TVar>
@@ -88,19 +88,19 @@ let collectConstraints (trees: Tree list) =
                 ////Problem (tvarInstance, IsRecordDefinition)
                 Problem (tvarInstance, HasField (exp.memberName, Var tvarExp))
             ]
-            IsOfType (Var tvarExp),problems
+            IsType (Var tvarExp),problems
         | IdentExp ident ->
             let tvarIdent = bindingContext |> Map.tryFind ident
             match tvarIdent with
             | Some tvarIdent ->
-                IsOfType (Var tvarIdent),[]
+                IsType (Var tvarIdent),[]
             | None ->
                 let tvarIdent = newTVar()
                 let problems = [
-                    Problem (IsOfType (Var Root), HasField (ident, Var tvarIdent))
+                    Problem (IsType (Var Root), HasField (ident, Var tvarIdent))
                     // tvarRoot is also a record; but we can omit this
                 ]
-                IsOfType (Var tvarIdent),problems
+                IsType (Var tvarIdent),problems
     
     let rec buildConstraints (trees: Tree list) (bindingContext: BindingContext) =
         [ for tree in trees do
@@ -110,19 +110,19 @@ let collectConstraints (trees: Tree list) =
             | LeafNode (Hole hole) ->
                 let tvarHole,holeProblems = constrainExp bindingContext hole.value
                 yield! holeProblems
-                yield Problem (tvarHole, IsOfType (Mono KnownTypes.string))
+                yield Problem (tvarHole, IsType (Mono KnownTypes.string))
             | InternalNode (For (ident,source), children) ->
                 let tvarIdent = newTVar()
                 let bindingContext = bindingContext |> Map.add ident.value tvarIdent
                 let tvarSource,sourceProblems = constrainExp bindingContext source.value
                 yield! sourceProblems
-                yield Problem (tvarSource, IsOfType (Poly (KnownTypes.sequence (Var tvarIdent))))
+                yield Problem (tvarSource, IsType (Poly (KnownTypes.sequence (Var tvarIdent))))
                 // --->
                 yield! buildConstraints children bindingContext
             | InternalNode (If cond, children) ->
                 let tvarCond,condProblems = constrainExp bindingContext cond.value
                 yield! condProblems
-                yield Problem (tvarCond, IsOfType (Mono KnownTypes.bool))
+                yield Problem (tvarCond, IsType (Mono KnownTypes.bool))
                 // --->
                 yield! buildConstraints children bindingContext
         ]
@@ -157,9 +157,9 @@ let solveProblems (problems: Problem list) =
 
     let substConstraint tvarToReplace by (constr: Constraint) =
         match constr with
-        | IsOfType typ ->
+        | IsType typ ->
             let res,t = substTyp tvarToReplace by typ
-            IsOfType t //res, IsOfType t
+            IsType t //res, IsOfType t
         | HasField (name,typ) ->
             let res,t = substTyp tvarToReplace by typ
             HasField (name, t) //res, HasField (name, t)
@@ -177,18 +177,18 @@ let solveProblems (problems: Problem list) =
         | [] -> []
         | Problem (cleft, cright) :: ps ->
             match cleft,cright with
-            | IsOfType (Var tvar), HasField _
-            | HasField _, IsOfType (Var tvar) ->
+            | IsType (Var tvar), HasField _
+            | HasField _, IsType (Var tvar) ->
                 let recordRef =
                     // TODO: better record naming / prevent collisions
                     let recordName = $"""TYP{match tvar with Root -> "ROOT" | TVar var -> string var}"""
                     RecordRef (RecordId recordName)
                 substituteProblems tvar recordRef problems
-            | IsOfType (Var tvar), IsOfType t
-            | IsOfType t, IsOfType (Var tvar) ->
+            | IsType (Var tvar), IsType t
+            | IsType t, IsType (Var tvar) ->
                 substituteProblems tvar t ps
-            | IsOfType (RecordRef _), HasField _
-            | HasField _, IsOfType (RecordRef _) ->
+            | IsType (RecordRef _), HasField _
+            | HasField _, IsType (RecordRef _) ->
                 problems
             | _, _ ->
                 failwith "TODO: Can't unify. Don't throw"

@@ -38,6 +38,7 @@ constr <| fun gen ->
         gen.end'
         gen.end'
     ]
+|> solveProblems
 
 
 constr <| fun gen ->
