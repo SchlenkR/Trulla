@@ -16,7 +16,6 @@ constr <| fun gen ->
     [
         gen.hole "name"
     ]
-|> unify
 
 
 constr <| fun gen ->
@@ -25,7 +24,6 @@ constr <| fun gen ->
         gen.hole "customer.address.street"
         gen.end'
     ]
-|> unify
 
 
 constr <| fun gen ->

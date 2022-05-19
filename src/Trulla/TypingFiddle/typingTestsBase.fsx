@@ -40,13 +40,13 @@ let constr x =
     x gen
     |> buildTree
     |> collectConstraints
-let unify constraints =
-    let u = constraints |> unifyConstraints
-    let types = u |> List.choose (fun x ->
-        if x.errors.Length > 0 then None else Some (x.tvar, x.resultingTyp))
-    let errors =
-        u |> List.collect (fun x -> if x.errors.Length > 0 then x.errors else [])
-    types,errors
+//let unify problems =
+//    let u = problems |> solve
+//    let types = u |> List.choose (fun x ->
+//        if x.errors.Length > 0 then None else Some (x.tvar, x.resultingTyp))
+//    let errors =
+//        u |> List.collect (fun x -> if x.errors.Length > 0 then x.errors else [])
+//    types,errors
 
 
 let indentWith i = String.replicate (i * 4) " "
@@ -67,17 +67,17 @@ let rec print (o: obj) =
     //    | tid -> tid |> String.concat "__"
     | :? (Problem list) as x ->
         x
-        |> List.map (fun (Problem (TVar tvar, constr)) ->
-            $"TVAR-{tvar} : {print constr}")
+        |> List.map (fun (Problem (cl, cr)) ->
+            $"{print cl} : {print cr}")
         |> printList "[" "]" 0 false
     | :? Type as typ ->
         match typ with
         | Mono x -> print x
         | Poly (name,tid) -> $"{name}<{print tid}>"
-        | Record r ->
-            r.fields
-            |> List.map (fun f -> $"{f.name}: {print f.typ}")
-            |> printList "{" "}" 1 false
+        //| Record r ->
+        //    r.fields
+        //    |> List.map (fun f -> $"{f.name}: {print f.typ}")
+        //    |> printList "{" "}" 1 false
         | x -> string x
     | _ -> sprintf "%A" o
 let printi indent o =
