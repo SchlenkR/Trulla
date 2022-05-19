@@ -57,7 +57,7 @@ and Field = string * Type
 
 type Constraint =
     | IsType of Type
-    | HasField of Field
+    | HasFields of Field list
 
 type BindingContext = Map<string, TVar>
 type Problem = Problem of TVar * Constraint
@@ -84,7 +84,7 @@ let collectConstraints (trees: Tree list) =
             let problems = [
                 yield! instanceProblems
                 ////Problem (tvarInstance, IsRecordDefinition)
-                Problem (tvarInstance, HasField (exp.memberName, Var tvarExp))
+                Problem (tvarInstance, HasFields [exp.memberName, Var tvarExp])
             ]
             tvarExp,problems
         | IdentExp ident ->
@@ -95,7 +95,7 @@ let collectConstraints (trees: Tree list) =
             | None ->
                 let tvarIdent = newTVar()
                 let problems = [
-                    Problem (Root, HasField (ident, Var tvarIdent))
+                    Problem (Root, HasFields [ident, Var tvarIdent])
                     // tvarRoot is also a record; but we can omit this
                 ]
                 tvarIdent,problems
@@ -151,7 +151,7 @@ let solveProblems (problems: Problem list) =
     let substConstraint tvarToReplace by constr =
         match constr with
         | IsType typ -> IsType (substTyp tvarToReplace by typ)
-        | HasField (name,typ) -> HasField (name, substTyp tvarToReplace by typ)
+        | HasFields fields -> HasFields [ for (fname,ftyp) in fields do fname, substTyp tvarToReplace by ftyp ]
 
     let rec unifyTypes t1 t2 =
         [ 
@@ -177,16 +177,14 @@ let solveProblems (problems: Problem list) =
                 yield Problem (tvar, substConstraint tvarToReplace by c)
             | true ->
                 // unification Problem
-                match c with
-                | IsType t ->
+                match by,c with
+                | by, IsType t ->
                     yield! unifyTypes by t
-                | HasField (fname,ftyp) ->
-                    match by with
-                    | Var tvar ->
-                        let ftyp = substTyp tvarToReplace by ftyp
-                        yield Problem (tvar, HasField (fname,ftyp))
-                    | _ ->
-                        failwith $"TODO: Can't unitfy {by} and {c}"
+                | Var tvar, HasFields fields ->
+                    let fields = [ for (fname,ftyp) in fields do fname, substTyp tvarToReplace by ftyp ]
+                    yield Problem (tvar, HasFields fields)
+                | _, HasFields fields ->
+                    failwith $"TODO: Can't unitfy {by} and {c}"
         ]
 
     let mutable problems : Problem list = problems
@@ -199,7 +197,7 @@ let solveProblems (problems: Problem list) =
             | IsType t ->
                 problems <- subst tvar t ps
                 solution <- subst tvar t (p::solution)
-            | HasField _ ->
+            | HasFields _ ->
                 problems <- ps
                 solution <- p::solution
             do solve()
