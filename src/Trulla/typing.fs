@@ -53,8 +53,6 @@ type Type =
     | Mono of string
     | Poly of name:string * typParam:Type
     | Var of TVar // TODO: why VAR is in here?
-    | RecordRef of RecordId
-and RecordId = RecordId of string
 and Field = string * Type
 
 type Constraint =
@@ -62,7 +60,7 @@ type Constraint =
     | HasField of Field
 
 type BindingContext = Map<string, TVar>
-type Problem = Problem of Constraint * Constraint
+type Problem = Problem of TVar * Constraint
 
 module KnownTypes =
     // TODO: reserve these keywords + parser tests
@@ -88,19 +86,19 @@ let collectConstraints (trees: Tree list) =
                 ////Problem (tvarInstance, IsRecordDefinition)
                 Problem (tvarInstance, HasField (exp.memberName, Var tvarExp))
             ]
-            IsType (Var tvarExp),problems
+            tvarExp,problems
         | IdentExp ident ->
             let tvarIdent = bindingContext |> Map.tryFind ident
             match tvarIdent with
             | Some tvarIdent ->
-                IsType (Var tvarIdent),[]
+                tvarIdent,[]
             | None ->
                 let tvarIdent = newTVar()
                 let problems = [
-                    Problem (IsType (Var Root), HasField (ident, Var tvarIdent))
+                    Problem (Root, HasField (ident, Var tvarIdent))
                     // tvarRoot is also a record; but we can omit this
                 ]
-                IsType (Var tvarIdent),problems
+                tvarIdent,problems
     
     let rec buildConstraints (trees: Tree list) (bindingContext: BindingContext) =
         [ for tree in trees do
@@ -142,61 +140,69 @@ type UnificationResult =
       errors: string list
       resultingTyp: FinalType }
 
-// TODO: This is currently not used
-type SubstResult = OpenOrUnknown | Determined
-
 let solveProblems (problems: Problem list) =
+    
     let rec substTyp tvarToReplace by typ =
         match typ with
-        | Poly (name, typ) ->
-            let res,t = substTyp tvarToReplace by typ
-            res, Poly (name, t)
-        | Var tvar when tvar = tvarToReplace -> Determined, by
-        | Var _ -> OpenOrUnknown, typ
-        | Mono _ | RecordRef _ -> Determined, typ
+        | Poly (name, typ) -> Poly (name, substTyp tvarToReplace by typ)
+        | Var tvar when tvar = tvarToReplace -> by
+        | _ -> typ
 
-    let substConstraint tvarToReplace by (constr: Constraint) =
+    let substConstraint tvarToReplace by constr =
         match constr with
-        | IsType typ ->
-            let res,t = substTyp tvarToReplace by typ
-            IsType t //res, IsOfType t
-        | HasField (name,typ) ->
-            let res,t = substTyp tvarToReplace by typ
-            HasField (name, t) //res, HasField (name, t)
+        | IsType typ -> IsType (substTyp tvarToReplace by typ)
+        | HasField (name,typ) -> HasField (name, substTyp tvarToReplace by typ)
 
-    let substituteProblems tvarToReplace by (problems: Problem list) =
-        problems 
-        |> List.map (fun (Problem (cl,cr)) ->
-            let cl = substConstraint tvarToReplace by cl
-            let cr = substConstraint tvarToReplace by cr
-            Problem (cl, cr)
-        )
+    let rec unifyTypes t1 t2 =
+        [ 
+            match t1,t2 with
+            | t1,t2 when t1 = t2 ->
+                ()
+            | Var tvar, Var _ -> // TODO: Kann das sein?
+                yield Problem (tvar, IsType t1)
+            | Var tvar, (Poly _ as t)
+            | (Poly _ as t), Var tvar ->
+                yield Problem (tvar, IsType t)
+            | Poly (n1,t1), Poly (n2,t2) when n1 = n2 ->
+                yield! unifyTypes t1 t2
+            | _ ->
+                failwith $"TODO: Can't unitfy {t1} and {t2}"
+        ]
 
-    let rec solveProblems (problems: Problem list) =
-        match problems with
-        | [] -> []
-        | Problem (cleft, cright) :: ps ->
-            match cleft,cright with
-            | IsType (Var tvar), HasField _
-            | HasField _, IsType (Var tvar) ->
-                let recordRef =
-                    // TODO: better record naming / prevent collisions
-                    let recordName = $"""TYP{match tvar with Root -> "ROOT" | TVar var -> string var}"""
-                    RecordRef (RecordId recordName)
-                substituteProblems tvar recordRef problems
-            | IsType (Var tvar), IsType t
-            | IsType t, IsType (Var tvar) ->
-                substituteProblems tvar t ps
-            | IsType (RecordRef _), HasField _
-            | HasField _, IsType (RecordRef _) ->
-                problems
-            | _, _ ->
-                failwith "TODO: Can't unify. Don't throw"
-    
-    let rec doSolve problems =
-        let newProblems = solveProblems problems
-        if set newProblems <> set problems 
-            then doSolve newProblems
-            else problems
-    
-    doSolve problems
+    let subst tvarToReplace by problems =
+        [ for (Problem (tvar, c)) in problems do
+            let c = substConstraint tvarToReplace by c
+            match tvar = tvarToReplace with
+            | false ->
+                yield Problem (tvar, substConstraint tvarToReplace by c)
+            | true ->
+                // unification Problem
+                match c with
+                | IsType t ->
+                    yield! unifyTypes by t
+                | HasField (fname,ftyp) ->
+                    match by with
+                    | Var tvar ->
+                        let ftyp = substTyp tvarToReplace by ftyp
+                        yield Problem (tvar, HasField (fname,ftyp))
+                    | _ ->
+                        failwith $"TODO: Can't unitfy {by} and {c}"
+        ]
+
+    let mutable problems : Problem list = problems
+    let mutable solution : Problem list = []
+    let rec solve () =
+        match problems with 
+        | [] -> ()
+        | (Problem (tvar, c) as p) :: ps ->
+            match c with
+            | IsType t ->
+                problems <- subst tvar t ps
+                solution <- subst tvar t (p::solution)
+            | HasField _ ->
+                problems <- ps
+                solution <- p::solution
+            do solve()
+    do solve()
+
+    solution
