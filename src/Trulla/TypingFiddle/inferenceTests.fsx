@@ -5,8 +5,6 @@ open Trulla.Typing
 open TypingTestsBase
 
 
-
-
 constr <| fun gen ->
     [
         gen.if' "customer.isActive"

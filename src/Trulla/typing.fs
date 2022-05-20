@@ -193,7 +193,7 @@ let solveProblems (problems: Problem list) =
         | [] -> ()
         | (Problem (tvar, c) as p) :: ps ->
             problems <- subst tvar c ps
-            solution <- subst tvar c (p::solution)
+            solution <- p :: subst tvar c solution
             do solve()
     do solve()
 
