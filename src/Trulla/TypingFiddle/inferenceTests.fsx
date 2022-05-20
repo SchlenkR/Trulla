@@ -6,6 +6,18 @@ open TypingTestsBase
 
 
 
+
+constr <| fun gen ->
+    [
+        gen.if' "customer.isActive"
+        gen.hole "customer.address.street"
+        gen.end'
+    ]
+|> solveProblems
+
+
+
+
 constr <| fun gen ->
     [
         gen.for' "order" "orders"
@@ -18,16 +30,6 @@ constr <| fun gen ->
 constr <| fun gen ->
     [
         gen.hole "name"
-    ]
-|> solveProblems
-
-
-
-constr <| fun gen ->
-    [
-        gen.if' "customer.isActive"
-        gen.hole "customer.address.street"
-        gen.end'
     ]
 |> solveProblems
 

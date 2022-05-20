@@ -142,16 +142,18 @@ type UnificationResult =
 
 let solveProblems (problems: Problem list) =
     
-    let rec substTyp tvarToReplace by typ =
-        match typ with
-        | Poly (name, typ) -> Poly (name, substTyp tvarToReplace by typ)
-        | Var tvar when tvar = tvarToReplace -> by
-        | _ -> typ
+    let rec substTyp tvarToReplace inTyp withTyp =
+        match inTyp with
+        | Poly (name, inTyp) -> Poly (name, substTyp tvarToReplace inTyp withTyp)
+        | Var tvar when tvar = tvarToReplace -> withTyp
+        | _ -> inTyp
 
-    let substConstraint tvarToReplace by constr =
-        match constr with
-        | IsType typ -> IsType (substTyp tvarToReplace by typ)
-        | HasFields fields -> HasFields [ for (fname,ftyp) in fields do fname, substTyp tvarToReplace by ftyp ]
+    let substConstraint tvarToReplace replaceWithConstr inConstr =
+        match inConstr,replaceWithConstr with
+        | IsType inTyp, IsType withTyp ->
+            IsType (substTyp tvarToReplace inTyp withTyp)
+        | HasFields fields ->
+            HasFields [ for (fname,ftyp) in fields do fname, substTyp tvarToReplace ftyp replaceWithConstr ]
 
     let rec unifyTypes t1 t2 =
         [ 
@@ -168,23 +170,23 @@ let solveProblems (problems: Problem list) =
             | _ ->
                 failwith $"TODO: Can't unitfy {t1} and {t2}"
         ]
+    
+    let rec unifyConstrs c1 c2 =
+        match withConstr,cr with
+        | IsType t1, IsType t2 ->
+            yield! unifyTypes t1 t2
+        | Var tvar, HasFields fields ->
+            let fields = [ for (fname,ftyp) in fields do fname, substTyp tvarToReplace ftyp by ]
+            yield Problem (tvar, HasFields fields)
+        | _, HasFields fields ->
+            failwith $"TODO: Can't unitfy {by} and {cr}"
 
-    let subst tvarToReplace by problems =
-        [ for (Problem (tvar, c)) in problems do
-            let c = substConstraint tvarToReplace by c
+    let subst tvarToReplace withConstr inProblems =
+        [ for (Problem (tvar, cr)) in inProblems do
+            let cr = substConstraint tvarToReplace withConstr cr
             match tvar = tvarToReplace with
-            | false ->
-                yield Problem (tvar, substConstraint tvarToReplace by c)
-            | true ->
-                // unification Problem
-                match by,c with
-                | by, IsType t ->
-                    yield! unifyTypes by t
-                | Var tvar, HasFields fields ->
-                    let fields = [ for (fname,ftyp) in fields do fname, substTyp tvarToReplace by ftyp ]
-                    yield Problem (tvar, HasFields fields)
-                | _, HasFields fields ->
-                    failwith $"TODO: Can't unitfy {by} and {c}"
+            | false -> yield Problem (tvar, cr)
+            | true -> yield! unifyConstrs withConstr cr
         ]
 
     let mutable problems : Problem list = problems
@@ -193,13 +195,8 @@ let solveProblems (problems: Problem list) =
         match problems with 
         | [] -> ()
         | (Problem (tvar, c) as p) :: ps ->
-            match c with
-            | IsType t ->
-                problems <- subst tvar t ps
-                solution <- subst tvar t (p::solution)
-            | HasFields _ ->
-                problems <- ps
-                solution <- p::solution
+            problems <- subst tvar c ps
+            solution <- subst tvar c (p::solution)
             do solve()
     do solve()
 
