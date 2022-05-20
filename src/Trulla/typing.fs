@@ -138,9 +138,12 @@ let solveProblems (problems: Problem list) =
     
     let rec substType tvarToReplace withTyp inTyp =
         match inTyp with
-        | Poly (name, inTyp) -> Poly (name, substType tvarToReplace withTyp inTyp)
-        | Record fields -> Record [ for (n,t) in fields do n, substType tvarToReplace withTyp t ]
-        | Var tvar when tvar = tvarToReplace -> withTyp
+        | Poly (name, inTyp) ->
+            Poly (name, substType tvarToReplace withTyp inTyp)
+        | Record fields ->
+            Record [ for (n,t) in fields do n, substType tvarToReplace withTyp t ]
+        | Var tvar when tvar =
+            tvarToReplace -> withTyp
         | _ -> inTyp
     
     let rec unifyTypes originalTvar t1 t2 =
