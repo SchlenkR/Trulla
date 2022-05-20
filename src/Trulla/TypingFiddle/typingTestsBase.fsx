@@ -60,38 +60,17 @@ let rec print (o: obj) =
     match o with
     | :? Position as pos -> $"({pos.index})"
     | :? Range as range -> $"({print range.start}-{print range.finish})"
-    //| :? TypeId as tid ->
-    //    let (TypeId tid) = tid
-    //    match tid with
-    //    | [] -> "$$ROOT$$"
-    //    | tid -> tid |> String.concat "__"
     | :? (Problem list) as x ->
         x
         |> List.map (fun (Problem (cl, cr)) ->
-            $"{print cl} : {print cr}")
+            $"%O{cl} : %O{cr}")
         |> printList "[" "]" 0 false
-    | :? Type as typ ->
-        match typ with
-        | Mono x -> print x
-        | Poly (name,tid) -> $"{name}<{print tid}>"
-        //| Record r ->
-        //    r.fields
-        //    |> List.map (fun f -> $"{f.name}: {print f.typ}")
-        //    |> printList "{" "}" 1 false
-        | x -> string x
-    | _ -> sprintf "%A" o
-let printi indent o =
-    let indent = indentWith indent
-    print o 
-    |> fun s -> s.Split [|'\n'|] 
-    |> Array.map (fun x -> $"{indent}{x}")
-    |> String.concat "\n"
+    | _ -> o.ToString()
 
-fsi.AddPrinter <| fun (x: Position) -> print x
-fsi.AddPrinter <| fun (x: Range) -> print x
-fsi.AddPrinter <| fun (x: Type) -> print x
+fsi.AddPrinter <| fun (x: Position) -> $"({x.index})"
+fsi.AddPrinter <| fun (x: Range) -> $"({print x.start}-{print x.finish})"
 fsi.AddPrinter <| fun (x: Problem list) -> print x
-fsi.AddPrinter <| fun (x: (TVar * Type) list) ->
-    x
-    |> List.map (fun (tvar,typ) -> $"{print tvar} =\n{printi 2 typ}")
-    |> printList "[" "]" 0 false
+//fsi.AddPrinter <| fun (x: (TVar * Type) list) ->
+//    x
+//    |> List.map (fun (tvar,typ) -> $"{print tvar} =\n{printi 2 typ}")
+//    |> printList "[" "]" 0 false

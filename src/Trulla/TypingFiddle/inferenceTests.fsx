@@ -15,6 +15,17 @@ constr <| fun gen ->
 
 
 
+// failure
+constr <| fun gen ->
+    [
+        gen.if' "customer.isActive"
+        gen.hole "customer"
+        gen.end'
+    ]
+|> solveProblems
+
+
+
 
 constr <| fun gen ->
     [
@@ -56,6 +67,7 @@ constr <| fun gen ->
         gen.end'
         gen.end'
     ]
+|> solveProblems
 
 
 constr <| fun gen ->
@@ -75,3 +87,4 @@ constr <| fun gen ->
         gen.end'
         gen.end'
     ]
+|> solveProblems

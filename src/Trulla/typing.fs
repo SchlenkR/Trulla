@@ -54,6 +54,12 @@ type Type =
     | Poly of name:string * typParam:Type
     | Record of Field list
     | Var of TVar // TODO: why VAR is in here?
+    override this.ToString() =
+        match this with
+        | Mono s -> s
+        | Poly (n,tp) -> $"%O{n}<%O{tp}>"
+        | Record fields -> $"""{{ {[for (n,t) in fields do $"{n}: %O{t}"] |> String.concat "; " } }}"""
+        | Var tvar -> string tvar
 and Field = string * Type
 
 type BindingContext = Map<string, TVar>
@@ -200,4 +206,4 @@ let solveProblems (problems: Problem list) =
             do solve()
     do solve()
 
-    problems,solution
+    List.distinct problems, List.distinct solution
