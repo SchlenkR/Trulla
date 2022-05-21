@@ -52,14 +52,14 @@ type TVar =
 type Type =
     | Mono of string
     | Poly of name: string * typParam: Type
-    | Record of Field list
+    | Field of Field
     | RecRef of TVar
     | Var of TVar // TODO: why VAR is in here?
     override this.ToString() =
         match this with
         | Mono s -> s
         | Poly (n,tp) -> $"%O{n}<%O{tp}>"
-        | Record fields -> $"""{{ {[for (n,t) in fields do $"{n}: %O{t}"] |> String.concat "; " } }}"""
+        | Field (fn,ft) -> $"""{{{fn}: %O{ft}}}"""
         | Var tvar -> string tvar
         | RecRef tvar -> 
             let x = match tvar with Root -> "ROOT" | TVar tvar -> $"{tvar}"
@@ -91,7 +91,7 @@ let collectConstraints (trees: Tree list) =
             let tvarExp = newTVar()
             let problems = [
                 yield! instanceProblems
-                yield Problem (tvarInstance, Record [exp.memberName, Var tvarExp])
+                yield Problem (tvarInstance, Field (exp.memberName, Var tvarExp))
             ]
             tvarExp,problems
         | IdentExp ident ->
@@ -102,7 +102,7 @@ let collectConstraints (trees: Tree list) =
             | None ->
                 let tvarIdent = newTVar()
                 let problems = [
-                    yield Problem (Root, Record [ident, Var tvarIdent])
+                    yield Problem (Root, Field (ident, Var tvarIdent))
                 ]
                 tvarIdent,problems
     
@@ -132,22 +132,13 @@ let collectConstraints (trees: Tree list) =
         ]
     buildConstraints trees Map.empty
 
-type Record = { name: string; fields: Field list }
-
-// TODO: Ranges wieder überall reinmachen
-////type TemplateError = { message: string; range: Range }
-type UnificationResult =
-    { tvar: TVar
-      errors: string list
-      resultingTyp: Record }
-
 let rec subst tvarToReplace withTyp inTyp =
-    let withTyp = match withTyp with Record _ -> RecRef tvarToReplace | _ -> withTyp
+    let withTyp = match withTyp with Field _ -> RecRef tvarToReplace | _ -> withTyp
     match inTyp with
     | Poly (name, inTyp) ->
         Poly (name, subst tvarToReplace withTyp inTyp)
-    | Record fields ->
-        Record [ for (n,t) in fields do n, subst tvarToReplace withTyp t ]
+    | Field (fn,ft) ->
+        Field (fn, subst tvarToReplace withTyp ft)
     | Var tvar when tvar = tvarToReplace ->
         withTyp
     | _ ->
@@ -165,25 +156,16 @@ let rec unify originalTvar t1 t2 =
             yield Problem (tvar, t)
         | Poly (n1,t1), Poly (n2,t2) when n1 = n2 ->
             yield! unify originalTvar t1 t2
-        | RecRef recref, (Record _ as r)
-        | (Record _ as r), RecRef recref ->
+        | RecRef recref, (Field _ as r)
+        | (Field _ as r), RecRef recref ->
             yield Problem (recref, r)
-        | Record f1, Record f2 ->
-            let res =
-                (f1 @ f2)
-                |> List.groupBy fst
-                |> List.map (fun (fname, types) ->
-                    let ftype,problems =
-                        types
-                        |> List.map (fun (_,ft) -> ft,[])
-                        |> List.reduce (fun (t1,problems) (t2,_) ->
-                            t1, problems @ unify originalTvar t1 t2
-                        )
-                    (fname,ftype),problems
-                )
-            let record = Problem (originalTvar, Record (res |> List.map fst))
-            let newProblems = res |> List.collect snd
-            yield! record :: newProblems
+        | (Field (fn1,ft1) as f1), (Field (fn2,ft2) as f2) ->
+            match fn1 = fn2 with
+            | true -> 
+                yield! unify originalTvar ft1 ft2
+            | false ->
+                yield Problem (originalTvar, f1)
+                yield Problem (originalTvar, f2)
         | _ ->
             failwith $"TODO: Can't unitfy {t1} and {t2}"
     ]
@@ -204,4 +186,32 @@ let solveProblems (problems: Problem list) =
             let problems = substMany tvar typ ps
             let solution = p :: substMany tvar typ solution
             solve problems solution
-    solve problems []
+    // TODO: Comment why distinct is needed
+    solve problems [] |> List.distinct
+
+
+type Record = { name: string; fields: Field list }
+
+// TODO: Ranges wieder überall reinmachen
+////type TemplateError = { message: string; range: Range }
+type UnificationResult =
+    { tvar: TVar
+      errors: string list
+      resultingTyp: Record }
+
+let buildRecords (problems: Problem list) =
+    let recordProblems =
+        problems
+        |> List.map (fun (Problem (tvar,t)) -> tvar,t)
+        |> List.choose (fun (tvar,t) ->
+            match t with
+            | Field f -> Some (tvar,f)
+            | _ -> None
+        )
+        |> List.groupBy fst
+    
+    [ for (tvar, fields) in recordProblems do
+        let fields = fields |> List.map snd
+        let recordName = match tvar with Root -> "Model" | TVar tvar -> $"T{tvar}"
+        { name = recordName; fields = fields }
+    ]

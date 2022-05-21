@@ -13,6 +13,7 @@ constr <| fun gen ->
         gen.end'
     ]
 |> solveProblems
+|> buildRecords
 
 
 
