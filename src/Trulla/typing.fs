@@ -190,28 +190,17 @@ let solveProblems (problems: Problem list) =
     solve problems [] |> List.distinct
 
 
-type Record = { name: string; fields: Field list }
-
 // TODO: Ranges wieder überall reinmachen
 ////type TemplateError = { message: string; range: Range }
 type UnificationResult =
     { tvar: TVar
       errors: string list
-      resultingTyp: Record }
+      resultingTyp: Type }
 
 let buildRecords (problems: Problem list) =
-    let recordProblems =
-        problems
-        |> List.map (fun (Problem (tvar,t)) -> tvar,t)
-        |> List.choose (fun (tvar,t) ->
-            match t with
-            | Field f -> Some (tvar,f)
-            | _ -> None
-        )
-        |> List.groupBy fst
-    
-    [ for (tvar, fields) in recordProblems do
-        let fields = fields |> List.map snd
-        let recordName = match tvar with Root -> "Model" | TVar tvar -> $"T{tvar}"
-        { name = recordName; fields = fields }
-    ]
+    problems
+    |> List.map (fun (Problem (tvar,t)) -> tvar,t)
+    |> List.choose (fun (tvar,t) -> match t with Field f -> Some (tvar,f) | _ -> None)
+    |> List.groupBy fst
+    |> List.map (fun (tvar, fields) -> tvar, fields |> List.map snd |> List.distinct)
+    |> Map.ofList
