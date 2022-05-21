@@ -51,7 +51,7 @@ type TVar =
 
 type Type =
     | Mono of string
-    | Poly of name:string * typParam:Type
+    | Poly of name: string * typParam: Type
     | Record of Field list
     | Var of TVar // TODO: why VAR is in here?
     override this.ToString() =
@@ -59,10 +59,11 @@ type Type =
         | Mono s -> s
         | Poly (n,tp) -> $"%O{n}<%O{tp}>"
         | Record fields -> $"""{{ {[for (n,t) in fields do $"{n}: %O{t}"] |> String.concat "; " } }}"""
-        | Var tvar -> string tvar
+        | Var tvar -> match tvar with Root -> "TVar(ROOT)" | TVar tvar -> $"TVar({tvar})"
 and Field = string * Type
 
 type BindingContext = Map<string, TVar>
+
 type Problem = Problem of TVar * Type
 
 module KnownTypes =
@@ -142,28 +143,42 @@ type UnificationResult =
 
 let solveProblems (problems: Problem list) =
     
-    let rec substType tvarToReplace withTyp inTyp =
+    let rec subst tvarToReplace withTyp inTyp =
+        printfn $"    Subst {tvarToReplace} with '{withTyp}' in '{inTyp}'"
         match inTyp with
         | Poly (name, inTyp) ->
-            Poly (name, substType tvarToReplace withTyp inTyp)
+            printfn $"        >> Substing poly"
+            let res = Poly (name, subst tvarToReplace withTyp inTyp)
+            printfn $"        << Substed poly"
+            res
         | Record fields ->
-            Record [ for (n,t) in fields do n, substType tvarToReplace withTyp t ]
-        | Var tvar when tvar =
-            tvarToReplace -> withTyp
-        | _ -> inTyp
+            printfn $"        >> Substing record"
+            let res = Record [ for (n,t) in fields do n, subst tvarToReplace withTyp t ]
+            printfn $"        << Substed record"
+            res
+        | Var tvar when tvar = tvarToReplace ->
+            printfn $"        Substed with {withTyp}"
+            withTyp
+        | _ -> 
+            printfn $"        Substed nothing"
+            inTyp
     
-    let rec unifyTypes originalTvar t1 t2 =
+    let rec unify originalTvar t1 t2 =
         printfn $"Unifying: ({t1})  --  ({t2})"
         [
             match t1,t2 with
             | t1,t2 when t1 = t2 -> ()
             | Var _, Var tvar ->
                 yield Problem (tvar, t1)
-            | Var tvar, (Poly _ as t)
-            | (Poly _ as t), Var tvar ->
+                printfn $"    Unify yielded for var-var"
+            | Var tvar, t
+            | t, Var tvar ->
                 yield Problem (tvar, t)
+                printfn $"    Unify yielded for poly-var"
             | Poly (n1,t1), Poly (n2,t2) when n1 = n2 ->
-                yield! unifyTypes originalTvar t1 t2
+                printfn $"    >> Unify for poly-poly"
+                yield! unify originalTvar t1 t2
+                printfn $"    << Unify yielded for poly-poly"
             | Record f1, Record f2 ->
                 let res =
                     (f1 @ f2)
@@ -173,37 +188,38 @@ let solveProblems (problems: Problem list) =
                             types
                             |> List.map (fun (_,ft) -> ft,[])
                             |> List.reduce (fun (t1,problems) (t2,_) ->
-                                t1, problems @ unifyTypes originalTvar t1 t2
+                                t1, problems @ unify originalTvar t1 t2
                             )
                         (fname,ftype),problems
                     )
                 let record = Problem (originalTvar, Record (res |> List.map fst))
                 let newProblems = res |> List.collect snd
                 yield! record :: newProblems
+                printfn $"    Unify yielded for rec-rec"
             | _ ->
                 failwith $"TODO: Can't unitfy {t1} and {t2}"
         ]
     
-    let subst tvarToReplace withType inProblems =
+    let substMany tvarToReplace withType inProblems =
+        printfn "--------------- ALL-PROBLEMS"
         [ for (Problem (ptvar, ptype)) in inProblems do
-            let ptype = substType tvarToReplace withType ptype
-            match ptvar = tvarToReplace with
-            | false -> yield Problem (ptvar, ptype)
-            | true -> yield! unifyTypes ptvar withType ptype
+            let tleft = subst tvarToReplace withType (Var ptvar)
+            let tright = subst tvarToReplace withType ptype
+            yield! unify ptvar tleft tright
         ]
 
     let mutable problems : Problem list = problems
     let mutable solution : Problem list = []
+    let mutable steps = []
     let rec solve () =
-        printfn "-------------------------------"
-        printfn $"Problems:\n%A{problems}"
-        printfn $"Solution:\n%A{solution}"
+        steps <- steps @ [problems, solution]
         match problems with 
         | [] -> ()
         | (Problem (tvar, c) as p) :: ps ->
-            problems <- subst tvar c ps
-            solution <- p :: subst tvar c solution
+            problems <- substMany tvar c ps
+            solution <- p :: substMany tvar c solution
             do solve()
     do solve()
 
-    List.distinct problems, List.distinct solution
+    problems,solution
+

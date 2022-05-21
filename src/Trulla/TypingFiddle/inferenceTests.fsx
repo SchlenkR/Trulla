@@ -5,6 +5,7 @@ open Trulla.Typing
 open TypingTestsBase
 
 
+
 constr <| fun gen ->
     [
         gen.if' "customer.isActive"
@@ -68,6 +69,20 @@ constr <| fun gen ->
         gen.end'
     ]
 |> solveProblems
+
+
+
+constr <| fun gen ->
+    [
+        gen.for' "a" "rootColl"
+        gen.hole "a.firstName"
+        gen.end'
+        gen.for' "k" "rootColl"
+        gen.hole "k.lastName"
+        gen.end'
+    ]
+|> solveProblems
+
 
 
 constr <| fun gen ->

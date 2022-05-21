@@ -1,5 +1,5 @@
 ﻿
-fsi.PrintWidth <- 170
+fsi.PrintWidth <- 120
 fsi.PrintLength <- 150
 
 #r "nuget: FParsec"
@@ -40,13 +40,7 @@ let constr x =
     x gen
     |> buildTree
     |> collectConstraints
-//let unify problems =
-//    let u = problems |> solve
-//    let types = u |> List.choose (fun x ->
-//        if x.errors.Length > 0 then None else Some (x.tvar, x.resultingTyp))
-//    let errors =
-//        u |> List.collect (fun x -> if x.errors.Length > 0 then x.errors else [])
-//    types,errors
+
 
 
 let indentWith i = String.replicate (i * 4) " "
