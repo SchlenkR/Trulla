@@ -1,5 +1,6 @@
 ﻿module Trulla.Internal.Typing
 
+open Helper
 open Parsing
 
 type Tree =
@@ -51,11 +52,12 @@ let buildTree (tokens: PVal<ParserToken> list) =
             // TODO: Position.zero is wrong
             { ranges = [Position.zero |> Position.toRange]
               message ="TODO: Unclosed scope detected." }
+            |> List.singleton
             |> Error
         else
             Ok tree
     with TrullaException err ->
-        Error err
+        Error [err]
 
 type TVar =
     | TVar of int
@@ -85,9 +87,10 @@ type Problem = Problem of TVar * PVal<Type>
 
 module KnownTypes =
     // TODO: reserve these keywords + parser tests
-    let string = "string"
-    let bool = "bool"
-    let sequence elemTypId = "sequence", elemTypId
+    let [<Literal>] string = "string"
+    let [<Literal>] bool = "bool"
+    let [<Literal>] sequence = "sequence"
+    let sequenceOf elemTypId = sequence, elemTypId
 
 type TVarGen() =
     let mutable x = -1
@@ -138,7 +141,7 @@ let collectConstraints (trees: Tree list) =
                 let bindingContext = bindingContext |> Map.add ident.value tvarIdent
                 let tvarSource,sourceProblems = constrainExp bindingContext source
                 yield! sourceProblems
-                yield Problem (tvarSource, PVal.create source.range (Poly (KnownTypes.sequence (Var tvarIdent))))
+                yield Problem (tvarSource, PVal.create source.range (Poly (KnownTypes.sequenceOf (Var tvarIdent))))
                 // --->
                 yield! buildConstraints children bindingContext
             | InternalNode (If cond, children) ->
@@ -148,7 +151,7 @@ let collectConstraints (trees: Tree list) =
                 // --->
                 yield! buildConstraints children bindingContext
         ]
-    buildConstraints trees Map.empty
+    buildConstraints trees Map.empty, tvargen.RangeToTVar
 
 let rec subst tvarToReplace withTyp inTyp =
     let withTyp = match withTyp with RecDef _ -> RecRef tvarToReplace | _ -> withTyp
@@ -223,7 +226,7 @@ let solveProblems (problems: Problem list) =
             let solution = p :: substMany tvar typ solution
             solve problems solution
     try Ok (solve problems [])
-    with TrullaException err -> Error err
+    with TrullaException err -> Error [err]
 
 type UnificationResult =
     { tvar: TVar
@@ -239,3 +242,14 @@ let buildRecords (problems: Problem list) =
         // comment why 'distinct' is needed (merging fields: original problem always remains in solution ist)
         tvar, fields |> List.collect snd |> List.distinct)
     |> Map.ofList
+
+let solve tokens =
+    result {
+        let! tokens = tokens 
+        let! tree = buildTree tokens
+        let problems,ranges2tvar = collectConstraints tree
+        let! solution = solveProblems problems
+        let records = buildRecords solution
+        return tree,records,ranges2tvar
+    }
+    

@@ -124,3 +124,13 @@ let expOrText =
         withPos (many1Chars anyChar) |>> fun x -> PVal.create x.range (Text x.value)
         ]
 let ptemplate = many expOrText .>> eof
+
+let parseTemplate templateString =
+    match run ptemplate templateString with
+    | Success (tokenList,_,_) -> Result.Ok tokenList
+    | Failure (msg,error,_) ->
+        { ranges = [Position.ofFParsec 0L error.Position |> Position.toRange]
+          message = msg }
+        |> List.singleton
+        |> Result.Error
+    

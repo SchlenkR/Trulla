@@ -4,6 +4,7 @@ fsi.PrintLength <- 150
 
 #r "nuget: FParsec, 1.1.1"
 
+#load "../helper.fs"
 #load "../parsing.fs"
 #load "../typing.fs"
 open Trulla.Internal.Parsing
@@ -32,9 +33,7 @@ type Gen() =
     member this.End = End |> pval (newNum())
 let constr x =
     let gen = Gen()
-    x gen
-    |> buildTree
-    |> Result.map collectConstraints
+    x gen |> buildTree |> Result.map (collectConstraints >> fst)
     
 
 

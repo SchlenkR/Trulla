@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="helper.fs" />
     <Compile Include="parsing.fs" />
     <None Include="ParsingFiddle\parserTest.fsx" />
     <None Include="ParsingFiddle\fiddle.fsx" />
@@ -13,8 +14,8 @@
     <None Include="TypingFiddle\typingTestsBase.fsx" />
     <None Include="TypingFiddle\treeTests.fsx" />
     <None Include="TypingFiddle\inferenceTests.fsx" />
-    <Compile Include="rendering.FSharp.fs" />
-    <Compile Include="trulla.fs" />
+    <Compile Include="codeGen.FSharp.fs" />
+    <None Include="CodeGenFiddle\codeGenTests.fsx" />
   </ItemGroup>
 
   <ItemGroup>
