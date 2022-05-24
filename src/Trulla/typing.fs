@@ -63,14 +63,17 @@ type TVar =
 type Type =
     | Mono of string
     | Poly of name: string * typParam: Type
-    | Field of Field
+    | RecDef of Field list
     | RecRef of TVar
     | Var of TVar // TODO: why VAR is in here?
     override this.ToString() =
         match this with
         | Mono s -> s
         | Poly (n,tp) -> $"%O{n}<%O{tp}>"
-        | Field (fn,ft) -> $"""{{{fn}: %O{ft}}}"""
+        | RecDef fields ->
+            let renderField (fn,ft) = $"""{fn}: %O{ft}"""
+            let fields = fields |> List.map renderField |> String.concat "; "
+            $"""{{ {fields} }}"""
         | Var tvar -> string tvar
         | RecRef tvar -> $"""(RecRef {match tvar with Root -> "ROOT" | TVar tvar -> $"{tvar}"})"""
 and Field = string * Type
@@ -105,7 +108,7 @@ let collectConstraints (trees: Tree list) =
             let tvarExp = tvargen.Next(exp.range)
             let problems = [
                 yield! instanceProblems
-                yield Problem (tvarInstance, PVal.create exp.range (Field (accExp.memberName, Var tvarExp)))
+                yield Problem (tvarInstance, PVal.create exp.range (RecDef [accExp.memberName, Var tvarExp]))
             ]
             tvarExp,problems
         | IdentExp ident ->
@@ -116,7 +119,7 @@ let collectConstraints (trees: Tree list) =
             | None ->
                 let tvarIdent = tvargen.Next(ident.range)
                 let problems = [
-                    yield Problem (Root, PVal.create exp.range (Field (ident.value, Var tvarIdent)))
+                    yield Problem (Root, PVal.create exp.range (RecDef [ident.value, Var tvarIdent]))
                 ]
                 tvarIdent,problems
     
@@ -147,13 +150,13 @@ let collectConstraints (trees: Tree list) =
     buildConstraints trees Map.empty
 
 let rec subst tvarToReplace withTyp inTyp =
-    let withTyp = match withTyp with Field _ -> RecRef tvarToReplace | _ -> withTyp
+    let withTyp = match withTyp with RecDef _ -> RecRef tvarToReplace | _ -> withTyp
     match inTyp with
     | Poly (name, inTyp) -> Poly (name, subst tvarToReplace withTyp inTyp)
-    | Field (fn,ft) -> Field (fn, subst tvarToReplace withTyp ft)
+    | RecDef fields -> RecDef [ for fn,ft in fields do fn, subst tvarToReplace withTyp ft ]
     | Var tvar when tvar = tvarToReplace -> withTyp
     | _ -> inTyp
-    
+
 let rec unify originalTvar t1 t2 =
     printfn $"Unifying: ({t1.value})  --  ({t2.value})"
     [
@@ -170,20 +173,27 @@ let rec unify originalTvar t1 t2 =
         | Poly (n1,pt1), Poly (n2,pt2) when n1 = n2 ->
             printfn "YIELD c ->"
             yield! unify originalTvar {t1 with value = pt1} {t2 with value = pt2}
-        | RecRef recref, (Field _ as r)
-        | (Field _ as r), RecRef recref ->
+        | RecRef recref, (RecDef _ as r)
+        | (RecDef _ as r), RecRef recref ->
             printfn "YIELD d"
             yield Problem (recref, {t1 with value = r})
-        | Field (fn1,ft1), Field (fn2,ft2) ->
-            match fn1 = fn2 with
-            | true -> 
-                printfn "YIELD e1 ->"
-                yield! unify originalTvar {t1 with value = ft1} {t2 with value = ft2}
-            | false ->
-                ()
-                //printfn "YIELD e2"
-                //yield Problem (originalTvar, t1)
-                //yield Problem (originalTvar, t2)
+        | RecDef f1, RecDef f2 ->
+            let unifiedFields =
+                (f1 @ f2)
+                |> List.groupBy fst
+                |> List.map (fun (fname, ftypes) ->
+                    let ftype,problems =
+                        ftypes
+                        |> List.map (fun (_,ft) -> ft,[])
+                        |> List.reduce (fun (ft1,problems) (ft2,_) ->
+                            ft1, problems @ unify originalTvar {t1 with value = ft1} {t2 with value = ft2}
+                        )
+                    (fname,ftype),problems
+                )
+            let fields = unifiedFields |> List.map fst
+            let problems = unifiedFields |> List.collect snd
+            let record = Problem (originalTvar, PVal.create t1.range (RecDef fields))
+            yield! record :: problems
         | _ ->
             { ranges = [t1.range; t2.range]
               message = $"TODO: Can't unitfy types {t1.value} and {t2.value}" }
@@ -219,7 +229,7 @@ type UnificationResult =
 let buildRecords (problems: Problem list) =
     problems
     |> List.map (fun (Problem (tvar,t)) -> tvar,t)
-    |> List.choose (fun (tvar,t) -> match t.value with Field f -> Some (tvar,f) | _ -> None)
+    |> List.choose (fun (tvar,t) -> match t.value with RecDef f -> Some (tvar,f) | _ -> None)
     |> List.groupBy fst
     |> List.map (fun (tvar, fields) -> tvar, fields |> List.map snd |> List.distinct)
     |> Map.ofList
