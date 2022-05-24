@@ -15,9 +15,9 @@ and ScopeToken =
 // TODO: meaningful error messages + location
 // TODO: Don't throw; return TemplateError results
 let buildTree (tokens: PVal<ParserToken> list) =
-    let mutable scopeStack = []
-    let rec toTree (pointer: int) =
+    let rec toTree (pointer: int) scopeStack =
         let mutable pointer = pointer
+        let mutable scopeStack = scopeStack
         let nodes = 
             let mutable endTokenDetected = false
             [ while not endTokenDetected && pointer < tokens.Length do
@@ -25,8 +25,9 @@ let buildTree (tokens: PVal<ParserToken> list) =
                 pointer <- pointer + 1
                 let descentWithNewScope scopeToken =
                     scopeStack <- scopeToken :: scopeStack
-                    let newPointer,children = toTree pointer
+                    let newPointer,children,newScopeStack = toTree pointer scopeStack
                     let res = InternalNode (scopeToken, children)
+                    scopeStack <- newScopeStack
                     pointer <- newPointer
                     res
                 match token.value with
@@ -43,9 +44,9 @@ let buildTree (tokens: PVal<ParserToken> list) =
                         |> raise
                     | _ :: xs -> scopeStack <- xs
             ]
-        pointer,nodes
+        pointer,nodes,scopeStack
     try 
-        let tree = snd (toTree 0)
+        let _,tree,scopeStack = toTree 0 []
         if scopeStack.Length > 0 then
             // TODO: Position.zero is wrong
             { ranges = [Position.zero |> Position.toRange]
@@ -178,10 +179,13 @@ let rec unify originalTvar t1 t2 =
             printfn "YIELD d"
             yield Problem (recref, {t1 with value = r})
         | RecDef f1, RecDef f2 ->
-            let unifiedFields =
+            let unifiedFieldsAndProblems =
                 (f1 @ f2)
                 |> List.groupBy fst
                 |> List.map (fun (fname, ftypes) ->
+                    // We finally use only ft1. This works because 'unify' only needs to emit
+                    // new problems, but it doesn't resolve 2 types to one by a type hierarchy or
+                    // something like that; out type system only has "equal" or "unequal" types.
                     let ftype,problems =
                         ftypes
                         |> List.map (fun (_,ft) -> ft,[])
@@ -190,8 +194,9 @@ let rec unify originalTvar t1 t2 =
                         )
                     (fname,ftype),problems
                 )
-            let fields = unifiedFields |> List.map fst
-            let problems = unifiedFields |> List.collect snd
+            let fields = unifiedFieldsAndProblems |> List.map fst
+            printfn $"EMIT: {fields}"
+            let problems = unifiedFieldsAndProblems |> List.collect snd
             let record = Problem (originalTvar, PVal.create t1.range (RecDef fields))
             yield! record :: problems
         | _ ->
@@ -217,8 +222,7 @@ let solveProblems (problems: Problem list) =
             let problems = substMany tvar typ ps
             let solution = p :: substMany tvar typ solution
             solve problems solution
-    // TODO: Comment why distinct is needed
-    try solve problems [] |> List.distinct |> Ok
+    try Ok (solve problems [])
     with TrullaException err -> Error err
 
 type UnificationResult =
@@ -231,5 +235,7 @@ let buildRecords (problems: Problem list) =
     |> List.map (fun (Problem (tvar,t)) -> tvar,t)
     |> List.choose (fun (tvar,t) -> match t.value with RecDef f -> Some (tvar,f) | _ -> None)
     |> List.groupBy fst
-    |> List.map (fun (tvar, fields) -> tvar, fields |> List.map snd |> List.distinct)
+    |> List.map (fun (tvar, fields) ->
+        // comment why 'distinct' is needed (merging fields: original problem always remains in solution ist)
+        tvar, fields |> List.collect snd |> List.distinct)
     |> Map.ofList

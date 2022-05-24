@@ -2,9 +2,12 @@
 
 open FParsec
 
-type Position = { index: int64; line: int64; column: int64 }
-type Range = { start: Position; finish: Position }
-type PVal<'a> = { range: Range; value: 'a }
+type Position = { index: int64; line: int64; column: int64 } with
+    override this.ToString() = $"I{this.index}"
+type Range = { start: Position; finish: Position } with
+    override this.ToString() = $"{this.start}-{this.finish}"
+type PVal<'a> = { range: Range; value: 'a } with
+    override this.ToString() = $"({this.range}){this.value}"
 type TrullaError = { ranges: Range list; message: string }
 exception TrullaException of TrullaError
 

@@ -5,6 +5,17 @@ open Trulla.Internal.Typing
 open TypingTestsBase
 
 
+constr <| fun gen ->
+    [
+        gen.Hole "customer.field1"
+        gen.Hole "customer.field2"
+        gen.Hole "customer.field3"
+    ]
+|> Result.bind solveProblems
+|> Result.map buildRecords
+
+
+
 // failure
 constr <| fun gen ->
     [
@@ -18,7 +29,6 @@ constr <| fun gen ->
 
 
 
-
 constr <| fun gen ->
     [
         gen.If "customer.isActive"
@@ -27,7 +37,6 @@ constr <| fun gen ->
     ]
 |> Result.bind solveProblems
 |> Result.map buildRecords
-
 
 
 
