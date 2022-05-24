@@ -3,6 +3,7 @@
 open Helper
 open Parsing
 
+//type XVal<'a> =
 type Tree =
     | LeafNode of LeafToken
     | InternalNode of root: ScopeToken * children: Tree list
