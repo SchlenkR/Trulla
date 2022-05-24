@@ -3,7 +3,7 @@
 open FParsec
 
 #load "../parsing.fs"
-open Trulla.Parsing
+open Trulla.Internal.Parsing
 
 let test p str =
     match run p str with
@@ -16,7 +16,7 @@ let accessExp ident propPath =
 let shouldEqual (expected: ParserToken list) str =
     let clearPos p = { p with range = { start = Position.none; finish = Position.none } }
     let actual = 
-        [ for token in test template str do
+        [ for token in test ptemplate str do
             match token with
             | Text _ -> token
             | Hole x -> Hole (clearPos x)
@@ -27,7 +27,7 @@ let shouldEqual (expected: ParserToken list) str =
     if expected <> actual then
         failwith $"Not equal.\nExpected = {expected}\nActual = {actual}"
 let shouldFail str =
-    match run template str with
+    match run ptemplate str with
     | Success (result, _, _) -> failwith $"Expected failure. Was: {result}"
     | Failure (_, _, _) -> ()
 

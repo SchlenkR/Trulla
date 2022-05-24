@@ -1,4 +1,4 @@
-﻿module Trulla.Typing
+﻿module Trulla.Internal.Typing
 
 open Parsing
 
@@ -14,7 +14,7 @@ and ScopeToken =
 
 // TODO: meaningful error messages + location
 // TODO: Don't throw; return TemplateError results
-let buildTree (tokens: ParseResult) : Tree list =
+let buildTree (tokens: PVal<ParserToken> list) =
     let mutable scopeStack = []
     let rec toTree (pointer: int) =
         let mutable pointer = pointer
@@ -29,21 +29,31 @@ let buildTree (tokens: ParseResult) : Tree list =
                     let res = InternalNode (scopeToken, children)
                     pointer <- newPointer
                     res
-                match token with
+                match token.value with
                 | ParserToken.Text x -> yield LeafNode (Text x)
                 | ParserToken.Hole x -> yield LeafNode (Hole x)
                 | ParserToken.For (ident, acc) -> yield descentWithNewScope (For (ident, acc))
                 | ParserToken.If acc -> yield descentWithNewScope (If acc)
                 | ParserToken.End ->
                     match scopeStack with
-                    | [] -> failwith "TODO: Closing an unopened scope"
+                    | [] ->
+                        { ranges = [token.range]
+                          message = "Closing a scope is not possible without having a scope open." }
+                        |> TrullaException
+                        |> raise
                     | _ :: xs -> scopeStack <- xs
             ]
         pointer,nodes
-    let tree = snd (toTree 0)
-    if scopeStack.Length > 0
-        then failwith "TODO: Unclosed scope detected."
-        else tree
+    try 
+        let tree = toTree 0
+        if scopeStack.Length > 0 then
+            { ranges = [Position.zero |> Position.toRange]
+              message ="TODO: Unclosed scope detected." }
+            |> Error
+        else
+            Ok tree
+    with TrullaException err ->
+        Error err
 
 type TVar =
     | TVar of int
@@ -61,9 +71,7 @@ type Type =
         | Poly (n,tp) -> $"%O{n}<%O{tp}>"
         | Field (fn,ft) -> $"""{{{fn}: %O{ft}}}"""
         | Var tvar -> string tvar
-        | RecRef tvar -> 
-            let x = match tvar with Root -> "ROOT" | TVar tvar -> $"{tvar}"
-            $"(RecRef {x})"
+        | RecRef tvar -> $"""(RecRef {match tvar with Root -> "ROOT" | TVar tvar -> $"{tvar}"})"""
 and Field = string * Type
 
 type BindingContext = Map<string, TVar>
@@ -82,9 +90,8 @@ type TVarGen() =
     member this.RangeToTVar = rangeToTVar
     member this.Next forRange =
         x <- x + 1
-        let tvar = TVar x
-        rangeToTVar <- rangeToTVar |> Map.add forRange tvar
-        tvar
+        rangeToTVar <- rangeToTVar |> Map.add forRange (TVar x)
+        TVar x
 
 // TODO: Prevent shadowing
 let collectConstraints (trees: Tree list) =

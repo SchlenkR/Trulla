@@ -13,6 +13,8 @@
     <None Include="TypingFiddle\typingTestsBase.fsx" />
     <None Include="TypingFiddle\treeTests.fsx" />
     <None Include="TypingFiddle\inferenceTests.fsx" />
+    <Compile Include="rendering.FSharp.fs" />
+    <Compile Include="trulla.fs" />
   </ItemGroup>
 
   <ItemGroup>

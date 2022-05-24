@@ -1,13 +1,14 @@
-﻿module Trulla.Parsing
+﻿module Trulla.Internal.Parsing
 
 open FParsec
 
 type Position = { index: int64; line: int64; column: int64 }
 type Range = { start: Position; finish: Position }
-type PVal<'a> = { value: 'a; range: Range }
+type PVal<'a> = { range: Range; value: 'a }
+type TrullaError = { ranges: Range list; message: string }
+exception TrullaException of TrullaError
 
-type ParseResult = ParserToken list
-and ParserToken =
+type ParserToken =
     | Text of string
     | Hole of PVal<Exp>
     | For of ident: PVal<string> * exp: PVal<Exp>
@@ -31,34 +32,37 @@ module Keywords =
     let else' = "else"
     let end' = "end"
 
+module PVal =
+    let create range value = { PVal.value = value; range = range }
+
 module Position =
     let none = { index = -1L; line = -1L; column = -1L }
-    let right offset pos = { pos with index = pos.index + offset; column = pos.column + offset }
+    let zero = { index = 0L; line = 0L; column = 0L }
+    let ofFParsec offset (p: FParsec.Position) =
+        { index = p.Index - offset; line = p.Line; column = p.Column - offset }
+    let toRange (pos: Position) = { start = pos; finish = pos }
 
 module Exp =
-    let createFromSegments =
-        function
+    let createFromSegments (segments: PVal<string> list) =
+        match segments with
         | x::xs ->
             ({ range = x.range; value = IdentExp x }, xs)
             ||> List.fold (fun state x ->
                 let accExp = AccessExp {| instanceExp = state; memberName = x.value |}
                 { range = x.range; value = accExp }
             )
-        | [] -> failwith "Should never happen: information loss in sepBy1 parser"
+        | [] -> failwith "Should never happen: Information loss in sepBy1 parser."
 
 [<AutoOpen>]
 module ParserHelper =
     /// Wrap a token parser to include the position.
     let withPos parser =
-        let posFromFParsec offset (p: FParsec.Position) =
-            { index = p.Index - offset; line = p.Line; column = p.Column - offset }
         let leftOf (p: FParsec.Position) =
-            let offset = if p.Column > 1L then 1L else 0L
-            p |> posFromFParsec offset
+            p |> Position.ofFParsec (if p.Column > 1L then 1L else 0L)
         pipe3 getPosition parser getPosition <| fun start value finish ->
             { value = value
               range = {
-                  start = posFromFParsec 0L start
+                  start = Position.ofFParsec 0L start
                   finish = leftOf finish 
               }
             }
@@ -84,18 +88,23 @@ let tmplExp =
         |>> fun segments -> Exp.createFromSegments segments
 
     let body =
-        let forExp =
-            pstring Keywords.for' >>. blanks1 >>. withPos ident .>> blanks1 .>> pstring Keywords.in' .>> blanks1 .>>. propAccess
-            |>> For
+        let forExp = 
+            withPos (
+                pstring Keywords.for' >>. blanks1 >>. withPos ident .>> blanks1 .>> 
+                pstring Keywords.in' .>> blanks1 .>>. propAccess
+            )
+            |>> fun x -> PVal.create x.range (For x.value)
         let ifExp = 
-            pstring Keywords.if' >>. blanks1 >>. propAccess
-            |>> If
+            withPos (pstring Keywords.if' >>. blanks1 >>. propAccess)
+            |>> fun x -> PVal.create x.range (If x.value)
         //let elseIfExp = pstring Keywords.elseIf' >>. blanks1 >>. propAccess |>> ElseIf
         //let elseExp = pstring Keywords.else' |>> fun _ -> Else
         let endExp = 
-            pstring Keywords.end' 
-            |>> (fun _ -> End)
-        let holeExp = propAccess |>> Hole
+            withPos (pstring Keywords.end')
+            |>> fun x -> PVal.create x.range (End)
+        let holeExp = 
+            withPos propAccess
+            |>> fun x -> PVal.create x.range (Hole x.value)
         choice [
             forExp
             ifExp
@@ -105,10 +114,10 @@ let tmplExp =
             holeExp
             ]
     beginExp .>> blanks >>. body .>> blanks .>> endExp
-let expOrText = 
+let expOrText =
     choice [
         tmplExp
-        chars1Until beginExp |>> Text
-        many1Chars anyChar |>> Text
+        withPos (chars1Until beginExp) |>> fun x -> PVal.create x.range (Text x.value)
+        withPos (many1Chars anyChar) |>> fun x -> PVal.create x.range (Text x.value)
         ]
-let template = many expOrText .>> eof
+let ptemplate = many expOrText .>> eof
