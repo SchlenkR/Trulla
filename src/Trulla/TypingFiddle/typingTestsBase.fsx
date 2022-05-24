@@ -6,8 +6,8 @@ fsi.PrintLength <- 150
 
 #load "../parsing.fs"
 #load "../typing.fs"
-open Trulla.Parsing
-open Trulla.Typing
+open Trulla.Internal.Parsing
+open Trulla.Internal.Typing
 
 
 let range number =
@@ -26,16 +26,16 @@ type Gen() =
     let mutable x = -1
     let newNum() = x <- x + 1; x
     let toAcc (path: string) = accessExp [ for x in path.Split [|'.'|] do pval (newNum()) x ]
-    member this.For ident path = ParserToken.For (pval (newNum()) ident, toAcc path)
-    member this.If path = ParserToken.If (toAcc path)
-    member this.Hole path = ParserToken.Hole (toAcc path)
-    member this.End = End
+    member this.For ident path = ParserToken.For (pval (newNum()) ident, toAcc path) |> pval (newNum())
+    member this.If path = ParserToken.If (toAcc path) |> pval (newNum())
+    member this.Hole path = ParserToken.Hole (toAcc path) |> pval (newNum())
+    member this.End = End |> pval (newNum())
 let constr x =
     let gen = Gen()
     x gen
     |> buildTree
-    |> collectConstraints
-
+    |> Result.map collectConstraints
+    
 
 
 let indentWith i = String.replicate (i * 4) " "

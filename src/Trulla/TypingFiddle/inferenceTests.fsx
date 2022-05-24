@@ -1,8 +1,21 @@
 ﻿
 #load "typingTestsBase.fsx"
 
-open Trulla.Typing
+open Trulla.Internal.Typing
 open TypingTestsBase
+
+
+// failure
+constr <| fun gen ->
+    [
+        gen.Hole "name"
+        gen.If "customer.isActive"
+        gen.Hole "customer"
+        gen.End
+    ]
+|> Result.bind solveProblems
+|> Result.map buildRecords
+
 
 
 
@@ -12,20 +25,9 @@ constr <| fun gen ->
         gen.Hole "customer.address.street"
         gen.End
     ]
-|> solveProblems
-|> buildRecords
+|> Result.bind solveProblems
+|> Result.map buildRecords
 
-
-
-// failure
-constr <| fun gen ->
-    [
-        gen.If "customer.isActive"
-        gen.Hole "customer"
-        gen.End
-    ]
-|> solveProblems
-|> buildRecords
 
 
 
@@ -35,8 +37,8 @@ constr <| fun gen ->
         gen.For "order" "orders"
         gen.End
     ]
-|> solveProblems
-|> buildRecords
+|> Result.bind solveProblems
+|> Result.map buildRecords
 
 
 
@@ -44,8 +46,8 @@ constr <| fun gen ->
     [
         gen.Hole "name"
     ]
-|> solveProblems
-|> buildRecords
+|> Result.bind solveProblems
+|> Result.map buildRecords
 
 
 
@@ -59,8 +61,8 @@ constr <| fun gen ->
         gen.End
         gen.End
     ]
-|> solveProblems
-|> buildRecords
+|> Result.bind solveProblems
+|> Result.map buildRecords
 
 
 
@@ -74,8 +76,8 @@ constr <| fun gen ->
         gen.End
         gen.End
     ]
-|> solveProblems
-|> buildRecords
+|> Result.bind solveProblems
+|> Result.map buildRecords
 
 
 
@@ -88,7 +90,8 @@ constr <| fun gen ->
         gen.Hole "k.lastName"
         gen.End
     ]
-|> solveProblems
+|> Result.bind solveProblems
+|> Result.map buildRecords
 
 
 
@@ -109,4 +112,5 @@ constr <| fun gen ->
         gen.End
         gen.End
     ]
-|> solveProblems
+|> Result.bind solveProblems
+|> Result.map buildRecords
