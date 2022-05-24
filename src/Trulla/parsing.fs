@@ -16,8 +16,8 @@ and ParserToken =
     //| Else
     | End
 and Exp =
-    | AccessExp of {| instanceExp: Exp; memberName: string |}
-    | IdentExp of string
+    | AccessExp of {| instanceExp: PVal<Exp>; memberName: string |}
+    | IdentExp of PVal<string>
 
 module Consts =
     let beginExp = "{{"
@@ -39,15 +39,12 @@ module Exp =
     let createFromSegments =
         function
         | x::xs ->
-            (IdentExp x, xs)
-            ||> List.fold (fun state x -> AccessExp {| instanceExp = state; memberName = x |})
+            ({ range = x.range; value = IdentExp x }, xs)
+            ||> List.fold (fun state x ->
+                let accExp = AccessExp {| instanceExp = state; memberName = x.value |}
+                { range = x.range; value = accExp }
+            )
         | [] -> failwith "Should never happen: information loss in sepBy1 parser"
-
-////module Range =
-////    let slice offsetL length (range: Range) =
-////        { range with 
-////            start = Position.right offsetL range.start
-////            finish = Position.right (offsetL + length - 1L) range.start }
 
 [<AutoOpen>]
 module ParserHelper =
@@ -83,31 +80,29 @@ let tmplExp =
     let endExp = pstring Consts.endExp
     let ident = many1Chars2 letter (letter <|> digit)
     let propAccess =
-        withPos (sepBy1 ident (pchar '.'))
-        |>> fun segments -> Exp.createFromSegments segments.value
+        sepBy1 (withPos  ident) (pchar '.')
+        |>> fun segments -> Exp.createFromSegments segments
 
     let body =
         let forExp =
-            pstring Keywords.for' >>. blanks1 >>. withPos ident .>> blanks1 .>> pstring Keywords.in' .>> blanks1 .>>. withPos propAccess
+            pstring Keywords.for' >>. blanks1 >>. withPos ident .>> blanks1 .>> pstring Keywords.in' .>> blanks1 .>>. propAccess
             |>> For
         let ifExp = 
-            pstring Keywords.if' >>. blanks1 >>. withPos propAccess
+            pstring Keywords.if' >>. blanks1 >>. propAccess
             |>> If
         //let elseIfExp = pstring Keywords.elseIf' >>. blanks1 >>. propAccess |>> ElseIf
         //let elseExp = pstring Keywords.else' |>> fun _ -> Else
         let endExp = 
             pstring Keywords.end' 
             |>> (fun _ -> End)
-        let fillExp = 
-            withPos propAccess
-            |>> Hole
-        choice [ 
+        let holeExp = propAccess |>> Hole
+        choice [
             forExp
             ifExp
             ////elseIfExp
             ////elseExp
             endExp
-            fillExp
+            holeExp
             ]
     beginExp .>> blanks >>. body .>> blanks .>> endExp
 let expOrText = 

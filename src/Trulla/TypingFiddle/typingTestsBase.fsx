@@ -13,30 +13,25 @@ open Trulla.Typing
 let range number =
     let pos number = { index = number; line = 0; column = 0 }
     { start = pos number; finish = pos number }
-let pval number t =
-    { value = t; range = range number }
-let accessExp number segments =
-    pval number (Exp.createFromSegments segments)
+let pval number t = { value = t; range = range number }
+let accessExp segments = Exp.createFromSegments segments
 let leaf tokenValue = LeafNode tokenValue
-let node tokenValue children =
-    InternalNode (tokenValue, children)
+let node tokenValue children = InternalNode (tokenValue, children)
 let shouldEqual expected actual =
     if expected <> actual 
         then failwith $"Not equal.\nExpected = {expected}\nActual = {actual}"
         else ()
-let newGen() =
+
+type Gen() =
     let mutable x = -1
     let newNum() = x <- x + 1; x
-    let toAcc (path: string) =
-        let segments = path.Split [|'.'|] |> Array.toList
-        accessExp (newNum()) segments
-    let for' ident path = ParserToken.For (pval (newNum()) ident, toAcc path)
-    let if' path = ParserToken.If (toAcc path)
-    let hole path = ParserToken.Hole (toAcc path)
-    let end' = End
-    {| for' = for'; if' = if'; hole = hole; end' = end' |}
+    let toAcc (path: string) = accessExp [ for x in path.Split [|'.'|] do pval (newNum()) x ]
+    member this.For ident path = ParserToken.For (pval (newNum()) ident, toAcc path)
+    member this.If path = ParserToken.If (toAcc path)
+    member this.Hole path = ParserToken.Hole (toAcc path)
+    member this.End = End
 let constr x =
-    let gen = newGen()
+    let gen = Gen()
     x gen
     |> buildTree
     |> collectConstraints

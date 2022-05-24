@@ -76,33 +76,39 @@ module KnownTypes =
     let bool = "bool"
     let sequence elemTypId = "sequence", elemTypId
 
+type TVarGen() =
+    let mutable x = -1
+    let mutable rangeToTVar = Map.empty
+    member this.RangeToTVar = rangeToTVar
+    member this.Next forRange =
+        x <- x + 1
+        let tvar = TVar x
+        rangeToTVar <- rangeToTVar |> Map.add forRange tvar
+        tvar
+
 // TODO: Prevent shadowing
 let collectConstraints (trees: Tree list) =
-    let newTVar =
-        let mutable x = -1
-        fun () ->
-            x <- x + 1
-            TVar x
+    let tvargen = TVarGen()
     
-    let rec constrainExp (bindingContext: BindingContext) exp =
-        match exp with
-        | AccessExp exp ->
-            let tvarInstance,instanceProblems = constrainExp bindingContext exp.instanceExp
-            let tvarExp = newTVar()
+    let rec constrainExp (bindingContext: BindingContext) (exp: PVal<Exp>) =
+        match exp.value with
+        | AccessExp accExp ->
+            let tvarInstance,instanceProblems = constrainExp bindingContext accExp.instanceExp
+            let tvarExp = tvargen.Next(exp.range)
             let problems = [
                 yield! instanceProblems
-                yield Problem (tvarInstance, Field (exp.memberName, Var tvarExp))
+                yield Problem (tvarInstance, Field (accExp.memberName, Var tvarExp))
             ]
             tvarExp,problems
         | IdentExp ident ->
-            let tvarIdent = bindingContext |> Map.tryFind ident
+            let tvarIdent = bindingContext |> Map.tryFind ident.value
             match tvarIdent with
             | Some tvarIdent ->
                 tvarIdent,[]
             | None ->
-                let tvarIdent = newTVar()
+                let tvarIdent = tvargen.Next(ident.range)
                 let problems = [
-                    yield Problem (Root, Field (ident, Var tvarIdent))
+                    yield Problem (Root, Field (ident.value, Var tvarIdent))
                 ]
                 tvarIdent,problems
     
@@ -112,19 +118,19 @@ let collectConstraints (trees: Tree list) =
             | LeafNode (Text _) ->
                 ()
             | LeafNode (Hole hole) ->
-                let tvarHole,holeProblems = constrainExp bindingContext hole.value
+                let tvarHole,holeProblems = constrainExp bindingContext hole
                 yield! holeProblems
                 yield Problem (tvarHole, Mono KnownTypes.string)
             | InternalNode (For (ident,source), children) ->
-                let tvarIdent = newTVar()
+                let tvarIdent = tvargen.Next(ident.range)
                 let bindingContext = bindingContext |> Map.add ident.value tvarIdent
-                let tvarSource,sourceProblems = constrainExp bindingContext source.value
+                let tvarSource,sourceProblems = constrainExp bindingContext source
                 yield! sourceProblems
                 yield Problem (tvarSource, Poly (KnownTypes.sequence (Var tvarIdent)))
                 // --->
                 yield! buildConstraints children bindingContext
             | InternalNode (If cond, children) ->
-                let tvarCond,condProblems = constrainExp bindingContext cond.value
+                let tvarCond,condProblems = constrainExp bindingContext cond
                 yield! condProblems
                 yield Problem (tvarCond, Mono KnownTypes.bool)
                 // --->

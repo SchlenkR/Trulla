@@ -8,9 +8,9 @@ open TypingTestsBase
 
 constr <| fun gen ->
     [
-        gen.if' "customer.isActive"
-        gen.hole "customer.address.street"
-        gen.end'
+        gen.If "customer.isActive"
+        gen.Hole "customer.address.street"
+        gen.End
     ]
 |> solveProblems
 |> buildRecords
@@ -20,19 +20,73 @@ constr <| fun gen ->
 // failure
 constr <| fun gen ->
     [
-        gen.if' "customer.isActive"
-        gen.hole "customer"
-        gen.end'
+        gen.If "customer.isActive"
+        gen.Hole "customer"
+        gen.End
     ]
 |> solveProblems
+|> buildRecords
 
 
 
 
 constr <| fun gen ->
     [
-        gen.for' "order" "orders"
-        gen.end'
+        gen.For "order" "orders"
+        gen.End
+    ]
+|> solveProblems
+|> buildRecords
+
+
+
+constr <| fun gen ->
+    [
+        gen.Hole "name"
+    ]
+|> solveProblems
+|> buildRecords
+
+
+
+constr <| fun gen ->
+    [
+        gen.For "a" "rootColl"
+        gen.For "b" "a"
+        gen.For "c" "b"
+        gen.Hole "c"
+        gen.End
+        gen.End
+        gen.End
+    ]
+|> solveProblems
+|> buildRecords
+
+
+
+constr <| fun gen ->
+    [
+        gen.For "a" "rootColl"
+        gen.For "b" "a"
+        gen.For "c" "b"
+        gen.Hole "c.name"
+        gen.End
+        gen.End
+        gen.End
+    ]
+|> solveProblems
+|> buildRecords
+
+
+
+constr <| fun gen ->
+    [
+        gen.For "a" "rootColl"
+        gen.Hole "a.firstName"
+        gen.End
+        gen.For "k" "rootColl"
+        gen.Hole "k.lastName"
+        gen.End
     ]
 |> solveProblems
 
@@ -40,68 +94,19 @@ constr <| fun gen ->
 
 constr <| fun gen ->
     [
-        gen.hole "name"
-    ]
-|> solveProblems
-
-
-
-constr <| fun gen ->
-    [
-        gen.for' "a" "rootColl"
-        gen.for' "b" "a"
-        gen.for' "c" "b"
-        gen.hole "c"
-        gen.end'
-        gen.end'
-        gen.end'
-    ]
-|> solveProblems
-
-
-
-constr <| fun gen ->
-    [
-        gen.for' "a" "rootColl"
-        gen.for' "b" "a"
-        gen.for' "c" "b"
-        gen.hole "c.name"
-        gen.end'
-        gen.end'
-        gen.end'
-    ]
-|> solveProblems
-
-
-
-constr <| fun gen ->
-    [
-        gen.for' "a" "rootColl"
-        gen.hole "a.firstName"
-        gen.end'
-        gen.for' "k" "rootColl"
-        gen.hole "k.lastName"
-        gen.end'
-    ]
-|> solveProblems
-
-
-
-constr <| fun gen ->
-    [
-        gen.for' "a" "rootColl"
-        gen.for' "b" "a"
-        gen.for' "c" "b"
-        gen.hole "c.firstName"
-        gen.end'
-        gen.end'
-        gen.end'
-        gen.for' "k" "rootColl"
-        gen.for' "l" "k"
-        gen.for' "m" "l"
-        gen.hole "m.lastName"
-        gen.end'
-        gen.end'
-        gen.end'
+        gen.For "a" "rootColl"
+        gen.For "b" "a"
+        gen.For "c" "b"
+        gen.Hole "c.firstName"
+        gen.End
+        gen.End
+        gen.End
+        gen.For "k" "rootColl"
+        gen.For "l" "k"
+        gen.For "m" "l"
+        gen.Hole "m.lastName"
+        gen.End
+        gen.End
+        gen.End
     ]
 |> solveProblems
