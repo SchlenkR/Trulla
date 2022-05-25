@@ -13,15 +13,15 @@ exception TrullaException of TrullaError
 
 type ParserToken =
     | Text of string
-    | Hole of PVal<Exp>
-    | For of ident: PVal<string> * exp: PVal<Exp>
-    | If of PVal<Exp>
+    | Hole of PVal<MemberToken>
+    | For of ident: PVal<string> * exp: PVal<MemberToken>
+    | If of PVal<MemberToken>
     //| ElseIf of Access
     //| Else
     | End
-and Exp =
-    | AccessExp of {| instanceExp: PVal<Exp>; memberName: string |}
-    | IdentExp of string
+and MemberToken =
+    | AccessToken of {| instanceExp: PVal<MemberToken>; memberName: string |}
+    | IdentToken of string
 
 module Consts =
     let beginExp = "{{"
@@ -45,13 +45,13 @@ module Position =
         { index = p.Index - offset; line = p.Line; column = p.Column - offset }
     let toRange (pos: Position) = { start = pos; finish = pos }
 
-module Exp =
+module MemberToken =
     let createFromSegments (segments: PVal<string> list) =
         match segments with
         | x::xs ->
-            ({ range = x.range; value = IdentExp x.value }, xs)
+            ({ range = x.range; value = IdentToken x.value }, xs)
             ||> List.fold (fun state x ->
-                let accExp = AccessExp {| instanceExp = state; memberName = x.value |}
+                let accExp = AccessToken {| instanceExp = state; memberName = x.value |}
                 { range = x.range; value = accExp }
             )
         | [] -> failwith "Should never happen: Information loss in sepBy1 parser."
@@ -88,7 +88,7 @@ let tmplExp =
     let ident = many1Chars2 letter (letter <|> digit)
     let propAccess =
         sepBy1 (withPos  ident) (pchar '.')
-        |>> fun segments -> Exp.createFromSegments segments
+        |>> fun segments -> MemberToken.createFromSegments segments
 
     let body =
         let forExp = 

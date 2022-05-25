@@ -37,13 +37,13 @@ module TVal =
         ofPVal TVar.zero Map.empty pval
 
 module Exp =
-    let rec ofPExpZero (pexp: PVal<Parsing.Exp>) : TVal<MemberExp> =
+    let rec ofPExpZero (pexp: PVal<Parsing.MemberToken>) : TVal<MemberExp> =
         let tval value = TVal.createZero pexp.range value
         match pexp.value with
-        | Parsing.Exp.AccessExp accExp ->
+        | Parsing.MemberToken.AccessToken accExp ->
             let accExp = {| instanceExp = ofPExpZero accExp.instanceExp; memberName = accExp.memberName  |}
             tval  (AccessExp accExp)
-        | Parsing.Exp.IdentExp identExp ->
+        | Parsing.MemberToken.IdentToken identExp ->
             tval (IdentExp identExp)
 
 // TODO: meaningful error messages + location
