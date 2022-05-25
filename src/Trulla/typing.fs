@@ -7,9 +7,12 @@ type TVar =
     | TVar of int
     | Root
 
-type XVal<'a> =
+type BindingContext = Map<string, TVar>
+
+type TVal<'a> =
     { range: Range
       tvar: TVar
+      bindingContext: BindingContext
       value: 'a }
       override this.ToString() = $"({this.range}){this.value}"
 
@@ -18,32 +21,36 @@ type Tree =
     | InternalNode of root: ScopeToken * children: Tree list
 and LeafToken =
     | Text of string
-    | Hole of XVal<Exp>
+    | Hole of TVal<Exp>
 and ScopeToken =
-    | For of ident: XVal<string> * exp: XVal<Exp>
-    | If of XVal<Exp>
+    | For of ident: TVal<string> * exp: TVal<Exp>
+    | If of TVal<Exp>
 and Exp =
-    | AccessExp of {| instanceExp: XVal<Exp>; memberName: string |}
+    | AccessExp of {| instanceExp: TVal<Exp>; memberName: string |}
     | IdentExp of string
 
 module TVar =
     let zero = TVar 0
 
-module XVal =
-    let create range tvar value = { range = range; tvar = tvar; value = value }
-    let createZero range value = { range = range; tvar = TVar.zero; value = value }
-    let ofPVal tvar (pval: PVal<'a>) = { range = pval.range; tvar = tvar; value = pval.value }
-    let ofPValZero (pval: PVal<'a>) = { range = pval.range; tvar = TVar.zero; value = pval.value }
+module TVal =
+    let create range tvar bindingContext value =
+        { range = range; tvar = tvar; bindingContext = bindingContext; value = value }
+    let createZero range value = 
+        create range TVar.zero Map.empty value
+    let ofPVal tvar bindingContext (pval: PVal<'a>) = 
+        create pval.range tvar bindingContext pval.value
+    let ofPValZero (pval: PVal<'a>) =
+        ofPVal TVar.zero Map.empty pval
 
 module Exp =
-    let rec ofPExpZero (pexp: PVal<Parsing.Exp>) : XVal<Exp> =
-        let xval value = { range = pexp.range; tvar = TVar.zero; value = value }
+    let rec ofPExpZero (pexp: PVal<Parsing.Exp>) : TVal<Exp> =
+        let tval value = TVal.createZero pexp.range value
         match pexp.value with
         | Parsing.Exp.AccessExp accExp ->
             let accExp = {| instanceExp = ofPExpZero accExp.instanceExp; memberName = accExp.memberName  |}
-            xval  (AccessExp accExp)
+            tval  (AccessExp accExp)
         | Parsing.Exp.IdentExp identExp ->
-            xval (IdentExp identExp)
+            tval (IdentExp identExp)
 
 // TODO: meaningful error messages + location
 // TODO: Don't throw; return TemplateError results
@@ -66,7 +73,7 @@ let buildTree (tokens: PVal<ParserToken> list) =
                 match token.value with
                 | ParserToken.Text x -> yield LeafNode (Text x)
                 | ParserToken.Hole x -> yield LeafNode (Hole (Exp.ofPExpZero x))
-                | ParserToken.For (ident, acc) -> yield descentWithNewScope (For (XVal.ofPValZero ident, Exp.ofPExpZero acc))
+                | ParserToken.For (ident, acc) -> yield descentWithNewScope (For (TVal.ofPValZero ident, Exp.ofPExpZero acc))
                 | ParserToken.If acc -> yield descentWithNewScope (If (Exp.ofPExpZero acc))
                 | ParserToken.End ->
                     match scopeStack with
@@ -109,10 +116,8 @@ type Type =
         | RecRef tvar -> $"""(RecRef {match tvar with Root -> "ROOT" | TVar tvar -> $"{tvar}"})"""
 and Field = string * Type
 
-type BindingContext = Map<string, TVar>
-
-// TODO: Problem is just a XVal?
-type Problem = Problem of TVar * XVal<Type>
+// TODO: Problem should be TVar * Type; later, resolve the ranges
+type Problem = Problem of TVar * TVal<Type>
 
 module KnownTypes =
     // TODO: reserve these keywords + parser tests
@@ -131,14 +136,14 @@ type TVarGen() =
 let collectConstraints (trees: Tree list) =
     let tvargen = TVarGen()
     
-    let rec constrainExp (bindingContext: BindingContext) (exp: XVal<Exp>) =
+    let rec constrainExp (bindingContext: BindingContext) (exp: TVal<Exp>) =
         match exp.value with
         | AccessExp accExp ->
             let tvarInstance,instanceProblems = constrainExp bindingContext accExp.instanceExp
             let tvarExp = tvargen.Next(exp.range)
             let problems = [
                 yield! instanceProblems
-                yield Problem (tvarInstance, XVal.create exp.range tvarExp (RecDef [accExp.memberName, Var tvarExp]))
+                yield Problem (tvarInstance, TVal.create exp.range tvarExp bindingContext (RecDef [accExp.memberName, Var tvarExp]))
             ]
             tvarExp,problems
         | IdentExp ident ->
@@ -149,7 +154,7 @@ let collectConstraints (trees: Tree list) =
             | None ->
                 let tvarIdent = tvargen.Next(exp.range)
                 let problems = [
-                    yield Problem (Root, XVal.create exp.range tvarIdent (RecDef [ident, Var tvarIdent]))
+                    yield Problem (Root, TVal.create exp.range tvarIdent bindingContext (RecDef [ident, Var tvarIdent]))
                 ]
                 tvarIdent,problems
     
@@ -161,19 +166,19 @@ let collectConstraints (trees: Tree list) =
             | LeafNode (Hole hole) ->
                 let tvarHole,holeProblems = constrainExp bindingContext hole
                 yield! holeProblems
-                yield Problem (tvarHole, XVal.create hole.range tvarHole (Mono KnownTypes.string))
+                yield Problem (tvarHole, TVal.create hole.range tvarHole bindingContext (Mono KnownTypes.string))
             | InternalNode (For (ident,source), children) ->
                 let tvarIdent = tvargen.Next(ident.range)
-                let bindingContext = bindingContext |> Map.add ident.value tvarIdent
-                let tvarSource,sourceProblems = constrainExp bindingContext source
+                let innerBindingContext = bindingContext |> Map.add ident.value tvarIdent
+                let tvarSource,sourceProblems = constrainExp innerBindingContext source
                 yield! sourceProblems
-                yield Problem (tvarSource, XVal.create source.range tvarIdent (Poly (KnownTypes.sequenceOf (Var tvarIdent))))
+                yield Problem (tvarSource, TVal.create source.range tvarIdent bindingContext (Poly (KnownTypes.sequenceOf (Var tvarIdent))))
                 // --->
-                yield! constrainTrees bindingContext children
+                yield! constrainTrees innerBindingContext children
             | InternalNode (If cond, children) ->
                 let tvarCond,condProblems = constrainExp bindingContext cond
                 yield! condProblems
-                yield Problem (tvarCond, XVal.create cond.range tvarCond (Mono KnownTypes.bool))
+                yield Problem (tvarCond, TVal.create cond.range tvarCond bindingContext (Mono KnownTypes.bool))
                 // --->
                 yield! constrainTrees bindingContext children
         ]
@@ -226,7 +231,7 @@ let rec unify originalTvar t1 t2 =
             let fields = unifiedFieldsAndProblems |> List.map fst
             printfn $"EMIT: {fields}"
             let problems = unifiedFieldsAndProblems |> List.collect snd
-            let record = Problem (originalTvar, XVal.create t1.range originalTvar (RecDef fields))
+            let record = Problem (originalTvar, TVal.create t1.range t1.tvar t1.bindingContext (RecDef fields))
             yield! record :: problems
         | _ ->
             { ranges = [t1.range; t2.range]
