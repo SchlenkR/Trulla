@@ -33,7 +33,7 @@ type Gen() =
     member this.End = End |> pval (newNum())
 let constr x =
     let gen = Gen()
-    x gen |> buildTree |> Result.map (collectConstraints >> fst)
+    x gen |> buildTree |> Result.map collectConstraints
     
 
 

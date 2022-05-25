@@ -21,7 +21,7 @@ type ParserToken =
     | End
 and Exp =
     | AccessExp of {| instanceExp: PVal<Exp>; memberName: string |}
-    | IdentExp of PVal<string>
+    | IdentExp of string
 
 module Consts =
     let beginExp = "{{"
@@ -49,7 +49,7 @@ module Exp =
     let createFromSegments (segments: PVal<string> list) =
         match segments with
         | x::xs ->
-            ({ range = x.range; value = IdentExp x }, xs)
+            ({ range = x.range; value = IdentExp x.value }, xs)
             ||> List.fold (fun state x ->
                 let accExp = AccessExp {| instanceExp = state; memberName = x.value |}
                 { range = x.range; value = accExp }
