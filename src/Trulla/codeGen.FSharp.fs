@@ -16,7 +16,7 @@ let rec toTypeName typ =
     | RecRef tvar -> makeTypeName tvar
     | _ -> failwith $"Unsupported reference for type '{typ}'."
 
-let rec expToIdent (exp: Exp) ranges2tvar =
+let rec expToIdent (exp: MemberExp) ranges2tvar =
     match exp with
     | IdentExp ident ->
         let isRoot

@@ -16,8 +16,6 @@ let range number =
     { start = pos number; finish = pos number }
 let pval number t = { value = t; range = range number }
 let accessExp segments = Exp.createFromSegments segments
-let leaf tokenValue = LeafNode tokenValue
-let node tokenValue children = InternalNode (tokenValue, children)
 let shouldEqual expected actual =
     if expected <> actual 
         then failwith $"Not equal.\nExpected = {expected}\nActual = {actual}"

@@ -3,9 +3,7 @@
 open Helper
 open Parsing
 
-type TVar =
-    | TVar of int
-    | Root
+type TVar = TVar of int | Root
 
 type BindingContext = Map<string, TVar>
 
@@ -14,19 +12,15 @@ type TVal<'a> =
       tvar: TVar
       bindingContext: BindingContext
       value: 'a }
-      override this.ToString() = $"({this.range}){this.value}"
+        override this.ToString() = $"({this.range}){this.value}"
 
-type Tree =
-    | LeafNode of LeafToken
-    | InternalNode of root: ScopeToken * children: Tree list
-and LeafToken =
+type TExp =
     | Text of string
-    | Hole of TVal<Exp>
-and ScopeToken =
-    | For of ident: TVal<string> * exp: TVal<Exp>
-    | If of TVal<Exp>
-and Exp =
-    | AccessExp of {| instanceExp: TVal<Exp>; memberName: string |}
+    | Hole of TVal<MemberExp>
+    | For of ident: TVal<string> * exp: TVal<MemberExp> * body: TExp list
+    | If of cond: TVal<MemberExp> * body: TExp list
+and MemberExp =
+    | AccessExp of {| instanceExp: TVal<MemberExp>; memberName: string |}
     | IdentExp of string
 
 module TVar =
@@ -43,7 +37,7 @@ module TVal =
         ofPVal TVar.zero Map.empty pval
 
 module Exp =
-    let rec ofPExpZero (pexp: PVal<Parsing.Exp>) : TVal<Exp> =
+    let rec ofPExpZero (pexp: PVal<Parsing.Exp>) : TVal<MemberExp> =
         let tval value = TVal.createZero pexp.range value
         match pexp.value with
         | Parsing.Exp.AccessExp accExp ->
@@ -54,40 +48,42 @@ module Exp =
 
 // TODO: meaningful error messages + location
 // TODO: Don't throw; return TemplateError results
-let buildTree (tokens: PVal<ParserToken> list) =
-    let rec toTree (pointer: int) scopeStack =
+let buildTree (tokens: PVal<ParserToken> list) : Result<TExp list, TrullaError list> =
+    let rec toTree (pointer: int) scopeDepth =
         let mutable pointer = pointer
-        let mutable scopeStack = scopeStack
-        let nodes = 
+        let mutable scopeDepth = scopeDepth
+        let tree = 
             let mutable endTokenDetected = false
             [ while not endTokenDetected && pointer < tokens.Length do
                 let token = tokens[pointer]
                 pointer <- pointer + 1
-                let descentWithNewScope scopeToken =
-                    scopeStack <- scopeToken :: scopeStack
-                    let newPointer,children,newScopeStack = toTree pointer scopeStack
-                    let res = InternalNode (scopeToken, children)
-                    scopeStack <- newScopeStack
+                let descentWithNewScope makeScopeToken =
+                    scopeDepth <- scopeDepth + 1
+                    let newPointer,children,newScopeDepth = toTree pointer scopeDepth
+                    let exp = makeScopeToken children
+                    scopeDepth <- newScopeDepth
                     pointer <- newPointer
-                    res
+                    exp
                 match token.value with
-                | ParserToken.Text x -> yield LeafNode (Text x)
-                | ParserToken.Hole x -> yield LeafNode (Hole (Exp.ofPExpZero x))
-                | ParserToken.For (ident, acc) -> yield descentWithNewScope (For (TVal.ofPValZero ident, Exp.ofPExpZero acc))
-                | ParserToken.If acc -> yield descentWithNewScope (If (Exp.ofPExpZero acc))
+                | ParserToken.Text x -> Text x
+                | ParserToken.Hole x -> Hole (Exp.ofPExpZero x)
+                | ParserToken.For (ident, acc) ->
+                    descentWithNewScope (fun children -> For (TVal.ofPValZero ident, Exp.ofPExpZero acc, children))
+                | ParserToken.If acc ->
+                    descentWithNewScope (fun children -> If (Exp.ofPExpZero acc, children))
                 | ParserToken.End ->
-                    match scopeStack with
-                    | [] ->
+                    match scopeDepth with
+                    | 0 ->
                         { ranges = [token.range]
                           message = "Closing a scope is not possible without having a scope open." }
                         |> TrullaException
                         |> raise
-                    | _ :: xs -> scopeStack <- xs
+                    | n -> scopeDepth <- n-1
             ]
-        pointer,nodes,scopeStack
+        pointer,tree,scopeDepth
     try 
-        let _,tree,scopeStack = toTree 0 []
-        if scopeStack.Length > 0 then
+        let _,tree,scopeDepth = toTree 0 0
+        if scopeDepth > 0 then
             // TODO: Position.zero is wrong
             { ranges = [Position.zero |> Position.toRange]
               message ="TODO: Unclosed scope detected." }
@@ -96,7 +92,7 @@ let buildTree (tokens: PVal<ParserToken> list) =
         else
             Ok tree
     with TrullaException err ->
-        Error [err]
+        Error [err] 
 
 type Type =
     | Mono of string
@@ -128,22 +124,20 @@ module KnownTypes =
 
 type TVarGen() =
     let mutable x = -1
-    member this.Next forRange =
-        x <- x + 1
-        TVar x
+    member this.Next() = x <- x + 1; TVar x
 
 // TODO: Prevent shadowing
-let collectConstraints (trees: Tree list) =
+let collectConstraints (tree: TExp list) =
     let tvargen = TVarGen()
     
-    let rec constrainExp (bindingContext: BindingContext) (exp: TVal<Exp>) =
-        match exp.value with
+    let rec constrainMemberExp (bindingContext: BindingContext) (membExp: TVal<MemberExp>) =
+        match membExp.value with
         | AccessExp accExp ->
-            let tvarInstance,instanceProblems = constrainExp bindingContext accExp.instanceExp
-            let tvarExp = tvargen.Next(exp.range)
+            let tvarInstance,instanceProblems = constrainMemberExp bindingContext accExp.instanceExp
+            let tvarExp = tvargen.Next()
             let problems = [
                 yield! instanceProblems
-                yield Problem (tvarInstance, TVal.create exp.range tvarExp bindingContext (RecDef [accExp.memberName, Var tvarExp]))
+                yield Problem (tvarInstance, TVal.create membExp.range tvarExp bindingContext (RecDef [accExp.memberName, Var tvarExp]))
             ]
             tvarExp,problems
         | IdentExp ident ->
@@ -152,37 +146,36 @@ let collectConstraints (trees: Tree list) =
             | Some tvarIdent ->
                 tvarIdent,[]
             | None ->
-                let tvarIdent = tvargen.Next(exp.range)
+                let tvarIdent = tvargen.Next()
                 let problems = [
-                    yield Problem (Root, TVal.create exp.range tvarIdent bindingContext (RecDef [ident, Var tvarIdent]))
+                    yield Problem (Root, TVal.create membExp.range tvarIdent bindingContext (RecDef [ident, Var tvarIdent]))
                 ]
                 tvarIdent,problems
     
-    let rec constrainTrees (bindingContext: BindingContext) (trees: Tree list) =
-        [ for tree in trees do
+    let rec constrainTree (bindingContext: BindingContext) (tree: TExp list) =
+        [ for tree in tree do
             match tree with
-            | LeafNode (Text _) ->
-                ()
-            | LeafNode (Hole hole) ->
-                let tvarHole,holeProblems = constrainExp bindingContext hole
+            | Text _ -> ()
+            | Hole hole ->
+                let tvarHole,holeProblems = constrainMemberExp bindingContext hole
                 yield! holeProblems
                 yield Problem (tvarHole, TVal.create hole.range tvarHole bindingContext (Mono KnownTypes.string))
-            | InternalNode (For (ident,source), children) ->
-                let tvarIdent = tvargen.Next(ident.range)
+            | For (ident,source,children) ->
+                let tvarIdent = tvargen.Next()
                 let innerBindingContext = bindingContext |> Map.add ident.value tvarIdent
-                let tvarSource,sourceProblems = constrainExp innerBindingContext source
+                let tvarSource,sourceProblems = constrainMemberExp innerBindingContext source
                 yield! sourceProblems
                 yield Problem (tvarSource, TVal.create source.range tvarIdent bindingContext (Poly (KnownTypes.sequenceOf (Var tvarIdent))))
                 // --->
-                yield! constrainTrees innerBindingContext children
-            | InternalNode (If cond, children) ->
-                let tvarCond,condProblems = constrainExp bindingContext cond
+                yield! constrainTree innerBindingContext children
+            | If (cond,children) ->
+                let tvarCond,condProblems = constrainMemberExp bindingContext cond
                 yield! condProblems
                 yield Problem (tvarCond, TVal.create cond.range tvarCond bindingContext (Mono KnownTypes.bool))
                 // --->
-                yield! constrainTrees bindingContext children
+                yield! constrainTree bindingContext children
         ]
-    constrainTrees Map.empty trees
+    constrainTree Map.empty tree
 
 let rec subst tvarToReplace withTyp inTyp =
     let withTyp = match withTyp with RecDef _ -> RecRef tvarToReplace | _ -> withTyp
