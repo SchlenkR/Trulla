@@ -15,7 +15,7 @@ let range number =
     let pos number = { index = number; line = 0; column = 0 }
     { start = pos number; finish = pos number }
 let pval number t = { value = t; range = range number }
-let accessExp segments = Exp.createFromSegments segments
+let accessExp segments = MemberToken.createFromSegments segments
 let shouldEqual expected actual =
     if expected <> actual 
         then failwith $"Not equal.\nExpected = {expected}\nActual = {actual}"
@@ -25,13 +25,13 @@ type Gen() =
     let mutable x = -1
     let newNum() = x <- x + 1; x
     let toAcc (path: string) = accessExp [ for x in path.Split [|'.'|] do pval (newNum()) x ]
-    member this.For ident path = ParserToken.For (pval (newNum()) ident, toAcc path) |> pval (newNum())
-    member this.If path = ParserToken.If (toAcc path) |> pval (newNum())
-    member this.Hole path = ParserToken.Hole (toAcc path) |> pval (newNum())
+    member this.For ident path = Token.For (pval (newNum()) ident, toAcc path) |> pval (newNum())
+    member this.If path = Token.If (toAcc path) |> pval (newNum())
+    member this.Hole path = Token.Hole (toAcc path) |> pval (newNum())
     member this.End = End |> pval (newNum())
 let constr x =
     let gen = Gen()
-    x gen |> buildTree |> Result.map collectConstraints
+    x gen |> buildTree |> Result.map buildProblems
     
 
 

@@ -11,7 +11,7 @@ type PVal<'a> = { range: Range; value: 'a } with
 type TrullaError = { ranges: Range list; message: string }
 exception TrullaException of TrullaError
 
-type ParserToken =
+type Token =
     | Text of string
     | Hole of PVal<MemberToken>
     | For of ident: PVal<string> * exp: PVal<MemberToken>
@@ -44,6 +44,9 @@ module Position =
     let ofFParsec offset (p: FParsec.Position) =
         { index = p.Index - offset; line = p.Line; column = p.Column - offset }
     let toRange (pos: Position) = { start = pos; finish = pos }
+
+module Range =
+    let zero = Position.toRange Position.zero
 
 module MemberToken =
     let createFromSegments (segments: PVal<string> list) =

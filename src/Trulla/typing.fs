@@ -40,15 +40,15 @@ module Exp =
     let rec ofPExpZero (pexp: PVal<Parsing.MemberToken>) : TVal<MemberExp> =
         let tval value = TVal.createZero pexp.range value
         match pexp.value with
-        | Parsing.MemberToken.AccessToken accExp ->
+        | AccessToken accExp ->
             let accExp = {| instanceExp = ofPExpZero accExp.instanceExp; memberName = accExp.memberName  |}
             tval  (AccessExp accExp)
-        | Parsing.MemberToken.IdentToken identExp ->
+        | IdentToken identExp ->
             tval (IdentExp identExp)
 
 // TODO: meaningful error messages + location
 // TODO: Don't throw; return TemplateError results
-let buildTree (tokens: PVal<ParserToken> list) : Result<TExp list, TrullaError list> =
+let buildTree (tokens: PVal<Token> list) : Result<TExp list, TrullaError list> =
     let rec toTree (pointer: int) scopeDepth =
         let mutable pointer = pointer
         let mutable scopeDepth = scopeDepth
@@ -65,13 +65,13 @@ let buildTree (tokens: PVal<ParserToken> list) : Result<TExp list, TrullaError l
                     pointer <- newPointer
                     exp
                 match token.value with
-                | ParserToken.Text x -> Text x
-                | ParserToken.Hole x -> Hole (Exp.ofPExpZero x)
-                | ParserToken.For (ident, acc) ->
+                | Token.Text x -> Text x
+                | Token.Hole x -> Hole (Exp.ofPExpZero x)
+                | Token.For (ident, acc) ->
                     descentWithNewScope (fun children -> For (TVal.ofPValZero ident, Exp.ofPExpZero acc, children))
-                | ParserToken.If acc ->
+                | Token.If acc ->
                     descentWithNewScope (fun children -> If (Exp.ofPExpZero acc, children))
-                | ParserToken.End ->
+                | Token.End ->
                     match scopeDepth with
                     | 0 ->
                         { ranges = [token.range]
@@ -84,9 +84,8 @@ let buildTree (tokens: PVal<ParserToken> list) : Result<TExp list, TrullaError l
     try 
         let _,tree,scopeDepth = toTree 0 0
         if scopeDepth > 0 then
-            // TODO: Position.zero is wrong
-            { ranges = [Position.zero |> Position.toRange]
-              message ="TODO: Unclosed scope detected." }
+            // TODO: Range.zero is wrong
+            { ranges = [Range.zero]; message ="TODO: Unclosed scope detected." }
             |> List.singleton
             |> Error
         else
@@ -127,7 +126,7 @@ type TVarGen() =
     member this.Next() = x <- x + 1; TVar x
 
 // TODO: Prevent shadowing
-let collectConstraints (tree: TExp list) =
+let buildProblems (tree: TExp list) =
     let tvargen = TVarGen()
     
     let rec constrainMemberExp (bindingContext: BindingContext) (membExp: TVal<MemberExp>) =
@@ -186,8 +185,9 @@ let rec subst tvarToReplace withTyp inTyp =
     | _ -> inTyp
 
 let rec unify originalTvar t1 t2 =
-    printfn $"Unifying: ({t1.value})  --  ({t2.value})"
     [
+        printfn $"Unifying: ({t1.value})  --  ({t2.value})"
+
         // TODO: Correct range mapping when constructing new problems
         match t1.value, t2.value with
         | t1,t2 when t1 = t2 -> ()
@@ -201,10 +201,10 @@ let rec unify originalTvar t1 t2 =
         | Poly (n1,pt1), Poly (n2,pt2) when n1 = n2 ->
             printfn "YIELD c ->"
             yield! unify originalTvar {t1 with value = pt1} {t2 with value = pt2}
-        | RecRef recref, (RecDef _ as r)
-        | (RecDef _ as r), RecRef recref ->
+        | RecRef tvarRec, (RecDef _ as r)
+        | (RecDef _ as r), RecRef tvarRec ->
             printfn "YIELD d"
-            yield Problem (recref, {t1 with value = r})
+            yield Problem (tvarRec, {t1 with value = r})
         | RecDef f1, RecDef f2 ->
             let unifiedFieldsAndProblems =
                 (f1 @ f2)
@@ -222,10 +222,12 @@ let rec unify originalTvar t1 t2 =
                     (fname,ftype),problems
                 )
             let fields = unifiedFieldsAndProblems |> List.map fst
-            printfn $"EMIT: {fields}"
-            let problems = unifiedFieldsAndProblems |> List.collect snd
-            let record = Problem (originalTvar, TVal.create t1.range t1.tvar t1.bindingContext (RecDef fields))
-            yield! record :: problems
+            let res = [
+                yield Problem (originalTvar, TVal.create t1.range t1.tvar t1.bindingContext (RecDef fields))
+                yield! unifiedFieldsAndProblems |> List.collect snd
+                ]
+            printfn $"Resulting RecordProblems: %A{res}"
+            yield! res
         | _ ->
             { ranges = [t1.range; t2.range]
               message = $"TODO: Can't unitfy types {t1.value} and {t2.value}" }
@@ -271,7 +273,7 @@ let solve tokens =
     result {
         let! tokens = tokens 
         let! tree = buildTree tokens
-        let problems = collectConstraints tree
+        let problems = buildProblems tree
         let! solution = solveProblems problems
         let records = buildRecords solution
         return tree,records
