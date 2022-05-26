@@ -13,7 +13,7 @@ let rec toTypeName typ =
     | Mono KnownTypes.string -> "string"
     | Mono KnownTypes.bool -> "bool"
     | Poly (KnownTypes.sequence, pt) -> $"list<{toTypeName pt}>"
-    | RecRef tvar -> makeTypeName tvar
+    | Record tvar -> makeTypeName tvar
     | _ -> failwith $"Unsupported reference for type '{typ}'."
 
 let rec expToIdent (exp: MemberExp) ranges2tvar =

@@ -62,9 +62,9 @@ fsi.AddPrinter <| fun (x: Type) ->
     match x with
     | Mono s -> s
     | Poly (n,tp) -> $"%O{n}<%O{tp}>"
-    | RecDef (fn,ft) -> $"""{fn}: %O{ft}"""
+    | Field (fn,ft) -> $"""{fn}: %O{ft}"""
     | Var tvar -> string tvar
-    | RecRef tvar -> $"""(RecRef {match tvar with Root -> "ROOT" | TVar tvar -> $"{tvar}"})"""
+    | Record tvar -> $"""(RecRef {match tvar with Root -> "ROOT" | TVar tvar -> $"{tvar}"})"""
 fsi.AddPrinter <| fun (x: Position) -> $"I{x.index}"
 fsi.AddPrinter <| fun (x: Range) -> $"{x.start}-{x.finish}"
 //fsi.AddPrinter <| fun (x: PVal) -> $"({this.range}){this.value}"
