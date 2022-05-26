@@ -106,14 +106,7 @@ type Type =
     | Poly of name: string * typParam: Type
     | RecDef of Field
     | RecRef of TVar
-    | Var of TVar // TODO: why VAR is in here?
-    override this.ToString() =
-        match this with
-        | Mono s -> s
-        | Poly (n,tp) -> $"%O{n}<%O{tp}>"
-        | RecDef (fn,ft) -> $"""{fn}: %O{ft}"""
-        | Var tvar -> string tvar
-        | RecRef tvar -> $"""(RecRef {match tvar with Root -> "ROOT" | TVar tvar -> $"{tvar}"})"""
+    | Var of TVar
 and Field = string * Type
 
 // TODO: Problem should be TVar * Type; later, resolve the ranges
@@ -169,14 +162,20 @@ let buildProblems (tree: TExp list) =
     constrainTree tree
 
 let rec subst tvarToReplace withTyp inTyp =
+    printfn $"Substing: {tvarToReplace} in {inTyp}"
     let withTyp = match withTyp with RecDef _ -> RecRef tvarToReplace | _ -> withTyp
     match inTyp with
     | Poly (name, inTyp) -> Poly (name, subst tvarToReplace withTyp inTyp)
     | RecDef (fn,ft) -> RecDef (fn, subst tvarToReplace withTyp ft)
     | Var tvar when tvar = tvarToReplace -> withTyp
-    | _ -> inTyp
+    | RecRef tvarRec ->
+        match withTyp with
+        | Var tvar when tvarRec = tvar -> RecRef tvar
+        | _ -> inTyp
+    | Mono _
+    | Var _ -> inTyp
 
-let rec unify originalTvar t1 t2 =
+let rec unify t1 t2 =
     [
         printfn $"Unifying: ({t1})  --  ({t2})"
 
@@ -184,22 +183,18 @@ let rec unify originalTvar t1 t2 =
         match t1, t2 with
         | t1,t2 when t1 = t2 -> ()
         | Var _, Var tvar ->
-            printfn "YIELD a"
             yield Unsolved (tvar, t1)
         | Var tvar, t
         | t, Var tvar ->
-            printfn "YIELD b"
             yield Unsolved (tvar, t)
         | Poly (n1,pt1), Poly (n2,pt2) when n1 = n2 ->
-            printfn "YIELD c ->"
-            yield! unify originalTvar pt1 pt2
+            yield! unify pt1 pt2
         | RecRef tvarRec, (RecDef _ as r)
         | (RecDef _ as r), RecRef tvarRec ->
-            printfn "YIELD d"
             yield Unsolved (tvarRec, r)
         | RecDef (fn1,ft1), RecDef (fn2,ft2) ->
             if fn1 = fn2 then
-                yield! unify originalTvar ft1 ft2
+                yield! unify ft1 ft2
             //let unifiedFieldsAndProblems =
             //    // TODO: Use partitionMap
             //    (f1 @ f2)
@@ -230,25 +225,28 @@ let rec unify originalTvar t1 t2 =
             |> raise
     ]
     
-let substInProblems tvarToReplace withType (inProblems: ProblemData list) =
+let substInProblems tvarToReplace withType (inProblems: ProblemData list) solveState =
+    printfn "RUN substInProblems ..."
     [ for ptvar, ptype in inProblems do
         let ptype = subst tvarToReplace withType ptype
-        match ptvar = tvarToReplace with
-        | false -> yield Solved (ptvar, ptype)
-        | true -> yield! unify ptvar withType ptype
+        if ptvar = tvarToReplace
+            then yield! unify withType ptype
+            else yield solveState (ptvar, ptype)
     ]
 
 let solveProblems (problems: Problem list) =
     let rec solve (problems: Problem list) =
-        let solved,unsolved = problems |> partitionMap (function Solved x -> Choice1Of2 x | Unsolved x -> Choice2Of2 x)
-        printfn $"Solved count: {solved.Length}   -   unsolved count: {unsolved.Length}"
+        printfn "---------------------- SOLVE"
+        let solved,unsolved = problems |> partitionMap (function 
+            | Solved x -> Choice1Of2 x
+            | Unsolved x -> Choice2Of2 x)
         match solved,unsolved with
         | solved,[] -> solved
         | solved, ((tvar, typ) as p) :: ps ->
             solve [
-                yield! substInProblems tvar typ ps
+                yield! substInProblems tvar typ ps Unsolved
                 yield Solved p
-                yield! substInProblems tvar typ solved
+                yield! substInProblems tvar typ solved Solved
             ]
     try Ok (solve problems)
     with TrullaException err -> Error [err]
