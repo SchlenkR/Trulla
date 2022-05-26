@@ -41,14 +41,14 @@ let buildTree (tokens: PVal<Token> list) : Result<TExp list, TrullaError list> =
     let tvargen = TVarGen()
 
     let buildMemberExp bindingContext pexp : TVal<MemberExp> =
-        let rec ofPExpZero (pexp: PVal<Parsing.MemberToken>) =
+        let rec ofPExpZero (pexp: PVal<MemberToken>) =
             let newTVal name value = TVal.create pexp.range (tvargen.Next(name)) bindingContext value
             match pexp.value with
             | AccessToken accExp ->
                 let accExp = {| instanceExp = ofPExpZero accExp.instanceExp; memberName = accExp.memberName |}
                 newTVal $"MemberExpAcc {accExp.memberName}" (AccessExp accExp)
-            | IdentToken identExp ->
-                newTVal $"MemberExpIdent {identExp}" (IdentExp identExp)
+            | IdentToken ident ->
+                newTVal $"MemberExpIdent {ident}" (IdentExp ident)
         ofPExpZero pexp
 
     let rec toTree (pointer: int) scopeDepth (bindingContext: BindingContext) =
@@ -138,9 +138,9 @@ let buildProblems (tree: TExp list) =
         | IdentExp ident ->
             let tvarIdent = membExp.bindingContext |> Map.tryFind ident
             match tvarIdent with
-            | Some tvar ->
-                printfn $"FOUND var for ident {ident}: {tvar}"
-                []
+            | Some tvarIdent ->
+                printfn $"FOUND var for ident {ident}: {tvarIdent}"
+                [ Unsolved (tvarIdent, Var membExp.tvar) ]
             | None ->
                 printfn $"COULD NOT FIND var for ident {ident} (seems to be root)"
                 [ Unsolved (Root, Field (ident, Var membExp.tvar)) ]

@@ -16,7 +16,7 @@ constr <| fun gen ->
 
 
 
-// failure
+// failure: Can't unitfy types Record (TVar 1) and Mono "string"
 constr <| fun gen ->
     [
         gen.Hole "name"
