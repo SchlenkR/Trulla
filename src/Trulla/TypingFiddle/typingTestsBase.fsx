@@ -35,32 +35,49 @@ let constr x =
     
 
 
-let indentWith i = String.replicate (i * 4) " "
-let printList o c indent singleLine l =
-    let indent = indentWith indent
-    let l = l |> List.map (sprintf "%A")
-    if singleLine 
-        then l |> String.concat "; " |> fun x -> $"{indent}{o} {x} {c}"
-        else l |> List.map (fun x -> $"{indent}    {x}") |> String.concat $"\n" |> fun x -> $"{indent}{o}\n{x}\n{indent}{c}"
-let rec print (o: obj) =
-    match o with
-    | :? Position as pos -> $"({pos.index})"
-    | :? Range as range -> $"({print range.start}-{print range.finish})"
-    | :? (Problem list) as x ->
-        x
-        |> List.map (fun x ->
-            let status,cl,cr =
-                match x with
-                | Unsolved (cl, cr) -> "Unsolved", cl, cr
-                | Solved (cl, cr) -> "Solved", cl, cr
-            $"{status} %O{cl} : %O{cr}")
-        |> printList "[" "]" 0 false
-    | _ -> o.ToString()
 
-fsi.AddPrinter <| fun (x: Position) -> $"({x.index})"
-fsi.AddPrinter <| fun (x: Range) -> $"({print x.start}-{print x.finish})"
-fsi.AddPrinter <| fun (x: Problem list) -> print x
-//fsi.AddPrinter <| fun (x: (TVar * Type) list) ->
-//    x
-//    |> List.map (fun (tvar,typ) -> $"{print tvar} =\n{printi 2 typ}")
-//    |> printList "[" "]" 0 false
+
+fsi.AddPrinter (fun (o: obj) ->
+    match o with
+    | :? System.Collections.IEnumerable as enumerable ->
+        let singleLine =
+            let elemTyp = try enumerable.GetType().GenericTypeArguments[0] with | _ -> typeof<obj>
+            [
+                typeof<int> 
+                typeof<float>
+                typeof<string>
+                typeof<bool>
+            ] 
+            |> List.contains elemTyp
+        let prefix,elemDelim,ocDelim = 
+            if singleLine
+            then "", "; ", " "
+            else "    ", "\n", "\n"
+        let l = enumerable |> Seq.cast<obj> |> Seq.map (fun x -> $"{prefix}{x}") |> Seq.toList
+        $"{ocDelim}[{ocDelim}" + (l |> String.concat elemDelim) + $"{ocDelim}]"
+    | _ -> null
+)
+
+fsi.AddPrinter <| fun (x: Position) -> $"I{x.index}"
+fsi.AddPrinter <| fun (x: Range) -> $"{x.start}-{x.finish}"
+//fsi.AddPrinter <| fun (x: PVal) -> $"({this.range}){this.value}"
+fsi.AddPrinter <| fun (x: Problem) ->
+    let status,cl,cr =
+        match x with
+        | Unsolved (cl, cr) -> "Unsolved", cl, cr
+        | Solved (cl, cr) -> "Solved", cl, cr
+    $"{status} %O{cl} : %O{cr}"
+
+
+
+
+//type T = {name: string; age: int}
+//fsi.AddPrinter (fun (t: T) -> $"{t.name}({t.age})")
+
+//type U = {person: T; data: string}
+
+//[
+//    { person = {name = "Hans"; age = 34}; data = "xxx" }
+//    { person = {name = "Ina"; age = 24}; data = "xxx" }
+//]
+
