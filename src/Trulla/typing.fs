@@ -26,9 +26,9 @@ and MemberExp =
 
 type TVarGen() =
     let mutable x = -1
-    member this.Next(name) =
+    member this.Next() =
         x <- x + 1
-        printfn $"TVAR {x} %s{name}"
+        ////printfn $"TVAR {x} %s{name}"
         TVar x
 
 module TVal =
@@ -42,13 +42,13 @@ let buildTree (tokens: PVal<Token> list) : Result<TExp list, TrullaError list> =
 
     let buildMemberExp bindingContext pexp : TVal<MemberExp> =
         let rec ofPExpZero (pexp: PVal<MemberToken>) =
-            let newTVal name value = TVal.create pexp.range (tvargen.Next(name)) bindingContext value
+            let newTVal value = TVal.create pexp.range (tvargen.Next()) bindingContext value
             match pexp.value with
             | AccessToken accExp ->
                 let accExp = {| instanceExp = ofPExpZero accExp.instanceExp; memberName = accExp.memberName |}
-                newTVal $"MemberExpAcc {accExp.memberName}" (AccessExp accExp)
+                newTVal (AccessExp accExp)
             | IdentToken ident ->
-                newTVal $"MemberExpIdent {ident}" (IdentExp ident)
+                newTVal (IdentExp ident)
         ofPExpZero pexp
 
     let rec toTree (pointer: int) scopeDepth (bindingContext: BindingContext) =
@@ -74,7 +74,7 @@ let buildTree (tokens: PVal<Token> list) : Result<TExp list, TrullaError list> =
                 | Token.Hole x -> Hole (buildMemberExp bindingContext x)
                 | Token.For (ident, acc) ->
                     let accExp = buildMemberExp bindingContext acc
-                    let tvarIdent = tvargen.Next($"For {ident.value}")
+                    let tvarIdent = tvargen.Next()
                     For (
                         TVal.create ident.range tvarIdent bindingContext ident.value,
                         accExp,
@@ -170,7 +170,7 @@ let buildProblems (tree: TExp list) =
     constrainTree tree
 
 let rec subst tvarToReplace withTyp inTyp =
-    printfn $"Substing: {tvarToReplace} in {inTyp}"
+    ////printfn $"Substing: {tvarToReplace} in {inTyp}"
     let withTyp = match withTyp with Field _ -> Record tvarToReplace | _ -> withTyp
     match inTyp with
     | Poly (name, inTyp) -> Poly (name, subst tvarToReplace withTyp inTyp)
@@ -215,7 +215,7 @@ let rec unify t1 t2 =
         |> raise
     
 let substInProblems tvarToReplace withType (inProblems: ProblemData list) newProblem =
-    printfn "RUN substInProblems ..."
+    ////printfn "RUN substInProblems ..."
     [ for ptvar, ptype in inProblems do
         let ptype = subst tvarToReplace withType ptype
         if ptvar = tvarToReplace then 
@@ -230,7 +230,7 @@ let substInProblems tvarToReplace withType (inProblems: ProblemData list) newPro
 
 let solveProblems (problems: Problem list) =
     let rec solve (problems: Problem list) =
-        printfn "---------------------- SOLVE"
+        ////printfn "---------------------- SOLVE"
         let solved,unsolved = problems |> partitionMap (function 
             | Solved x -> Choice1Of2 x
             | Unsolved x -> Choice2Of2 x)
