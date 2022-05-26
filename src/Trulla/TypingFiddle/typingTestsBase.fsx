@@ -48,8 +48,12 @@ let rec print (o: obj) =
     | :? Range as range -> $"({print range.start}-{print range.finish})"
     | :? (Problem list) as x ->
         x
-        |> List.map (fun (Problem (cl, cr)) ->
-            $"%O{cl} : %O{cr}")
+        |> List.map (fun x ->
+            let status,cl,cr =
+                match x with
+                | Unsolved (cl, cr) -> "Unsolved", cl, cr
+                | Solved (cl, cr) -> "Solved", cl, cr
+            $"{status} %O{cl} : %O{cr}")
         |> printList "[" "]" 0 false
     | _ -> o.ToString()
 
