@@ -7,6 +7,7 @@
 
   <ItemGroup>
     <Compile Include="helper.fs" />
+    <Compile Include="text.fs" />
     <Compile Include="parsing.fs" />
     <None Include="ParsingFiddle\parserTest.fsx" />
     <None Include="ParsingFiddle\fiddle.fsx" />
@@ -16,7 +17,7 @@
     <None Include="TypingFiddle\inferenceTests.fsx" />
     <Compile Include="codeGen.FSharp.fs" />
     <None Include="CodeGenFiddle\codeGenTests.fsx" />
-    <Compile Include="CodeGenFiddle\output.fs" />
+    <Page Include="CodeGenFiddle\output.fsx" />
   </ItemGroup>
 
   <ItemGroup>

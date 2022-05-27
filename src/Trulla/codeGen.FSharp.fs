@@ -1,8 +1,10 @@
 ﻿module Trulla.Internal.CodeGen.FSharp
 
-open Trulla.Internal
-open Parsing
-open Typing
+open System.IO
+
+open Trulla.Internal.Text
+open Trulla.Internal.Parsing
+open Trulla.Internal.Typing
 
 let rootIdentifier = "model"
 let dotIntoMember = "."
@@ -27,76 +29,71 @@ let rec memberExpToIdent (exp: TVal<MemberExp>) =
         rootPrefix + ident
     | AccessExp acc -> (memberExpToIdent acc.instanceExp) + dotIntoMember + acc.memberName
 
-type StringBuilder2() =
-    let sb = System.Text.StringBuilder()
-    member this.Append(s: string) = sb.Append s |> ignore
-    member this.AppendLine(s: string) = sb.AppendLine s |> ignore
-    member this.NewLine() = sb.AppendLine ""
-    member this.GetString() = sb.ToString()
+let textHelperFileContent =
+    // we use the same text API inside of our generated file as we use also in this project
+    let beginContentSignal = "// #begin"
+    text {
+        ln "[<AutoOpen>]"
+        ln "module internal Text ="
+        
+        File.ReadAllLines(Path.Combine(__SOURCE_DIRECTORY__, "text.fs"))
+        |> Seq.skipWhile (fun line -> not (line.StartsWith beginContentSignal))
+        |> Seq.skip 1
+        |> Seq.map (ind 1)
+    }
 
 let render (template: string) =
-    let builder = StringBuilder2()
-    let append (x: string) = builder.Append x |> ignore
+    parseTemplate template |> solve |> Result.map (fun (tree,records) -> text {
+        ln "#if INTERACTIVE"
+        ln "#else"
+        ln "namespace TODO" // TODO
+        ln "#endif"
+        br
 
-    let quot = "\""
-    let plus = " + "
-    let pareno = "("
-    let parenc = ")"
-    let newLine = "\n"
+        ln textHelperFileContent
+        br
 
-    let getIndent indent = String.replicate indent "    "
+        ln "[<AutoOpen>]"
+        ln "module rec ModelTypes ="
+        br
 
-    let linei indent x = append ((getIndent indent) + x + newLine)
-    let line = linei 0
-    let str x = quot + x + quot
-    let strPlus x = append ((str x) + plus)
-    let inParens x = append (pareno + x + parenc)
-    
-    let sb fn indent x =
-        let indent = getIndent indent
-        line $"""{indent}sb.%s{fn}("%s{x}"{indent}) |> ignore"""
-    let sbAppend = sb "Append"
-    let sbAppendLine = sb "AppendLine"
-    
-    parseTemplate template |> solve |> Result.map (fun (tree,records) ->
-        line "module rec TODO" // TODO
-        append newLine
-
+        // render records
         let records = 
             if records |> Map.containsKey Root 
             then records
             else records |> Map.add Root []
-
         for tvar,fields in Map.toList records do
-            line $"""type {makeTypeName tvar} = {{"""
+            lni 1 $"""type {makeTypeName tvar} = {{"""
             for (fn,ft) in fields do
-                line $"    {fn}: {toTypeName ft}"
-            line "}"
-            append newLine
-            
-        append newLine
-                
+                lni 2 $"{fn}: {toTypeName ft}"
+            lni 1 "}"
+            br
+        br
+                    
         // TODO: Escape Quotes in strings
-        line $"let renderTemplate ({rootIdentifier}: {makeTypeName Root}) ="
-        linei 1 "let sb = System.Text.StringBuilder()"
-        append newLine
-        
-        let rec render indent tree =
+        ln "module Template ="
+        lni 1 "open ModelTypes"
+        br
+
+        lni 1 $"let render ({rootIdentifier}: {makeTypeName Root}) ="
+        let rec render indent tree = text {
+            lni indent "text {"
+            let indent = indent + 1
             for texp in tree do
                 match texp with
                 | Text txt ->
-                    sbAppend indent txt
+                    strlni indent txt
                 | Hole hole ->
-                    sbAppend indent (memberExpToIdent hole)
-                | For (ident,exp,body) -> ()
-                    //inParens ($"for {ident.value} in {memberExpToIdent exp} do")
-                    //render (indent+1) body
-                | If (cond,body) ->
-                    linei indent $"if {memberExpToIdent cond} then"
+                    lni indent (memberExpToIdent hole)
+                | For (ident,exp,body) ->
+                    lni indent $"for %s{ident.value} in {memberExpToIdent exp} do"
                     render (indent+1) body
-        render 1 tree
-        
-        append newLine
+                | If (cond,body) ->
+                    lni indent $"if {memberExpToIdent cond} then"
+                    render (indent+1) body
+            lni indent "}"
+        }
+        render 2 tree
+    }
+)
 
-        builder.ToString()
-    )

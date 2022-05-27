@@ -55,16 +55,14 @@ let buildTree (tokens: PVal<Token> list) : Result<TExp list, TrullaError list> =
         // TODO: IS all that really necessary - the mutable stuff?
         let mutable pointer = pointer
         let mutable scopeDepth = scopeDepth
-
-        let tree = 
-            let mutable endTokenDetected = false
+        let mutable endTokenDetected = false
+        let tree =
             [ while not endTokenDetected && pointer < tokens.Length do
                 let token = tokens[pointer]
                 pointer <- pointer + 1
 
                 let processBody bindingContext : TExp list =
-                    scopeDepth <- scopeDepth + 1
-                    let newPointer,children,newScopeDepth = toTree pointer scopeDepth bindingContext
+                    let newPointer,children,newScopeDepth = toTree pointer (scopeDepth + 1) bindingContext
                     scopeDepth <- newScopeDepth
                     pointer <- newPointer
                     children
@@ -90,7 +88,9 @@ let buildTree (tokens: PVal<Token> list) : Result<TExp list, TrullaError list> =
                           message = "Closing a scope is not possible without having a scope open." }
                         |> TrullaException
                         |> raise
-                    | n -> scopeDepth <- n-1
+                    | n ->
+                        scopeDepth <- n-1
+                        endTokenDetected <- true
             ]
         pointer,tree,scopeDepth
     try 
@@ -183,7 +183,7 @@ type Unification =
     | KeepOriginal
 
 let rec unify t1 t2 =
-    printfn $"Unifying: ({t1})  --  ({t2})"
+    ////printfn $"Unifying: ({t1})  --  ({t2})"
     // TODO: Correct range mapping when constructing new problems
     match t1,t2 with
     | t1,t2 when t1 = t2 -> 

@@ -14,3 +14,9 @@ let partitionMap (mapping: 'T -> Choice<'T1,'T2>) (source: list<'T>) =
             | Choice1Of2 x -> loop (x::acc1, acc2) xs
             | Choice2Of2 x -> loop (acc1, x::acc2) xs
     loop ([], []) (List.rev source)
+
+open Microsoft.FSharp.Reflection
+
+/// Returns the case name of the object with union type 'a.
+let getUnionCaseName (x:'a) =
+    match FSharpValue.GetUnionFields(x, typeof<'a>) with case, _ -> case.Name
