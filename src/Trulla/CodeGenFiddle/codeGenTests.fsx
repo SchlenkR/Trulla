@@ -6,8 +6,7 @@
 #load "../typing.fs"
 #load "../codeGen.FSharp.fs"
 
-open Trulla.Internal.Parsing
-open Trulla.Internal.Typing
+open System.IO
 open Trulla.Internal.CodeGen.FSharp
 
 let printResult renderRes =
@@ -15,9 +14,11 @@ let printResult renderRes =
 
     do printLines()
     match renderRes with
-    | Ok res -> printfn "%A" res
+    | Ok res -> File.WriteAllText(Path.Combine(__SOURCE_DIRECTORY__, "output.fs"), res)
     | Error err -> failwithf "ERROR: %A" err
     do printLines()
+
+
 
 """
 Hello
@@ -30,3 +31,4 @@ Order ID: {{x.id}}
 """
 |> render
 |> printResult
+

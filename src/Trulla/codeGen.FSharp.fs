@@ -16,6 +16,7 @@ let rec toTypeName typ =
     | Mono KnownTypes.bool -> "bool"
     | Poly (KnownTypes.sequence, pt) -> $"list<{toTypeName pt}>"
     | Record tvar -> makeTypeName tvar
+    | Var _ -> "obj"
     | _ -> failwith $"Unsupported reference for type '{typ}'."
 
 let rec memberExpToIdent (exp: TVal<MemberExp>) =
@@ -26,9 +27,16 @@ let rec memberExpToIdent (exp: TVal<MemberExp>) =
         rootPrefix + ident
     | AccessExp acc -> (memberExpToIdent acc.instanceExp) + dotIntoMember + acc.memberName
 
-let render (template: string) =
+type StringBuilder2() =
     let sb = System.Text.StringBuilder()
-    let append (x: string) = sb.Append x |> ignore
+    member this.Append(s: string) = sb.Append s |> ignore
+    member this.AppendLine(s: string) = sb.AppendLine s |> ignore
+    member this.NewLine() = sb.AppendLine ""
+    member this.GetString() = sb.ToString()
+
+let render (template: string) =
+    let builder = StringBuilder2()
+    let append (x: string) = builder.Append x |> ignore
 
     let quot = "\""
     let plus = " + "
@@ -44,13 +52,20 @@ let render (template: string) =
     let strPlus x = append ((str x) + plus)
     let inParens x = append (pareno + x + parenc)
     
-    let sb fn indent x = line $"""{getIndent indent}sb.{fn}("%s{x}")"""
+    let sb fn indent x =
+        let indent = getIndent indent
+        line $"""{indent}sb.%s{fn}("%s{x}"{indent}) |> ignore"""
     let sbAppend = sb "Append"
     let sbAppendLine = sb "AppendLine"
     
     parseTemplate template |> solve |> Result.map (fun (tree,records) ->
-        line "namespace rec TODO" // TODO
+        line "module rec TODO" // TODO
         append newLine
+
+        let records = 
+            if records |> Map.containsKey Root 
+            then records
+            else records |> Map.add Root []
 
         for tvar,fields in Map.toList records do
             line $"""type {makeTypeName tvar} = {{"""
@@ -60,11 +75,12 @@ let render (template: string) =
             append newLine
             
         append newLine
-        line "let sb = System.Text.StringBuilder()"
-        append newLine
                 
         // TODO: Escape Quotes in strings
-        line "let renderTemplate () ="
+        line $"let renderTemplate ({rootIdentifier}: {makeTypeName Root}) ="
+        linei 1 "let sb = System.Text.StringBuilder()"
+        append newLine
+        
         let rec render indent tree =
             for texp in tree do
                 match texp with
@@ -72,15 +88,15 @@ let render (template: string) =
                     sbAppend indent txt
                 | Hole hole ->
                     sbAppend indent (memberExpToIdent hole)
-                | For (ident,exp,body) ->
-                    inParens ($"for {ident.value} in {memberExpToIdent exp} do")
-                    render (indent+1) body
+                | For (ident,exp,body) -> ()
+                    //inParens ($"for {ident.value} in {memberExpToIdent exp} do")
+                    //render (indent+1) body
                 | If (cond,body) ->
                     linei indent $"if {memberExpToIdent cond} then"
                     render (indent+1) body
-        render 0 tree
+        render 1 tree
         
         append newLine
 
-        sb.ToString()
+        builder.ToString()
     )
