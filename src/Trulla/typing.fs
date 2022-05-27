@@ -138,12 +138,8 @@ let buildProblems (tree: TExp list) =
         | IdentExp ident ->
             let tvarIdent = membExp.bindingContext |> Map.tryFind ident
             match tvarIdent with
-            | Some tvarIdent ->
-                printfn $"FOUND var for ident {ident}: {tvarIdent}"
-                [ Unsolved (tvarIdent, Var membExp.tvar) ]
-            | None ->
-                printfn $"COULD NOT FIND var for ident {ident} (seems to be root)"
-                [ Unsolved (Root, Field (ident, Var membExp.tvar)) ]
+            | Some tvarIdent -> [ Unsolved (tvarIdent, Var membExp.tvar) ]
+            | None -> [ Unsolved (Root, Field (ident, Var membExp.tvar)) ]
     
     let rec constrainTree (tree: TExp list) =
         [ for tree in tree do
@@ -180,8 +176,7 @@ let rec subst tvarToReplace withTyp inTyp =
         match withTyp with
         | Var tvar when tvarRec = tvar -> Record tvar
         | _ -> inTyp
-    | Mono _
-    | Var _ -> inTyp
+    | Mono _ | Var _ -> inTyp
 
 type Unification =
     | Unified of Problem list

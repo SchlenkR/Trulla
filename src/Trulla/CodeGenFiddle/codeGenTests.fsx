@@ -10,15 +10,22 @@ open Trulla.Internal.Parsing
 open Trulla.Internal.Typing
 open Trulla.Internal.CodeGen.FSharp
 
-let printResult =
-    function
+let printResult renderRes =
+    let printLines() = printfn "---------------------------------"
+
+    do printLines()
+    match renderRes with
     | Ok res -> printfn "%A" res
     | Error err -> failwithf "ERROR: %A" err
+    do printLines()
 
 """
 Hello
 {{if customer.isActive}}
 ACTIVE
+{{for order in customer.orders}}
+Order ID: {{x.id}}
+{{end}}
 {{end}}
 """
 |> render

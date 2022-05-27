@@ -123,3 +123,16 @@ constr <| fun gen ->
     ]
 |> Result.bind solveProblems
 |> Result.map buildRecords
+
+
+constr <| fun gen ->
+    [
+        gen.If "customer.isActive"
+        gen.For "order" "customer.orders"
+        gen.Hole "x.id"
+        gen.End
+        gen.End
+    ]
+|> Result.bind solveProblems
+|> Result.map buildRecords
+

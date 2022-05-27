@@ -1,9 +1,11 @@
 ﻿module Trulla.Internal.CodeGen.FSharp
 
 open Trulla.Internal
-open Helper
 open Parsing
 open Typing
+
+let rootIdentifier = "model"
+let dotIntoMember = "."
 
 let makeTypeName tvar = match tvar with Root -> "TRoot" | TVar tvar -> $"T{tvar}"
 
@@ -16,41 +18,69 @@ let rec toTypeName typ =
     | Record tvar -> makeTypeName tvar
     | _ -> failwith $"Unsupported reference for type '{typ}'."
 
-let rec expToIdent (exp: MemberExp) ranges2tvar =
-    match exp with
+let rec memberExpToIdent (exp: TVal<MemberExp>) =
+    match exp.value with
     | IdentExp ident ->
-        let isRoot
-        ident.value
-    | AccessExp acc -> expToIdent acc.instanceExp.value + "." + acc.memberName
+        let isBound = exp.bindingContext |> Map.containsKey ident
+        let rootPrefix = if isBound then "" else rootIdentifier + dotIntoMember
+        rootPrefix + ident
+    | AccessExp acc -> (memberExpToIdent acc.instanceExp) + dotIntoMember + acc.memberName
 
 let render (template: string) =
-    let newLine = "\n"
-    let line x = x + newLine
+    let sb = System.Text.StringBuilder()
+    let append (x: string) = sb.Append x |> ignore
+
     let quot = "\""
     let plus = " + "
-    let text x = quot + x + quot
-    let textLine x = line (text x)
-    let textPlus x = quot + x + quot + plus
-    let textLinePlus x = line (textPlus x)
+    let pareno = "("
+    let parenc = ")"
+    let newLine = "\n"
+
+    let getIndent indent = String.replicate indent "    "
+
+    let linei indent x = append ((getIndent indent) + x + newLine)
+    let line = linei 0
+    let str x = quot + x + quot
+    let strPlus x = append ((str x) + plus)
+    let inParens x = append (pareno + x + parenc)
     
-    result {
-        let! tree,records,ranges2tvar = parseTemplate template |> solve
-        let lines = 
-            [
-                yield line "namespace rec TODO"
-                for tvar,fields in Map.toList records do
-                    let typeName = makeTypeName tvar
-                    yield line $"""type {typeName} = {{"""
-                    for (fn,ft) in fields do
-                        yield line $"    {fn}: {toTypeName ft}"
-                    yield line "}"
-                    yield newLine
+    let sb fn indent x = line $"""{getIndent indent}sb.{fn}("%s{x}")"""
+    let sbAppend = sb "Append"
+    let sbAppendLine = sb "AppendLine"
+    
+    parseTemplate template |> solve |> Result.map (fun (tree,records) ->
+        line "namespace rec TODO" // TODO
+        append newLine
+
+        for tvar,fields in Map.toList records do
+            line $"""type {makeTypeName tvar} = {{"""
+            for (fn,ft) in fields do
+                line $"    {fn}: {toTypeName ft}"
+            line "}"
+            append newLine
             
-                for node in tree do
-                    match node with
-                    | LeafNode (Text txt) -> yield textPlus txt
-                    | LeafNode (Hole exp) -> exp.value
-            ]
-            |> String.concat ""
-        return lines
-    }
+        append newLine
+        line "let sb = System.Text.StringBuilder()"
+        append newLine
+                
+        // TODO: Escape Quotes in strings
+        line "let renderTemplate () ="
+        let rec render indent tree =
+            for texp in tree do
+                match texp with
+                | Text txt ->
+                    sbAppend indent txt
+                | Hole hole ->
+                    sbAppend indent (memberExpToIdent hole)
+                | For (ident,exp,body) ->
+                    inParens ($"for {ident.value} in {memberExpToIdent exp} do")
+                    render (indent+1) body
+                | If (cond,body) ->
+                    linei indent $"if {memberExpToIdent cond} then"
+                    render (indent+1) body
+        render 0 tree
+        
+        append newLine
+
+        sb.ToString()
+    )
