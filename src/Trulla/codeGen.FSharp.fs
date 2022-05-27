@@ -2,7 +2,7 @@
 
 open System.IO
 
-open Trulla.Internal.Text
+open Trulla.Internal.Utils.Text
 open Trulla.Internal.Parsing
 open Trulla.Internal.Typing
 
@@ -36,7 +36,7 @@ let textHelperFileContent =
         ln "[<AutoOpen>]"
         ln "module internal Text ="
         
-        File.ReadAllLines(Path.Combine(__SOURCE_DIRECTORY__, "text.fs"))
+        File.ReadAllLines(Path.Combine(__SOURCE_DIRECTORY__, "Utils/text.fs"))
         |> Seq.skipWhile (fun line -> not (line.StartsWith beginContentSignal))
         |> Seq.skip 1
         |> Seq.map (ind 1)

@@ -1,4 +1,4 @@
-﻿module Trulla.Internal.Helper
+﻿module Trulla.Internal.Utils
 
 type ResultBuilder() =
     member this.Bind(m, f) = Result.bind f m

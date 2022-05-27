@@ -1,8 +1,8 @@
 ﻿
 #r "nuget: FParsec, 1.1.1"
 
-#load "../helper.fs"
-#load "../text.fs"
+#load "../Utils/utils.fs"
+#load "../Utils/text.fs"
 #load "../parsing.fs"
 #load "../typing.fs"
 #load "../codeGen.FSharp.fs"

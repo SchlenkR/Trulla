@@ -133,4 +133,3 @@ let parseTemplate templateString =
           message = msg }
         |> List.singleton
         |> Result.Error
-    

@@ -6,8 +6,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="helper.fs" />
-    <Compile Include="text.fs" />
+    <Compile Include="Utils\utils.fs" />
+    <Compile Include="Utils\text.fs" />
     <Compile Include="parsing.fs" />
     <None Include="ParsingFiddle\parserTest.fsx" />
     <None Include="ParsingFiddle\fiddle.fsx" />

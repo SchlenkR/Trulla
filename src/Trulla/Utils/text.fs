@@ -3,7 +3,7 @@
 //            the file's content is rendered in the generated code.
 // ------------------------------------------------------------------------
 
-module Trulla.Internal.Text
+module Trulla.Internal.Utils.Text
 // #begin
 
 // Base from: http://fssnip.net/7WR and https://github.com/fsharp/fslang-suggestions/issues/775

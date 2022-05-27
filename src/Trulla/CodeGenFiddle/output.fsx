@@ -91,7 +91,7 @@ ACTIVE"
                     "
 Order ID: "
                     order.id
-                    "yyyy"
+                    " (yyyy)"
                     }
             "
 xxxxxxx
@@ -103,16 +103,3 @@ xxxxxxx
             "
 "
             }
-
-
-module Test =
-    Template.render {
-        TRoot.customer = {
-            T0.isActive = true
-            T0.orders = [
-                { T5.id = "Order_1" }
-                { T5.id = "Order_2" }
-            ]
-        }
-    }
-    |> printfn "----------\n%s\n----------"
