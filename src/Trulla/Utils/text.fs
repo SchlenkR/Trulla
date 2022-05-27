@@ -1,12 +1,17 @@
 ﻿// ------------------------------------------------------------------------
 // IMPORTANT: DO NOT change the indentation of the module body because
 //            the file's content is rendered in the generated code.
+//
+// IMPORTANT: This code must be free of any dependencies!
+//            (= files in this project + any other dependencies)
 // ------------------------------------------------------------------------
 
+// Base from:
+// http://fssnip.net/7WR
+// https://github.com/fsharp/fslang-suggestions/issues/775
 module Trulla.Internal.Utils.Text
 // #begin
 
-// Base from: http://fssnip.net/7WR and https://github.com/fsharp/fslang-suggestions/issues/775
 open System.Text
 
 type StringBuffer = StringBuilder -> unit
