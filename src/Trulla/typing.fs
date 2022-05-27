@@ -35,12 +35,18 @@ module TVal =
     let create range tvar bindingContext value =
         { range = range; tvar = tvar; bindingContext = bindingContext; value = value }
 
+module MemberExp =
+    let getLastSegment = function
+        | AccessExp accExp -> accExp.memberName
+        | IdentExp ident -> ident
+
+
 // TODO: meaningful error messages + location
 // TODO: Don't throw; return TemplateError results
-let buildTree (tokens: PVal<Token> list) : Result<TExp list, TrullaError list> =
+let buildTree (tokens: PVal<Token> list) =
     let tvargen = TVarGen()
 
-    let buildMemberExp bindingContext pexp : TVal<MemberExp> =
+    let buildMemberExp bindingContext pexp =
         let rec ofPExpZero (pexp: PVal<MemberToken>) =
             let newTVal value = TVal.create pexp.range (tvargen.Next()) bindingContext value
             match pexp.value with
@@ -103,7 +109,7 @@ let buildTree (tokens: PVal<Token> list) : Result<TExp list, TrullaError list> =
         else
             Ok tree
     with TrullaException err ->
-        Error [err] 
+        Error [err]
 
 type Type =
     | Mono of string
@@ -128,12 +134,17 @@ module KnownTypes =
 
 // TODO: Prevent shadowing
 let buildProblems (tree: TExp list) =
+    let mutable possibleRecordNames = []
+
     let rec constrainMemberExp (membExp: TVal<MemberExp>) =
         match membExp.value with
         | AccessExp accExp ->
             [
                 yield! constrainMemberExp accExp.instanceExp
                 yield Unsolved (accExp.instanceExp.tvar, Field (accExp.memberName, Var membExp.tvar))
+                do possibleRecordNames <-
+                    (accExp.instanceExp.tvar, MemberExp.getLastSegment accExp.instanceExp.value)
+                    :: possibleRecordNames
             ]
         | IdentExp ident ->
             let tvarIdent = membExp.bindingContext |> Map.tryFind ident
@@ -163,7 +174,9 @@ let buildProblems (tree: TExp list) =
                 // --->
                 yield! constrainTree children
         ]
-    constrainTree tree
+    
+    let problems = constrainTree tree
+    problems,possibleRecordNames
 
 let rec subst tvarToReplace withTyp inTyp =
     ////printfn $"Substing: {tvarToReplace} in {inTyp}"
@@ -252,13 +265,24 @@ let buildRecords (solution: ProblemData list) =
     |> List.map (fun (tvar, fields) -> tvar, fields |> List.map snd)
     |> Map.ofList
 
+type SolveResult =
+    { tree: TExp list
+      records: Map<TVar, Field list>
+      possibleRecordNames: (TVar * string) list
+    }
+
 let solve tokens =
     result {
         let! tokens = tokens 
         let! tree = buildTree tokens
-        let problems = buildProblems tree
+        let problems,possibleRecordNames = buildProblems tree
         let! solution = solveProblems problems
         let records = buildRecords solution
-        return tree,records
+        return
+            {
+                tree = tree
+                records = records
+                possibleRecordNames = possibleRecordNames
+            }
     }
     

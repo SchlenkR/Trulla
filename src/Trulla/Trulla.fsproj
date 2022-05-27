@@ -17,7 +17,7 @@
     <None Include="TypingFiddle\inferenceTests.fsx" />
     <Compile Include="codeGen.FSharp.fs" />
     <None Include="CodeGenFiddle\codeGenTests.fsx" />
-    <Page Include="CodeGenFiddle\output.fsx" />
+    <None Include="CodeGenFiddle\output.fsx" />
   </ItemGroup>
 
   <ItemGroup>

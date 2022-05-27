@@ -57,24 +57,24 @@ module internal Text =
 [<AutoOpen>]
 module rec ModelTypes =
 
-    type T0 = {
+    type Customer = {
         isActive: bool
-        orders: list<T5>
+        orders: list<Order>
     }
 
-    type T5 = {
+    type Order = {
         id: string
     }
 
-    type TRoot = {
-        customer: T0
+    type Root = {
+        customer: Customer
     }
 
 
 module Template =
     open ModelTypes
 
-    let render (model: TRoot) =
+    let render (model: Root) =
         text {
             "
 Hello
