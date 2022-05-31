@@ -25,14 +25,15 @@ let saveFile renderRes =
 
 
 """
-Hello
-{{if customer.isActive}}
-ACTIVE{{end}}
-{{for order in customer.orders}}
-Order ID: {{order.id}} (yyyy){{end}}
-xxxxxxx
-{{if customer.isActive}}ANOTHER-IF{{end}}
+Hello {{user.name}}, how are you?
+
+Your Orders
+---
+{{for order in orders}}ID: {{order.id}}
+{{if order.isActive}}ORDER IS ACTIVE{{end}}
+{{end}}
 """
+
 |> render
 |> saveFile
 
