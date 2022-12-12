@@ -4,12 +4,11 @@ fsi.PrintLength <- 150
 
 #r "nuget: FParsec, 1.1.1"
 
-#load "../Utils/utils.fs"
-#load "../Utils/text.fs"
-#load "../parsing.fs"
-#load "../typing.fs"
+#load "../Parsing.fs"
+#load "../Utils.fs"
+#load "../ModelInference.fs"
 open Trulla.Internal.Parsing
-open Trulla.Internal.Typing
+open Trulla.Internal.ModelInference
 
 
 let range number =

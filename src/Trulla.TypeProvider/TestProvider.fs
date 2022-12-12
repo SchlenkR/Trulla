@@ -6,6 +6,7 @@ open ProviderImplementation.ProvidedTypes
 open FSharp.Core.CompilerServices
 open UncheckedQuotations
 open Microsoft.FSharp.Quotations
+open Trulla.Internal
 
 type TpType =
     | DotnetType of Type
@@ -75,51 +76,70 @@ type TrullaProvider (config : TypeProviderConfig) as this =
 
     let asm = Assembly.GetExecutingAssembly()
     let ns = "Trulla"
-    let tpEntry =
+    
+    let trullaProviderForStringLiteral =
         let providerType = ProvidedTypeDefinition(asm, ns, "Template", Some typeof<obj>, isErased = false)
         providerType.DefineStaticParameters(
-            [ProvidedStaticParameter("Count", typeof<int>)],
-            fun typeName args -> 
-                let modelDef =
-                    [
-                        {
-                            name = "Record1"
-                            fields = [
-                                { name = "MyString1"; fieldType = DotnetType typeof<string> }
-                                { name = "MyString2"; fieldType = DotnetType typeof<string> }
-                            ]
-                        }
-                        {
-                            name = "Record2"
-                            fields = [
-                                { name = "MyString1"; fieldType = DotnetType typeof<string> }
-                                { name = "MyParent"; fieldType = TypeByName "Record1" }
-                            ]
-                        }
-                    ]
+            [ProvidedStaticParameter("Template", typeof<string>)],
+            fun typeName args ->
+                let solveResult =
+                    let template = unbox<string> args.[0]
+                    Parsing.parseTemplate template |> ModelInference.solve
+                match solveResult with
+                | Error errors -> failwith $"Template error: {errors}"
+                | Ok solveResult->
+                    //let modelDef =
+                    //    [
+                    //        for recName,fields in solveResult.records |> Map.toList do
+                    //            let fields =
+                    //                [ for field in fields do
+                    //                    { name = field; fieldType = DotnetType typeof<string> }
+                    //                ]
+                    //    ]
+                        
+                    //    |> Map.map (fun recName fields ->
+                    //        { name = recName; fields = fields |> List.map (fun field ->
+                    //            ) }
+
+                    let modelDef =
+                        [
+                            {
+                                name = "Root"
+                                fields = [
+                                    { name = "MyString1"; fieldType = DotnetType typeof<string> }
+                                    { name = "MyParent"; fieldType = TypeByName "MyType" }
+                                ]
+                            }
+                            {
+                                name = "MyType"
+                                fields = [
+                                    { name = "MyString1"; fieldType = DotnetType typeof<string> }
+                                    { name = "MyString2"; fieldType = DotnetType typeof<string> }
+                                ]
+                            }
+                        ]
                 
-                //createType typeName (unbox<int> args.[0])
-                let asm = ProvidedAssembly()
+                    let asm = ProvidedAssembly()
                 
-                let records = TP.addRecords modelDef
-                let renderFunction =
-                    ProvidedMethod(
-                        "Render", 
-                        [ProvidedParameter("model", records[0])],
-                        typeof<string>,
-                        isStatic = true,
-                        invokeCode = fun args -> <@@ "TODO" @@>)
-                let modelType = ProvidedTypeDefinition(asm, ns, typeName, Some typeof<obj>, isErased = false, hideObjectMethods = true)
-                do 
-                    modelType.AddMembers records
-                    modelType.AddMembers [renderFunction]
-                    asm.AddTypes [modelType]
-                modelType
+                    let records = TP.addRecords modelDef
+                    let renderFunction =
+                        ProvidedMethod(
+                            "Render", 
+                            [ProvidedParameter("model", records[0])],
+                            typeof<string>,
+                            isStatic = true,
+                            invokeCode = fun args -> <@@ "TODO" @@>)
+                    let modelType = ProvidedTypeDefinition(asm, ns, typeName, Some typeof<obj>, isErased = false, hideObjectMethods = true)
+                    do 
+                        modelType.AddMembers records
+                        modelType.AddMembers [renderFunction]
+                        asm.AddTypes [modelType]
+                    modelType
         )
 
         providerType
     do
-        this.AddNamespace(ns, [tpEntry])
+        this.AddNamespace(ns, [trullaProviderForStringLiteral])
 
 
 [<assembly: TypeProviderAssembly()>]

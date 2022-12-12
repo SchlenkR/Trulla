@@ -3,7 +3,8 @@
 
 #load "../Utils.fs"
 #load "../parsing.fs"
-#load "../typing.fs"
+#load "../ModelInference.fs"
+#load "../CodeGen.Common.fs"
 #load "../CodeGen.FSharp.fs"
 
 open System.IO

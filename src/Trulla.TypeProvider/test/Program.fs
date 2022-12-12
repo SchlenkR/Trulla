@@ -9,9 +9,9 @@ type Tmpl = Trulla.Template<2>
 let main _ =
     let root =
         Tmpl.Record2(
-            "Hurz", 
+            "Hurz",
             Tmpl.Record1("xxx", "yyy"))
-    let output = Tmpl.
+    let output = Tmpl.Render(root)
     printfn "%A" t
     0
 

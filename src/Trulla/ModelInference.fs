@@ -1,9 +1,11 @@
-﻿module Trulla.Internal.Typing
+﻿module Trulla.Internal.ModelInference
 
 open Trulla.Internal.Utils
 open Trulla.Internal.Parsing
 
-type TVar = TVar of int | Root
+type TVar =
+    | Root
+    | TVar of int
 
 type BindingContext = Map<string, TVar>
 
@@ -26,7 +28,7 @@ and MemberExp =
 
 type TVarGen() =
     let mutable x = -1
-    member this.Next() =
+    member _.Next() =
         x <- x + 1
         ////printfn $"TVAR {x} %s{name}"
         TVar x
@@ -266,9 +268,10 @@ let buildRecords (solution: ProblemData list) =
     |> Map.ofList
 
 type SolveResult =
-    { tree: TExp list
-      records: Map<TVar, Field list>
-      possibleRecordNames: (TVar * string) list
+    { 
+        tree: TExp list
+        records: Map<TVar, Field list>
+        possibleRecordNames: (TVar * string) list
     }
 
 let solve tokens =

@@ -10,10 +10,11 @@
     <None Include="ParsingFiddle\parserTest.fsx" />
     <None Include="ParsingFiddle\fiddle.fsx" />
     <Compile Include="Utils.fs" />
-    <Compile Include="Typing.fs" />
+    <Compile Include="ModelInference.fs" />
     <None Include="TypingFiddle\typingTestsBase.fsx" />
     <None Include="TypingFiddle\treeTests.fsx" />
     <None Include="TypingFiddle\inferenceTests.fsx" />
+    <Compile Include="CodeGen.Common.fs" />
     <Compile Include="CodeGen.FSharp.fs" />
     <None Include="CodeGenFiddle\codeGenTests.fsx" />
     <None Include="CodeGenFiddle\output.fsx" />

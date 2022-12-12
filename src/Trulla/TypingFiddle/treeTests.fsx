@@ -1,24 +1,24 @@
 ﻿
 #load "typingTestsBase.fsx"
 
-open Trulla.Parsing
-open Trulla.Typing
+open Trulla.Internal.Parsing
+open Trulla.Internal.ModelInference
 open TypingTestsBase
 
 
 buildTree [
-    ParserToken.Text "Text1"
-    ParserToken.Hole (accessExp 0 "hello" [])
-    ParserToken.If (accessExp 1 "cond1" [])
-    ParserToken.Text "cond1_Text1"
-    ParserToken.Text "cond1_Text2"
-    ParserToken.For (pval 2 "x", accessExp 3 "y" [])
-    ParserToken.Text "cond1_For1_Text1"
-    ParserToken.Text "cond1_For1_Text2"
-    ParserToken.End
-    ParserToken.Text "cond1_Text3"
-    ParserToken.End
-    ParserToken.Text "Text2"
+    Token.Text "Text1"
+    Token.Hole (accessExp 0 "hello" [])
+    Token.If (accessExp 1 "cond1" [])
+    Token.Text "cond1_Text1"
+    Token.Text "cond1_Text2"
+    Token.For (pval 2 "x", accessExp 3 "y" [])
+    Token.Text "cond1_For1_Text1"
+    Token.Text "cond1_For1_Text2"
+    Token.End
+    Token.Text "cond1_Text3"
+    Token.End
+    Token.Text "Text2"
     ]
 |> shouldEqual [
     leaf (Text "Text1")
@@ -38,14 +38,14 @@ buildTree [
 
 // Fails because of unclosed scope
 buildTree [
-    ParserToken.If (accessExp 0 "cond1" [])
-    ParserToken.Text "Text1"
+    Token.If (accessExp 0 "cond1" [])
+    Token.Text "Text1"
     ]
 
 // Fails because of unopened scope
 buildTree [
-    ParserToken.If (accessExp 0 "cond1" [])
-    ParserToken.Text "Text1"
-    ParserToken.End
-    ParserToken.End
+    Token.If (accessExp 0 "cond1" [])
+    Token.Text "Text1"
+    Token.End
+    Token.End
     ]
