@@ -3,11 +3,15 @@
 
 module Program
 
-type T = Trulla.TrullaProvider<8>
+type Tmpl = Trulla.Template<2>
 
 [<EntryPoint>]
 let main _ =
-    let t = T().Property1
+    let root =
+        Tmpl.Record2(
+            "Hurz", 
+            Tmpl.Record1("xxx", "yyy"))
+    let output = Tmpl.
     printfn "%A" t
     0
 
