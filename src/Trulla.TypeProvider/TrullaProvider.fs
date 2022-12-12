@@ -7,55 +7,41 @@ open System.Reflection
 [<TypeProvider>]
 type TrullaProvider (config : TypeProviderConfig) as this =
     inherit TypeProviderForNamespaces(config)
+        ////assemblyReplacementMap=[("BasicGenerativeProvider.DesignTime", "BasicProvider")])
 
-    let ns = "Templates" // TODO
-    let thisAssembly = Assembly.GetExecutingAssembly()
+    let ns = "TrullaProvider"
+    let asm = Assembly.GetExecutingAssembly()
 
-    let createTypes () =
-        let myType = ProvidedTypeDefinition(thisAssembly, ns, "MyType", Some typeof<obj>)
-        let staticParams = [ProvidedStaticParameter("value", typeof<string>)]
-        do
-            myType.DefineStaticParameters(
-                parameters = staticParams,
-                instantiationFunction = (fun typeName paramValues ->
-                    match paramValues with
-                    | [| :? string as value |] ->
-                        let provider = ProvidedTypeDefinition(
-                            thisAssembly,
-                            ns,
-                            typeName,
-                            Some typeof<obj>
-                        )
+    // TODO: check we contain a copy of runtime files, and are not referencing the runtime DLL
+    ////do assert (typeof<BasicProvider.Helpers.SomeRuntimeHelper>.Assembly.GetName().Name = asm.GetName().Name)  
 
-                        let myProp = ProvidedProperty(
-                            "MyProperty", typeof<string>, isStatic = true,
-                            getterCode = fun args -> <@@ "Hello world" @@>)
-                        myType.AddMember(myProp)
-    
-                        let ctor = ProvidedConstructor([], invokeCode = fun args -> <@@ "My internal state" :> obj @@>)
-                        myType.AddMember(ctor)
-    
-                        let ctor2 = ProvidedConstructor(
-                            [ProvidedParameter("InnerState", typeof<string>)],
-                            invokeCode = fun args -> <@@ (%%(args.[0]):string) :> obj @@>)
-                        myType.AddMember(ctor2)
-    
-                        let innerState = ProvidedProperty(
-                            "InnerState", typeof<string>,
-                            getterCode = fun args -> <@@ (%%(args.[0]) :> obj) :?> string @@>)
-                        myType.AddMember(innerState)
+    let createType typeName (count:int) =
+        let asm = ProvidedAssembly()
+        let myType = ProvidedTypeDefinition(asm, ns, typeName, Some typeof<obj>, isErased=false)
 
-                        provider.AddMember(myType)
+        let ctor = ProvidedConstructor([], invokeCode = fun args -> <@@ "My internal state" :> obj @@>)
+        myType.AddMember(ctor)
 
-                        provider
+        let ctor2 = ProvidedConstructor(
+            [ProvidedParameter("InnerState", typeof<string>)],
+            invokeCode = fun args -> <@@ (%%(args.[1]):string) :> obj @@>)
+        myType.AddMember(ctor2)
 
-                    | _ -> failwith "That wasn't supported!"
-                ))
-            
-        [myType]
-    
+        for i in 1 .. count do 
+            let prop = ProvidedProperty("Property" + string i, typeof<int>, getterCode = fun args -> <@@ i @@>)
+            myType.AddMember(prop)
+        asm.AddTypes [ myType ]
+
+        myType
+
+    let myParamType =
+        let t = ProvidedTypeDefinition(asm, ns, "GenerativeProvider", Some typeof<obj>, isErased=false)
+        t.DefineStaticParameters(
+            [ProvidedStaticParameter("Count", typeof<int>)],
+            fun typeName args -> createType typeName (unbox<int> args.[0]))
+        t
     do
-        this.AddNamespace(ns, createTypes())
+        this.AddNamespace(ns, [myParamType])
 
 [<assembly: TypeProviderAssembly()>]
 do ()

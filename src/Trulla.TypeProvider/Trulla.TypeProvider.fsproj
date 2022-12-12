@@ -1,19 +1,23 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <OutputType>Library</OutputType>
+    <TargetFrameworks>netstandard2.0</TargetFrameworks>
+    <DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
+    <OutputPath>c:/temp/trulla</OutputPath>
   </PropertyGroup>
 
   <ItemGroup>
     <Compile Include="TpSdk\ProvidedTypes.fsi" />
     <Compile Include="TpSdk\ProvidedTypes.fs" />
-    <None Include="TrullaProvider - Copy.fs.bak" />
-    <Compile Include="TrullaProvider.fs" />
+    <Compile Include="TestProvider.fs" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Trulla\Trulla.fsproj" />
+    <PackageReference Update="FSharp.Core" Version="6.0.0">
+      <!-- This excludes FSharp.Core.xml and FSharp.Core.resources.dll while referencing the right FSharp.Core.dll version -->
+      <ExcludeAssets>runtime;contentFiles</ExcludeAssets>
+    </PackageReference>
   </ItemGroup>
 
 </Project>

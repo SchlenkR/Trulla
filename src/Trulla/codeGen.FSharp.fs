@@ -45,6 +45,19 @@ let rec memberExpToIdent (exp: TVal<MemberExp>) =
     | AccessExp acc -> (memberExpToIdent acc.instanceExp) + dotIntoMember + acc.memberName
 
 let render (template: string) =
+    let renderRecords (solveResult: SolveResult) = text {
+        let records = 
+            if solveResult.records |> Map.containsKey Root 
+            then solveResult.records
+            else solveResult.records |> Map.add Root []
+        for tvar,fields in Map.toList records do
+            lni 1 $"""type {makeTypeName solveResult.possibleRecordNames tvar} = {{"""
+            for (fn,ft) in fields do
+                lni 2 $"{fn}: {toTypeName solveResult.possibleRecordNames ft}"
+            lni 1 "}"
+            br
+    }
+
     parseTemplate template |> solve |> Result.map (fun solveResult -> text {
         ln "#if INTERACTIVE"
         ln "#else"
@@ -57,16 +70,7 @@ let render (template: string) =
         br
 
         // render records
-        let records = 
-            if solveResult.records |> Map.containsKey Root 
-            then solveResult.records
-            else solveResult.records |> Map.add Root []
-        for tvar,fields in Map.toList records do
-            lni 1 $"""type {makeTypeName solveResult.possibleRecordNames tvar} = {{"""
-            for (fn,ft) in fields do
-                lni 2 $"{fn}: {toTypeName solveResult.possibleRecordNames ft}"
-            lni 1 "}"
-            br
+        renderRecords solveResult
         br
                     
         // TODO: Escape Quotes in strings
