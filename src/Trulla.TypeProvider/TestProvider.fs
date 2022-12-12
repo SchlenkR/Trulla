@@ -4,6 +4,8 @@ open System
 open System.Reflection
 open ProviderImplementation.ProvidedTypes
 open FSharp.Core.CompilerServices
+open UncheckedQuotations
+open Microsoft.FSharp.Quotations
 
 [<TypeProvider>]
 type TrullaProvider (config : TypeProviderConfig) as this =
@@ -22,23 +24,38 @@ type TrullaProvider (config : TypeProviderConfig) as this =
         let tempAsm = ProvidedAssembly()
         let myType = ProvidedTypeDefinition(tempAsm, ns, typeName, Some typeof<obj>, isErased=false)
 
+        let innerStateBackingField =
+            ProvidedField("_innerState", typeof<string>)
+        let innerStateProp =
+            ProvidedProperty(
+                "InnerState",
+                typeof<string>,
+                getterCode =
+                    function
+                    | [ this ] -> Expr.FieldGetUnchecked(this, innerStateBackingField)
+                    | _ -> failwith "invalid property getter params"
+            )
+        myType.AddMember(innerStateBackingField)
+        myType.AddMember(innerStateProp)
+        
         let ctor = ProvidedConstructor(
             [],
             invokeCode = fun args -> <@@ () @@>
         )
         myType.AddMember(ctor)
-        
-        let ctor2 = ProvidedConstructor(
-            [ProvidedParameter("InnerState", typeof<string>)],
-            //invokeCode = fun args -> <@@ (%%(args.[1]):string) :> obj @@>)
-            invokeCode = fun args -> <@@ () @@>)
-        myType.AddMember(ctor2)
 
-        //let innerState = ProvidedProperty(
-        //    "InnerState",
-        //    typeof<string>,
-        //    getterCode = fun args -> <@@ (%%(args.[0]) :> obj) :?> string @@>)
-        //myType.AddMember(innerState)
+        let ctor2 = 
+            ProvidedConstructor(
+                [ProvidedParameter("innerState", typeof<string>)],
+                invokeCode =
+                    function
+                    | [this; innerStateArg] ->
+                        Expr.Sequential(
+                            Expr.FieldSetUnchecked(this, innerStateBackingField, innerStateArg),
+                            <@@ () @@>)
+                    | args -> failwith $"Invalid property setter params: {args}"
+            )
+        myType.AddMember(ctor2)
 
         for i in 1 .. count do 
             let prop = ProvidedProperty("Property" + string i, typeof<int>, getterCode = fun args -> <@@ i @@>)
