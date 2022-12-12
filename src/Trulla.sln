@@ -5,7 +5,7 @@ VisualStudioVersion = 17.0.32014.148
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Trulla", "Trulla\Trulla.fsproj", "{7AA8BF26-2B04-440F-A581-53E40A0A0291}"
 EndProject
-Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Tests", "Tests\Tests.fsproj", "{A2DA73DB-F573-49B0-9252-6CA4F9F6C0A7}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Trulla.Tests", "Trulla.Tests\Trulla.Tests.fsproj", "{A2DA73DB-F573-49B0-9252-6CA4F9F6C0A7}"
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Trulla.TypeProvider", "Trulla.TypeProvider\Trulla.TypeProvider.fsproj", "{2ACBBDA1-928F-437A-BF91-C3D4D0C4C5CE}"
 EndProject
@@ -14,8 +14,6 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Test", "Test", "{9835F9D0-14C2-4C4C-A770-9F7AA386FCD0}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Trulla.SourceGenerator.Tests", "Trulla.SourceGenerator.Tests\Trulla.SourceGenerator.Tests.csproj", "{9522F15B-BDBB-40D9-9D57-BE3173D0EA06}"
-EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Trulla.Utils", "Trulla.Utils\Trulla.Utils.fsproj", "{020EAFEC-1C4E-47B6-9725-B9D11BE12E98}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -43,10 +41,6 @@ Global
 		{9522F15B-BDBB-40D9-9D57-BE3173D0EA06}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9522F15B-BDBB-40D9-9D57-BE3173D0EA06}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9522F15B-BDBB-40D9-9D57-BE3173D0EA06}.Release|Any CPU.Build.0 = Release|Any CPU
-		{020EAFEC-1C4E-47B6-9725-B9D11BE12E98}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{020EAFEC-1C4E-47B6-9725-B9D11BE12E98}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{020EAFEC-1C4E-47B6-9725-B9D11BE12E98}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{020EAFEC-1C4E-47B6-9725-B9D11BE12E98}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

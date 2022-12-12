@@ -1,6 +1,6 @@
 ﻿module Trulla.Internal.Typing
 
-open Trulla.Internal.Utils.Common
+open Trulla.Internal.Utils
 open Trulla.Internal.Parsing
 
 type TVar = TVar of int | Root

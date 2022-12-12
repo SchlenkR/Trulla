@@ -10,7 +10,13 @@ let test p str =
     | Success (result, _, _) -> result
     | Failure (errorMsg, _, _) -> failwith errorMsg
 let tok t = 
-    { value = t; range = { start = Position.none; finish = Position.none } }
+    { 
+        value = t
+        range = { 
+            start = Position.none
+            finish = Position.none 
+        }
+    }
 let accessExp ident propPath = 
     tok { ident = ident; propPath = propPath }
 let shouldEqual (expected: ParserToken list) str =

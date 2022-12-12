@@ -9,11 +9,11 @@
     <Compile Include="Parsing.fs" />
     <None Include="ParsingFiddle\parserTest.fsx" />
     <None Include="ParsingFiddle\fiddle.fsx" />
+    <Compile Include="Utils.fs" />
     <Compile Include="Typing.fs" />
     <None Include="TypingFiddle\typingTestsBase.fsx" />
     <None Include="TypingFiddle\treeTests.fsx" />
     <None Include="TypingFiddle\inferenceTests.fsx" />
-    <Compile Include="CodeGen.Helper.fs" />
     <Compile Include="CodeGen.FSharp.fs" />
     <None Include="CodeGenFiddle\codeGenTests.fsx" />
     <None Include="CodeGenFiddle\output.fsx" />
@@ -21,10 +21,6 @@
 
   <ItemGroup>
     <PackageReference Include="FParsec" Version="1.1.1" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\Trulla.Utils\Trulla.Utils.fsproj" />
   </ItemGroup>
 
 </Project>

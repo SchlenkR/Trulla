@@ -1,14 +1,13 @@
 ﻿module Trulla.Internal.CodeGen.FSharp
 
-open System.IO
-
-open Trulla.Internal.Utils.Text
-open Trulla.Internal.Parsing
-open Trulla.Internal.Typing
 open System
 
-let rootIdentifier = "model"
-let dotIntoMember = "."
+open Trulla.Internal.Utils
+open Trulla.Internal.Parsing
+open Trulla.Internal.Typing
+
+let [<Literal>] rootIdentifier = "model"
+let [<Literal>] dotIntoMember = "."
 
 let makeTypeName (possibleRecordNames: (TVar * string) list) tvar =
     possibleRecordNames
@@ -45,28 +44,12 @@ let rec memberExpToIdent (exp: TVal<MemberExp>) =
         rootPrefix + ident
     | AccessExp acc -> (memberExpToIdent acc.instanceExp) + dotIntoMember + acc.memberName
 
-let textHelperFileContent =
-    // we use the same text API inside of our generated file as we use also in this project
-    let beginContentSignal = "// #begin"
-    text {
-        ln "[<AutoOpen>]"
-        ln "module internal Text ="
-        
-        File.ReadAllLines(Path.Combine(__SOURCE_DIRECTORY__, "Utils/text.fs"))
-        |> Seq.skipWhile (fun line -> not (line.StartsWith beginContentSignal))
-        |> Seq.skip 1
-        |> Seq.map (ind 1)
-    }
-
 let render (template: string) =
     parseTemplate template |> solve |> Result.map (fun solveResult -> text {
         ln "#if INTERACTIVE"
         ln "#else"
         ln "namespace TODO" // TODO
         ln "#endif"
-        br
-
-        ln textHelperFileContent
         br
 
         ln "[<AutoOpen>]"
@@ -88,26 +71,30 @@ let render (template: string) =
                     
         // TODO: Escape Quotes in strings
         ln "module Template ="
+        lni 1 "open System"
         lni 1 "open ModelTypes"
         br
 
         lni 1 $"let render ({rootIdentifier}: {makeTypeName solveResult.possibleRecordNames Root}) ="
+        let sbAppend indent txt = text {
+                ind indent $"""("%s{txt}" """
+                ln "|> __sb.Append |> ignore)"
+                br
+            }
+        lni 2 "let __sb = System.Text.StringBuilder()"
         let rec render indent tree = text {
-            lni indent "text {"
-            let indent = indent + 1
             for texp in tree do
                 match texp with
                 | Text txt ->
-                    strlni indent txt
+                    sbAppend indent txt
                 | Hole hole ->
-                    lni indent (memberExpToIdent hole)
+                    sbAppend indent (memberExpToIdent hole)
                 | For (ident,exp,body) ->
                     lni indent $"for %s{ident.value} in {memberExpToIdent exp} do"
-                    render (indent+1) body
+                    render (indent + 1) body
                 | If (cond,body) ->
                     lni indent $"if {memberExpToIdent cond} then"
-                    render (indent+1) body
-            lni indent "}"
+                    render (indent + 1) body
         }
 
         render 2 solveResult.tree

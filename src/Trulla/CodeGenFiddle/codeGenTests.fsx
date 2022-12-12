@@ -1,18 +1,15 @@
 ﻿
 #r "nuget: FParsec, 1.1.1"
 
-#load "../Utils/utils.fs"
-#load "../Utils/text.fs"
+#load "../Utils.fs"
 #load "../parsing.fs"
 #load "../typing.fs"
-#load "../codeGen.FSharp.fs"
+#load "../CodeGen.FSharp.fs"
 
 open System.IO
-open Trulla.Internal.Parsing
-open Trulla.Internal.Typing
 open Trulla.Internal.CodeGen.FSharp
 
-let saveFile renderRes =
+let saveToOutputFs renderRes =
     let printLines() = printfn "---------------------------------"
 
     do printLines()
@@ -33,9 +30,8 @@ Your Orders
 {{if order.isActive}}ORDER IS ACTIVE{{end}}
 {{end}}
 """
-
 |> render
-|> saveFile
+|> saveToOutputFs
 
 
 
