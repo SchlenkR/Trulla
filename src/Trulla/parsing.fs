@@ -9,6 +9,7 @@ type TrullaError = { ranges: Range list; message: string }
 exception TrullaException of TrullaError
 
 // TODO: else if, etc.
+[<RequireQualifiedAccess>]
 type Token =
     | Text of string
     | Hole of PVal<MemberToken>
@@ -97,18 +98,18 @@ let tmplExp =
                 pstring Keywords.for' >>. blanks1 >>. withPos ident .>> blanks1 .>> 
                 pstring Keywords.in' .>> blanks1 .>>. propAccess
             )
-            |>> fun x -> PVal.create x.range (For x.value)
+            |>> fun x -> PVal.create x.range (Token.For x.value)
         let ifExp = 
             withPos (pstring Keywords.if' >>. blanks1 >>. propAccess)
-            |>> fun x -> PVal.create x.range (If x.value)
+            |>> fun x -> PVal.create x.range (Token.If x.value)
         //let elseIfExp = pstring Keywords.elseIf' >>. blanks1 >>. propAccess |>> ElseIf
         //let elseExp = pstring Keywords.else' |>> fun _ -> Else
         let endExp = 
             withPos (pstring Keywords.end')
-            |>> fun x -> PVal.create x.range (End)
+            |>> fun x -> PVal.create x.range (Token.End)
         let holeExp = 
             withPos propAccess
-            |>> fun x -> PVal.create x.range (Hole x.value)
+            |>> fun x -> PVal.create x.range (Token.Hole x.value)
         choice [
             forExp
             ifExp
@@ -121,8 +122,8 @@ let tmplExp =
 let expOrText =
     choice [
         tmplExp
-        withPos (chars1Until beginExp) |>> fun x -> PVal.create x.range (Text x.value)
-        withPos (many1Chars anyChar) |>> fun x -> PVal.create x.range (Text x.value)
+        withPos (chars1Until beginExp) |>> fun x -> PVal.create x.range (Token.Text x.value)
+        withPos (many1Chars anyChar) |>> fun x -> PVal.create x.range (Token.Text x.value)
         ]
 let ptemplate = many expOrText .>> eof
 

@@ -124,12 +124,12 @@ and Field =
         typ: Typ 
     }
 
-// TODO: After solving, a transition should happen from Type to FinalTyp
-////type FinalTyp =
-////    | FMono of string
-////    | FPoly of name: string * typParam: FinalTyp
-////    | FField of Field
-////    | FRecord of TVar
+//// TODO: After solving, a transition should happen from Type to FinalTyp
+//type FinalTyp =
+//    | FMono of string
+//    | FPoly of name: string * typParam: FinalTyp
+//    | FField of Field
+//    | FRecord of TVar
 
 // TODO: Problem should beTypr * Type; later, resolve the ranges
 type ProblemData = TVar * Typ
@@ -137,12 +137,26 @@ type SolutionData = TVar * Typ // should be FinalTyp
 type Problem =
     | Unsolved of ProblemData
     | Solved of SolutionData
+
 type RecordName =
     {
         record: TVar
         name: string
     }
 
+type RecordDef =
+    {
+        id: TVar
+        fields: Field list
+        potentialNames: RecordName list
+    }
+
+type SolveResult =
+    {
+        tree: TExp list
+        records: RecordDef list
+    }
+    
 module KnownTypes =
     // TODO: reserve these keywords + parser tests
     let [<Literal>] string = "string"
@@ -210,13 +224,6 @@ type private Unification =
     | Unified of Problem list
     | KeepOriginal
 
-type SolveResult =
-    { 
-        tree: TExp list
-        records: Map<TVar, Field list>
-        possibleRecordNames: RecordName list
-    }
-
 let solveProblems (problems: Problem list) =
     let rec subst tvarToReplace withTyp inTyp =
         ////printfn $"Substing: {tvarToReplace} in {inTyp}"
@@ -239,10 +246,10 @@ let solveProblems (problems: Problem list) =
         ////printfn $"Unifying: ({t1})  --  ({t2})"
         // TODO: Correct range mapping when constructing new problems
         match t1,t2 with
-        | t1,t2 when t1 = t2 -> 
+        | t1,t2 when t1 = t2 ->
             Unified []
         | Var tv1, Var tv2 ->
-            Unified [ Unsolved (tv2, Var tv1) ] // TODO: Why does tv2,tv2 work, but not tv1,tv2?
+            Unified [ Unsolved (tv2, Var tv1) ] // TODO: Why does tv2,tv1 work, but not tv1,tv2?
         | Var tvar, t
         | t, Var tvar ->
             Unified [ Unsolved (tvar, t) ]
@@ -296,27 +303,35 @@ let solveProblems (problems: Problem list) =
     with TrullaException err -> Error [err]
 
 let solve parserResult =
-    let buildRecords (solution: SolutionData list) =
-        solution
-        |> List.choose (fun (tvar,t) ->
-            match t with
-            | Field f -> Some (tvar,f)
-            | _ -> None)
-        |> List.groupBy fst
-        |> List.map (fun (tvar, fields) -> tvar, fields |> List.map snd)
-        |> Map.ofList
-    
     result {
         let! tokens = parserResult 
         let! tree = buildTree tokens
         let problems = buildProblems tree
         let! solution = solveProblems problems.problems
-        let records = buildRecords solution
+        let getPotentialRecordNames =
+            let map = 
+                problems.possibleRecordNames
+                |> List.groupBy (fun x -> x.record)
+                |> Map.ofList
+            fun recId -> map |> Map.tryFind recId |> Option.defaultValue []
+        let records =
+            solution
+            |> List.choose (fun (tvar,t) ->
+                match t with
+                | Field f -> Some (tvar,f)
+                | _ -> None)
+            |> List.groupBy fst
+            |> List.map (fun (tvar, fields) ->
+                {
+                    id = tvar
+                    fields = fields |> List.map snd
+                    potentialNames = getPotentialRecordNames tvar
+                }
+            )
+        
         return
-            {
+            { 
                 tree = tree
                 records = records
-                possibleRecordNames = problems.possibleRecordNames
             }
     }
-    

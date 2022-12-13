@@ -13,10 +13,10 @@ open Trulla.Internal.Inference
 let [<Literal>] rootIdentifier = "model"
 let [<Literal>] dotIntoMember = "."
 
-let makeTypeName (possibleRecordNames: (TVar * string) list) tvar =
+let makeTypeName (possibleRecordNames: RecordName list) tvar =
     possibleRecordNames
-    |> List.tryFind (fun x -> fst x = tvar)
-    |> Option.map snd
+    |> List.tryFind (fun x -> x.record = tvar)
+    |> Option.map (fun x -> x.name)
     |> Option.map (fun name ->
         match name.ToCharArray() |> Array.toList with
         | c::cs -> Char.ToUpperInvariant c :: cs
