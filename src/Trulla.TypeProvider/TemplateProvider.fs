@@ -3,26 +3,46 @@
 open System
 open System.Reflection
 open ProviderImplementation.ProvidedTypes
+open ProviderImplementation.ProvidedTypes.UncheckedQuotations
 open FSharp.Core.CompilerServices
-open UncheckedQuotations
 open Microsoft.FSharp.Quotations
 open Trulla.Internal
 
 type TpType =
     | DotnetType of Type
-    | TypeByName of string
+    | DotnetTypeWithGenericRecordArgument of Type * string
+    | RecordRef of string
+
 type FieldDef =
     {
         name: string
         fieldType: TpType
     }
+
 type RecordDef =
     {
+        isRoot: bool
         name: string
         fields: FieldDef list
     }
 
-module TP =
+//module SolveResult =
+//    let toTpModel (solveResult: SolveResult) =
+//        let modelDef =
+//            [
+//                for recName,fields in solveResult.records |> Map.toList do
+//                    let fields =
+//                        [ for (fname,ftype) in fields do
+//                            { 
+//                                name = fname
+//                                fieldType =
+//                                    match ftype with
+//                                    | 
+//                            }
+//                        ]
+//            ]
+
+module internal TypeProviderHelper =
     let addRecords (recordDefs: RecordDef list) =
         let addRecord (def: RecordDef) =
             ProvidedTypeDefinition(def.name, Some typeof<obj>, isErased = false)
@@ -35,7 +55,7 @@ module TP =
                         let fieldType =
                             match field.fieldType with
                             | DotnetType t -> t
-                            | TypeByName s -> findRecordType s
+                            | RecordRef s -> findRecordType s
                         let provField = ProvidedField(field.name, fieldType)
                         do recordType.AddMember(provField)
                         provField,fieldType
@@ -64,10 +84,10 @@ module TP =
         finalizedRecords
         
 [<TypeProvider>]
-type TrullaProvider (config : TypeProviderConfig) as this =
+type TemplateProviderImplemtation (config : TypeProviderConfig) as this =
     inherit TypeProviderForNamespaces (
         config,
-        assemblyReplacementMap = [("Trulla.TypeProvider", "TrullaProvider")],
+        assemblyReplacementMap = [("Trulla.TypeProvider", "TemplateProvider")],
         addDefaultProbingLocation = true
     )
 
@@ -77,7 +97,7 @@ type TrullaProvider (config : TypeProviderConfig) as this =
     let asm = Assembly.GetExecutingAssembly()
     let ns = "Trulla"
     
-    let trullaProviderForStringLiteral =
+    let templateProviderForStringLiteral =
         let providerType = ProvidedTypeDefinition(asm, ns, "Template", Some typeof<obj>, isErased = false)
         providerType.DefineStaticParameters(
             [ProvidedStaticParameter("Template", typeof<string>)],
@@ -105,13 +125,15 @@ type TrullaProvider (config : TypeProviderConfig) as this =
                         [
                             {
                                 name = "Root"
+                                isRoot = true
                                 fields = [
                                     { name = "MyString1"; fieldType = DotnetType typeof<string> }
-                                    { name = "MyParent"; fieldType = TypeByName "MyType" }
+                                    { name = "MyParent"; fieldType = RecordRef "MyType" }
                                 ]
                             }
                             {
                                 name = "MyType"
+                                isRoot = false
                                 fields = [
                                     { name = "MyString1"; fieldType = DotnetType typeof<string> }
                                     { name = "MyString2"; fieldType = DotnetType typeof<string> }
@@ -121,7 +143,7 @@ type TrullaProvider (config : TypeProviderConfig) as this =
                 
                     let asm = ProvidedAssembly()
                 
-                    let records = TP.addRecords modelDef
+                    let records = TypeProviderHelper.addRecords modelDef
                     let renderFunction =
                         ProvidedMethod(
                             "Render", 
@@ -139,7 +161,7 @@ type TrullaProvider (config : TypeProviderConfig) as this =
 
         providerType
     do
-        this.AddNamespace(ns, [trullaProviderForStringLiteral])
+        this.AddNamespace(ns, [templateProviderForStringLiteral])
 
 
 [<assembly: TypeProviderAssembly()>]

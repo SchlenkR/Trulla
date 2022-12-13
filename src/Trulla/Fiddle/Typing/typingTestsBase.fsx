@@ -4,9 +4,9 @@ fsi.PrintLength <- 150
 
 #r "nuget: FParsec, 1.1.1"
 
-#load "../Parsing.fs"
-#load "../Utils.fs"
-#load "../ModelInference.fs"
+#load "../../Parsing.fs"
+#load "../../Utils.fs"
+#load "../../ModelInference.fs"
 open Trulla.Internal.Parsing
 open Trulla.Internal.ModelInference
 

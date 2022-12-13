@@ -1,11 +1,10 @@
 ﻿
 #r "nuget: FParsec, 1.1.1"
 
-#load "../Utils.fs"
-#load "../parsing.fs"
-#load "../ModelInference.fs"
-#load "../CodeGen.Common.fs"
-#load "../CodeGen.FSharp.fs"
+#load "../../Utils.fs"
+#load "../../parsing.fs"
+#load "../../ModelInference.fs"
+#load "../../CodeGen.FSharp.fs"
 
 open System.IO
 open Trulla.Internal.CodeGen.FSharp
@@ -31,6 +30,19 @@ Your Orders
 {{if order.isActive}}ORDER IS ACTIVE{{end}}
 {{end}}
 """
+|> render
+|> saveToOutputFs
+
+
+
+"""Hello"""
+|> render
+|> saveToOutputFs
+
+
+
+
+"""Hello {{a.b.c}}"""
 |> render
 |> saveToOutputFs
 

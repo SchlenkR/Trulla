@@ -6,18 +6,17 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Parsing.fs" />
-    <None Include="ParsingFiddle\parserTest.fsx" />
-    <None Include="ParsingFiddle\fiddle.fsx" />
     <Compile Include="Utils.fs" />
-    <Compile Include="ModelInference.fs" />
-    <None Include="TypingFiddle\typingTestsBase.fsx" />
-    <None Include="TypingFiddle\treeTests.fsx" />
-    <None Include="TypingFiddle\inferenceTests.fsx" />
-    <Compile Include="CodeGen.Common.fs" />
+    <Compile Include="Parsing.fs" />
+    <Compile Include="Inference.fs" />
     <Compile Include="CodeGen.FSharp.fs" />
-    <None Include="CodeGenFiddle\codeGenTests.fsx" />
-    <None Include="CodeGenFiddle\output.fsx" />
+    <None Include="Fiddle\Parsing\parserTest.fsx" />
+    <None Include="Fiddle\Parsing\fiddle.fsx" />
+    <None Include="Fiddle\Typing\typingTestsBase.fsx" />
+    <None Include="Fiddle\Typing\treeTests.fsx" />
+    <None Include="Fiddle\Typing\inferenceTests.fsx" />
+    <None Include="Fiddle\CodeGen\codeGenTests.fsx" />
+    <None Include="Fiddle\CodeGen\output.fsx" />
   </ItemGroup>
 
   <ItemGroup>

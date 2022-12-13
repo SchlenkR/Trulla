@@ -1,4 +1,4 @@
-﻿module Trulla.Internal.ModelInference
+﻿module Trulla.Internal.Inference
 
 open Trulla.Internal.Utils
 open Trulla.Internal.Parsing
@@ -41,7 +41,6 @@ module MemberExp =
     let getLastSegment = function
         | AccessExp accExp -> accExp.memberName
         | IdentExp ident -> ident
-
 
 // TODO: meaningful error messages + location
 // TODO: Don't throw; return TemplateError results
@@ -113,19 +112,27 @@ let buildTree (tokens: PVal<Token> list) =
     with TrullaException err ->
         Error [err]
 
-type Type =
+type Typ =
     | Mono of string
-    | Poly of name: string * typParam: Type
+    | Poly of name: string * typParam: Typ
     | Field of Field
     | Record of TVar
     | Var of TVar
-and Field = string * Type
+and Field = string * Typ
 
-// TODO: Problem should be TVar * Type; later, resolve the ranges
-type ProblemData = TVar * Type
+// TODO: After solving, a transition should happen from Type to FinalTyp
+////type FinalTyp =
+////    | FMono of string
+////    | FPoly of name: string * typParam: FinalTyp
+////    | FField of Field
+////    | FRecord of TVar
+
+// TODO: Problem should beTypr * Type; later, resolve the ranges
+type ProblemData = TVar * Typ
+type SolutionData = TVar * Typ // should be FinalTyp
 type Problem =
     | Unsolved of ProblemData
-    | Solved of ProblemData
+    | Solved of SolutionData
 
 module KnownTypes =
     // TODO: reserve these keywords + parser tests
@@ -182,7 +189,10 @@ let buildProblems (tree: TExp list) =
 
 let rec subst tvarToReplace withTyp inTyp =
     ////printfn $"Substing: {tvarToReplace} in {inTyp}"
-    let withTyp = match withTyp with Field _ -> Record tvarToReplace | _ -> withTyp
+    let withTyp =
+        match withTyp with
+        | Field _ -> Record tvarToReplace
+        | _ -> withTyp
     match inTyp with
     | Poly (name, inTyp) -> Poly (name, subst tvarToReplace withTyp inTyp)
     | Field (fn,ft) -> Field (fn, subst tvarToReplace withTyp ft)
@@ -191,66 +201,69 @@ let rec subst tvarToReplace withTyp inTyp =
         match withTyp with
         | Var tvar when tvarRec = tvar -> Record tvar
         | _ -> inTyp
-    | Mono _ | Var _ -> inTyp
+    | Mono _
+    | Var _ -> inTyp
 
 type Unification =
     | Unified of Problem list
     | KeepOriginal
 
-let rec unify t1 t2 =
-    ////printfn $"Unifying: ({t1})  --  ({t2})"
-    // TODO: Correct range mapping when constructing new problems
-    match t1,t2 with
-    | t1,t2 when t1 = t2 -> 
-        Unified []
-    | Var tv1, Var tv2 ->
-        Unified [ Unsolved (tv2, Var tv1) ] // TODO: Why does tv2,tv2 work, but not tv1,tv2?
-    | Var tvar, t
-    | t, Var tvar ->
-        Unified [ Unsolved (tvar, t) ]
-    | Poly (n1,pt1), Poly (n2,pt2) when n1 = n2 ->
-        unify pt1 pt2
-    | Record tvarRec, (Field _ as r)
-    | (Field _ as r), Record tvarRec ->
-        Unified [ Unsolved (tvarRec, r) ]
-    | Field (fn1,ft1), Field (fn2,ft2) ->
-        if fn1 = fn2 
-            then unify ft1 ft2
-            else KeepOriginal
-    | _ ->
-        // TODO: Don't raise
-        { ranges = [] // TODO
-          message = $"TODO: Can't unitfy types {t1} and {t2}" }
-        |> TrullaException
-        |> raise
-    
-let substInProblems tvarToReplace withType (inProblems: ProblemData list) newProblem =
-    ////printfn "RUN substInProblems ..."
-    [ for ptvar, ptype in inProblems do
-        let ptype = subst tvarToReplace withType ptype
-        if ptvar = tvarToReplace then 
-            match unify withType ptype with
-            | Unified unifiedProblems ->
-                yield! unifiedProblems
-            | KeepOriginal ->
-                yield newProblem (ptvar, ptype)
-        else
-            yield newProblem (ptvar, ptype)
-    ]
-
 let solveProblems (problems: Problem list) =
+    let rec unify t1 t2 =
+        ////printfn $"Unifying: ({t1})  --  ({t2})"
+        // TODO: Correct range mapping when constructing new problems
+        match t1,t2 with
+        | t1,t2 when t1 = t2 -> 
+            Unified []
+        | Var tv1, Var tv2 ->
+            Unified [ Unsolved (tv2, Var tv1) ] // TODO: Why does tv2,tv2 work, but not tv1,tv2?
+        | Var tvar, t
+        | t, Var tvar ->
+            Unified [ Unsolved (tvar, t) ]
+        | Poly (n1,pt1), Poly (n2,pt2) when n1 = n2 ->
+            unify pt1 pt2
+        | Record tvarRec, (Field _ as r)
+        | (Field _ as r), Record tvarRec ->
+            Unified [ Unsolved (tvarRec, r) ]
+        | Field (fn1,ft1), Field (fn2,ft2) ->
+            if fn1 = fn2 
+                then unify ft1 ft2
+                else KeepOriginal
+        | _ ->
+            // TODO: Don't raise
+            { ranges = [] // TODO
+              message = $"TODO: Can't unitfy types {t1} and {t2}" }
+            |> TrullaException
+            |> raise
+        
+    let substInProblems tvarToReplace withType (inProblems: ProblemData list) newProblem =
+        ////printfn "RUN substInProblems ..."
+        [ for ptvar, ptype in inProblems do
+            let ptype = subst tvarToReplace withType ptype
+            if ptvar = tvarToReplace then 
+                match unify withType ptype with
+                | Unified unifiedProblems ->
+                    yield! unifiedProblems
+                | KeepOriginal ->
+                    yield newProblem (ptvar, ptype)
+            else
+                yield newProblem (ptvar, ptype)
+        ]
+    
     let rec solve (problems: Problem list) =
         ////printfn "---------------------- SOLVE"
-        let solved,unsolved = problems |> partitionMap (function 
-            | Solved x -> Choice1Of2 x
-            | Unsolved x -> Choice2Of2 x)
-        match solved,unsolved with
-        | solved,[] -> solved
-        | solved, ((tvar, typ) as p) :: ps ->
+        let solutions,problems =
+            problems |> partitionMap (
+                function 
+                | Solved x -> Choice1Of2 x
+                | Unsolved x -> Choice2Of2 x)
+        match problems with
+        | [] -> solutions
+        | ((tvar, typ) as p) :: ps ->
             solve [
                 yield! substInProblems tvar typ ps Unsolved
                 yield Solved p
-                yield! substInProblems tvar typ solved Solved
+                yield! substInProblems tvar typ solutions Solved
             ]
     try Ok (solve problems)
     with TrullaException err -> Error [err]
@@ -258,11 +271,14 @@ let solveProblems (problems: Problem list) =
 type UnificationResult =
     { tvar: TVar
       errors: string list
-      resultingTyp: Type }
+      resultingTyp: Typ }
 
-let buildRecords (solution: ProblemData list) =
+let buildRecords (solution: SolutionData list) =
     solution
-    |> List.choose (fun (tvar,t) -> match t with Field f -> Some (tvar,f) | _ -> None)
+    |> List.choose (fun (tvar,t) ->
+        match t with
+        | Field f -> Some (tvar,f)
+        | _ -> None)
     |> List.groupBy fst
     |> List.map (fun (tvar, fields) -> tvar, fields |> List.map snd)
     |> Map.ofList

@@ -2,7 +2,7 @@
 #r "nuget: FParsec"
 open FParsec
 
-#load "../parsing.fs"
+#load "../../parsing.fs"
 open Trulla.Internal.Parsing
 
 let test p str =
