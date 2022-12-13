@@ -1,4 +1,9 @@
-﻿module Trulla.Internal.CodeGen.FSharp
+﻿
+#r "nuget: FParsec, 1.1.1"
+
+#load "../../Utils.fs"
+#load "../../parsing.fs"
+#load "../../Inference.fs"
 
 open System
 open Trulla.Internal.Utils
@@ -53,8 +58,8 @@ let render (template: string) =
             //else solveResult.records |> Map.add Root []
         for tvar,fields in Map.toList records do
             lni 1 $"""type {makeTypeName solveResult.possibleRecordNames tvar} = {{"""
-            for (fn,ft) in fields do
-                lni 2 $"{fn}: {toTypeName solveResult.possibleRecordNames ft}"
+            for field in fields do
+                lni 2 $"{field.name}: {toTypeName solveResult.possibleRecordNames field.typ}"
             lni 1 "}"
             br
     }

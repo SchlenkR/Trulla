@@ -104,7 +104,7 @@ type TemplateProviderImplemtation (config : TypeProviderConfig) as this =
             fun typeName args ->
                 let solveResult =
                     let template = unbox<string> args.[0]
-                    Parsing.parseTemplate template |> ModelInference.solve
+                    Parsing.parseTemplate template |> Inference.solve
                 match solveResult with
                 | Error errors -> failwith $"Template error: {errors}"
                 | Ok solveResult->

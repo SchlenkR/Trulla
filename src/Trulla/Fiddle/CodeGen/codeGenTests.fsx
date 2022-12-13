@@ -3,11 +3,11 @@
 
 #load "../../Utils.fs"
 #load "../../parsing.fs"
-#load "../../ModelInference.fs"
-#load "../../CodeGen.FSharp.fs"
+#load "../../Inference.fs"
+#load "./codeGenFSharp.fsx"
 
 open System.IO
-open Trulla.Internal.CodeGen.FSharp
+open CodeGenFSharp
 
 let saveToOutputFs renderRes =
     let printLines() = printfn "---------------------------------"

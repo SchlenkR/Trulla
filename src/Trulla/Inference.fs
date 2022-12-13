@@ -10,11 +10,13 @@ type TVar =
 type BindingContext = Map<string, TVar>
 
 type TVal<'a> =
-    { range: Range
-      tvar: TVar
-      bindingContext: BindingContext
-      value: 'a }
-        override this.ToString() = $"({this.range}){this.value}"
+    { 
+        range: Range
+        tvar: TVar
+        bindingContext: BindingContext
+        value: 'a 
+    }
+    override this.ToString() = $"({this.range}){this.value}"
 
 type Body = BindingContext * TExp list
 and TExp =
@@ -25,13 +27,6 @@ and TExp =
 and MemberExp =
     | AccessExp of {| instanceExp: TVal<MemberExp>; memberName: string |}
     | IdentExp of string
-
-type TVarGen() =
-    let mutable x = -1
-    member _.Next() =
-        x <- x + 1
-        ////printfn $"TVAR {x} %s{name}"
-        TVar x
 
 module TVal =
     let create range tvar bindingContext value =
@@ -45,11 +40,16 @@ module MemberExp =
 // TODO: meaningful error messages + location
 // TODO: Don't throw; return TemplateError results
 let buildTree (tokens: PVal<Token> list) =
-    let tvargen = TVarGen()
+    let newTVar =
+        let mutable x = -1
+        fun () ->
+            x <- x + 1
+            ////printfn $"TVAR {x} %s{name}"
+            TVar x
 
     let buildMemberExp bindingContext pexp =
         let rec ofPExpZero (pexp: PVal<MemberToken>) =
-            let newTVal value = TVal.create pexp.range (tvargen.Next()) bindingContext value
+            let newTVal value = TVal.create pexp.range (newTVar()) bindingContext value
             match pexp.value with
             | AccessToken accExp ->
                 let accExp = {| instanceExp = ofPExpZero accExp.instanceExp; memberName = accExp.memberName |}
@@ -79,7 +79,7 @@ let buildTree (tokens: PVal<Token> list) =
                 | Token.Hole x -> Hole (buildMemberExp bindingContext x)
                 | Token.For (ident, acc) ->
                     let accExp = buildMemberExp bindingContext acc
-                    let tvarIdent = tvargen.Next()
+                    let tvarIdent = newTVar()
                     For (
                         TVal.create ident.range tvarIdent bindingContext ident.value,
                         accExp,
@@ -118,7 +118,11 @@ type Typ =
     | Field of Field
     | Record of TVar
     | Var of TVar
-and Field = string * Typ
+and Field = 
+    { 
+        name: string
+        typ: Typ 
+    }
 
 // TODO: After solving, a transition should happen from Type to FinalTyp
 ////type FinalTyp =
@@ -150,7 +154,12 @@ let buildProblems (tree: TExp list) =
         | AccessExp accExp ->
             [
                 yield! constrainMemberExp accExp.instanceExp
-                yield Unsolved (accExp.instanceExp.tvar, Field (accExp.memberName, Var membExp.tvar))
+                yield
+                    (
+                        accExp.instanceExp.tvar,
+                        Field { name = accExp.memberName; typ = Var membExp.tvar }
+                    )
+                    |> Unsolved 
                 do possibleRecordNames <-
                     (accExp.instanceExp.tvar, MemberExp.getLastSegment accExp.instanceExp.value)
                     :: possibleRecordNames
@@ -159,7 +168,7 @@ let buildProblems (tree: TExp list) =
             let tvarIdent = membExp.bindingContext |> Map.tryFind ident
             match tvarIdent with
             | Some tvarIdent -> [ Unsolved (tvarIdent, Var membExp.tvar) ]
-            | None -> [ Unsolved (Root, Field (ident, Var membExp.tvar)) ]
+            | None -> [ Unsolved (Root, Field { name = ident; typ = Var membExp.tvar }) ]
     
     let rec constrainTree (tree: TExp list) =
         [ for tree in tree do
@@ -195,7 +204,7 @@ let rec subst tvarToReplace withTyp inTyp =
         | _ -> withTyp
     match inTyp with
     | Poly (name, inTyp) -> Poly (name, subst tvarToReplace withTyp inTyp)
-    | Field (fn,ft) -> Field (fn, subst tvarToReplace withTyp ft)
+    | Field { name = fn; typ = ft } -> Field { name = fn; typ = subst tvarToReplace withTyp ft }
     | Var tvar when tvar = tvarToReplace -> withTyp
     | Record tvarRec ->
         match withTyp with
@@ -225,7 +234,7 @@ let solveProblems (problems: Problem list) =
         | Record tvarRec, (Field _ as r)
         | (Field _ as r), Record tvarRec ->
             Unified [ Unsolved (tvarRec, r) ]
-        | Field (fn1,ft1), Field (fn2,ft2) ->
+        | Field { name = fn1; typ = ft1 }, Field { name = fn2; typ = ft2 } ->
             if fn1 = fn2 
                 then unify ft1 ft2
                 else KeepOriginal
