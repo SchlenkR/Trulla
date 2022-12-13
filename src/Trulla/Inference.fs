@@ -291,27 +291,23 @@ let solveProblems (problems: Problem list) =
                 yield Solved p
                 yield! substInProblems tvar typ solutions Solved
             ]
+
     try Ok (solve problems)
     with TrullaException err -> Error [err]
 
-type UnificationResult =
-    { tvar: TVar
-      errors: string list
-      resultingTyp: Typ }
-
-let buildRecords (solution: SolutionData list) =
-    solution
-    |> List.choose (fun (tvar,t) ->
-        match t with
-        | Field f -> Some (tvar,f)
-        | _ -> None)
-    |> List.groupBy fst
-    |> List.map (fun (tvar, fields) -> tvar, fields |> List.map snd)
-    |> Map.ofList
-
-let solve tokens =
+let solve parserResult =
+    let buildRecords (solution: SolutionData list) =
+        solution
+        |> List.choose (fun (tvar,t) ->
+            match t with
+            | Field f -> Some (tvar,f)
+            | _ -> None)
+        |> List.groupBy fst
+        |> List.map (fun (tvar, fields) -> tvar, fields |> List.map snd)
+        |> Map.ofList
+    
     result {
-        let! tokens = tokens 
+        let! tokens = parserResult 
         let! tree = buildTree tokens
         let problems = buildProblems tree
         let! solution = solveProblems problems.problems
