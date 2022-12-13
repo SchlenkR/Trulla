@@ -18,12 +18,12 @@ type TVal<'a> =
     }
     override this.ToString() = $"({this.range}){this.value}"
 
-type Body = BindingContext * TExp list
-and TExp =
+type TExp =
     | Text of string
     | Hole of TVal<MemberExp>
     | For of ident: TVal<string> * exp: TVal<MemberExp> * body: TExp list
     | If of cond: TVal<MemberExp> * body: TExp list
+and Body = BindingContext * TExp list
 and MemberExp =
     | AccessExp of {| instanceExp: TVal<MemberExp>; memberName: string |}
     | IdentExp of string
@@ -59,7 +59,7 @@ let buildTree (tokens: PVal<Token> list) =
         ofPExpZero pexp
 
     let rec toTree (pointer: int) scopeDepth (bindingContext: BindingContext) =
-        // TODO: IS all that really necessary - the mutable stuff?
+        // TODO: Is all that really necessary - the mutable stuff?
         let mutable pointer = pointer
         let mutable scopeDepth = scopeDepth
         let mutable endTokenDetected = false
@@ -137,6 +137,11 @@ type SolutionData = TVar * Typ // should be FinalTyp
 type Problem =
     | Unsolved of ProblemData
     | Solved of SolutionData
+type RecordName =
+    {
+        record: TVar
+        name: string
+    }
 
 module KnownTypes =
     // TODO: reserve these keywords + parser tests
@@ -161,7 +166,10 @@ let buildProblems (tree: TExp list) =
                     )
                     |> Unsolved 
                 do possibleRecordNames <-
-                    (accExp.instanceExp.tvar, MemberExp.getLastSegment accExp.instanceExp.value)
+                    {
+                        record = accExp.instanceExp.tvar
+                        name = MemberExp.getLastSegment accExp.instanceExp.value
+                    }
                     :: possibleRecordNames
             ]
         | IdentExp ident ->
@@ -192,32 +200,41 @@ let buildProblems (tree: TExp list) =
                 // --->
                 yield! constrainTree children
         ]
-    
-    let problems = constrainTree tree
-    problems,possibleRecordNames
 
-let rec subst tvarToReplace withTyp inTyp =
-    ////printfn $"Substing: {tvarToReplace} in {inTyp}"
-    let withTyp =
-        match withTyp with
-        | Field _ -> Record tvarToReplace
-        | _ -> withTyp
-    match inTyp with
-    | Poly (name, inTyp) -> Poly (name, subst tvarToReplace withTyp inTyp)
-    | Field { name = fn; typ = ft } -> Field { name = fn; typ = subst tvarToReplace withTyp ft }
-    | Var tvar when tvar = tvarToReplace -> withTyp
-    | Record tvarRec ->
-        match withTyp with
-        | Var tvar when tvarRec = tvar -> Record tvar
-        | _ -> inTyp
-    | Mono _
-    | Var _ -> inTyp
+    {|
+        problems = constrainTree tree
+        possibleRecordNames = possibleRecordNames
+    |}
 
-type Unification =
+type private Unification =
     | Unified of Problem list
     | KeepOriginal
 
+type SolveResult =
+    { 
+        tree: TExp list
+        records: Map<TVar, Field list>
+        possibleRecordNames: RecordName list
+    }
+
 let solveProblems (problems: Problem list) =
+    let rec subst tvarToReplace withTyp inTyp =
+        ////printfn $"Substing: {tvarToReplace} in {inTyp}"
+        let withTyp =
+            match withTyp with
+            | Field _ -> Record tvarToReplace
+            | _ -> withTyp
+        match inTyp with
+        | Poly (name, inTyp) -> Poly (name, subst tvarToReplace withTyp inTyp)
+        | Field { name = fn; typ = ft } -> Field { name = fn; typ = subst tvarToReplace withTyp ft }
+        | Var tvar when tvar = tvarToReplace -> withTyp
+        | Record tvarRec ->
+            match withTyp with
+            | Var tvar when tvarRec = tvar -> Record tvar
+            | _ -> inTyp
+        | Mono _
+        | Var _ -> inTyp
+    
     let rec unify t1 t2 =
         ////printfn $"Unifying: ({t1})  --  ({t2})"
         // TODO: Correct range mapping when constructing new problems
@@ -292,25 +309,18 @@ let buildRecords (solution: SolutionData list) =
     |> List.map (fun (tvar, fields) -> tvar, fields |> List.map snd)
     |> Map.ofList
 
-type SolveResult =
-    { 
-        tree: TExp list
-        records: Map<TVar, Field list>
-        possibleRecordNames: (TVar * string) list
-    }
-
 let solve tokens =
     result {
         let! tokens = tokens 
         let! tree = buildTree tokens
-        let problems,possibleRecordNames = buildProblems tree
-        let! solution = solveProblems problems
+        let problems = buildProblems tree
+        let! solution = solveProblems problems.problems
         let records = buildRecords solution
         return
             {
                 tree = tree
                 records = records
-                possibleRecordNames = possibleRecordNames
+                possibleRecordNames = problems.possibleRecordNames
             }
     }
     

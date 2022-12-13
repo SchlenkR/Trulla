@@ -8,6 +8,7 @@ type PVal<'a> = { range: Range; value: 'a }
 type TrullaError = { ranges: Range list; message: string }
 exception TrullaException of TrullaError
 
+// TODO: else if, etc.
 type Token =
     | Text of string
     | Hole of PVal<MemberToken>
