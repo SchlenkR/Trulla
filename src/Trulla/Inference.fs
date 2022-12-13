@@ -3,6 +3,8 @@
 open Trulla.Internal.Utils
 open Trulla.Internal.Parsing
 
+let [<Literal>] private RootRecordName = "Root"
+
 type TVar =
     | Root
     | TVar of int
@@ -54,7 +56,7 @@ type RecordDef =
     {
         id: TVar
         fields: Field list
-        potentialNames: string list
+        name: string
     }
 
 type SolveResult =
@@ -301,16 +303,24 @@ let solve parserResult =
         let! tree = buildTree tokens
         let problems = buildProblems tree
         let! solution = solveProblems problems.problems
-        let getPotentialRecordNames =
+        let getRecordName =
+            // TODO: How we know that we have at least one?
+            // TODO: Pascal case names / general: name checks all over the place
             let map = 
                 problems.possibleRecordNames
                 |> List.groupBy fst
                 |> Map.ofList
                 |> Map.map (fun _ v -> v |> List.map snd)
             fun recId ->
-                map
-                |> Map.tryFind recId
-                |> Option.defaultValue []
+                match recId with
+                | Root -> RootRecordName
+                | TVar _ -> map |> Map.find recId |> List.head
+        let makeRecord tvar fields =
+            {
+                id = tvar
+                name = getRecordName tvar
+                fields = fields |> List.map snd
+            }
         let records =
             solution
             |> List.choose (fun (tvar,t) ->
@@ -318,17 +328,11 @@ let solve parserResult =
                 | Field f -> Some (tvar,f)
                 | _ -> None)
             |> List.groupBy fst
-            |> List.map (fun (tvar, fields) ->
-                {
-                    id = tvar
-                    fields = fields |> List.map snd
-                    potentialNames = getPotentialRecordNames tvar
-                }
-            )
-        
-        return
-            { 
-                tree = tree
-                records = records
-            }
+            |> List.map (fun (tvar, fields) -> makeRecord tvar fields)
+            |>
+                function
+                | [] -> [ makeRecord Root [] ]
+                | records -> records
+
+        return { tree = tree; records = records }
     }

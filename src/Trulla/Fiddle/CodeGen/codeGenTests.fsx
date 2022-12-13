@@ -42,6 +42,13 @@ Your Orders
 
 
 
+"""{{if order.isActive}}{{order.isActive}}{{end}}"""
+|> render
+|> saveToOutputFs
+
+
+
+
 
 """Hello {{a.b.c}}"""
 |> render

@@ -1,6 +1,6 @@
 ﻿namespace Trulla.TypeProviderImplementation
 
-open System
+open System.Text
 open System.Reflection
 open ProviderImplementation.ProvidedTypes
 open ProviderImplementation.ProvidedTypes.UncheckedQuotations
@@ -9,17 +9,14 @@ open Microsoft.FSharp.Quotations
 open Trulla.Internal
 open Trulla.Internal.Inference
 
+module private Expr =
+    let allSequential exprs =
+        exprs |> List.fold (fun a b -> Expr.Sequential(a, b)) <@@ () @@>
+
 module internal ModelCompiler =
     let addRecords (recordDefs: RecordDef list) =
         let toProvidedRecord (def: RecordDef) =
-            let recordName =
-                match def.id with
-                | Root -> "Root"
-                | TVar _ -> 
-                    // TODO: How we know that we have at least one?
-                    // TODO: Pascal case names / general: name checks all over the place
-                    def.potentialNames[0]
-            ProvidedTypeDefinition(recordName, Some typeof<obj>, isErased = false)
+            ProvidedTypeDefinition(def.name, Some typeof<obj>, isErased = false)
         let finalizeProvidedRecord 
             (providedRecords: Map<TVar, ProvidedTypeDefinition>)
             (providedRecord: ProvidedTypeDefinition)
@@ -50,9 +47,8 @@ module internal ModelCompiler =
                         function
                         | this :: args ->
                             List.zip args fields
-                            |> List.map(fun (arg, (f,_)) -> Expr.FieldSetUnchecked(this, f, arg))
-                            |> List.rev
-                            |> List.fold (fun a b -> Expr.Sequential(a, b)) <@@ () @@>
+                            |> List.map (fun (arg, (f,_)) -> Expr.FieldSetUnchecked(this, f, arg))
+                            |> Expr.allSequential
                         | args -> failwith $"Invalid property setter params: {args}"
                 )
             providedRecord.AddMember(ctor)
@@ -68,8 +64,46 @@ module internal ModelCompiler =
         let finalizedRecords = 
             providedRecords
             |> List.map (fun (recDef, providedRec) -> finalizeProvidedRecord providedRecordsMap providedRec recDef)
-        
         finalizedRecords
+
+    let createRenderMethod rootRecord (tree: TExp list) =
+        let sb = StringBuilder()
+        let rec createRenderExprs (tree: TExp list) =
+            [ for texp in tree do
+                match texp with
+                | Text txt ->
+                    yield <@@ sb.Append(txt) |> ignore @@>
+                | Hole hole ->
+                    //sbAppend indent (memberExpToIdent hole)
+                    ()
+                | For (ident,exp,body) ->
+                    //lni indent $"for %s{ident.value} in {memberExpToIdent exp} do"
+                    //render (indent + 1) body
+                    ()
+                | If (cond,body) ->
+                    //lni indent $"if {memberExpToIdent cond} then"
+                    //render (indent + 1) body
+                    ()
+            ]
+        //let finalExp =
+        //    createRenderExprs tree
+        //    @ [ <@@ sb.ToString() @@> ]
+        //    |> Expr.allSequential
+        let finalExp =
+            let appendHello = <@ fun (append: string -> unit) -> append "Hello" @>
+            <@@ 
+                let sb = StringBuilder()
+                let append (txt: string) = sb.Append(txt) |> ignore
+                (%appendHello) append
+                sb.ToString()
+            @@>
+
+        ProvidedMethod(
+            "Render",
+            [ProvidedParameter("model", rootRecord)],
+            typeof<string>,
+            isStatic = true,
+            invokeCode = fun args -> finalExp)
         
 [<TypeProvider>]
 type TemplateProviderImplemtation (config : TypeProviderConfig) as this =
@@ -96,27 +130,19 @@ type TemplateProviderImplemtation (config : TypeProviderConfig) as this =
                 match solveResult with
                 | Error errors -> failwith $"Template error: {errors}"
                 | Ok solveResult ->
-                    let addedRecords = ModelCompiler.addRecords solveResult.records
+                    let providedRecords = ModelCompiler.addRecords solveResult.records
                     let rootRecord =
-                        addedRecords
+                        providedRecords
                         |> List.find (fun (r,_) ->
                             // Wieder sowas: Es sollte klar sein, dass es genau einen Root-Recotd geben MUSS
                             match r.id with Root -> true | _ -> false)
                         |> snd
-                    let providedRecords = addedRecords |> List.map snd
-                    let renderFunction =
-                        ProvidedMethod(
-                            "Render",
-                            [ProvidedParameter("model", rootRecord)],
-                            typeof<string>,
-                            isStatic = true,
-                            invokeCode = fun args -> <@@ "TODO" @@>)
-                    
+                    let renderFunction = ModelCompiler.createRenderMethod rootRecord solveResult.tree
                     let asm = ProvidedAssembly()
                     let modelType = ProvidedTypeDefinition(
                         asm, ns, typeName, Some typeof<obj>, isErased = false, hideObjectMethods = true)
                     do 
-                        modelType.AddMembers providedRecords
+                        modelType.AddMembers (providedRecords |> List.map snd)
                         modelType.AddMembers [renderFunction]
                         asm.AddTypes [modelType]
                     modelType
