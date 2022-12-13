@@ -1,17 +1,27 @@
-﻿//// For more information see https://aka.ms/fsharp-console-apps
-//printfn "Hello from F#"
+﻿module Program
 
-module Program
+let [<Literal>] TestTemplate =
+    """Hello {{user.name}}, how are you?
 
-type Tmpl = Trulla.Template<2>
+Your Orders
+---
+{{for order in orders}}ID: {{order.id}}
+{{if order.isActive}}ORDER IS ACTIVE{{end}}
+{{end}}
+"""
+
+
+type Tmpl = Trulla.Template<TestTemplate>
 
 [<EntryPoint>]
 let main _ =
     let root =
-        Tmpl.Record2(
-            "Hurz",
-            Tmpl.Record1("xxx", "yyy"))
+        Tmpl.Root(
+            [
+                Tmpl.order(false, "Order 1")
+                Tmpl.order(true, "Order 2")
+            ],
+            Tmpl.user("Hans im Glück"))
     let output = Tmpl.Render(root)
-    printfn "%A" t
+    printfn "%A" output
     0
-

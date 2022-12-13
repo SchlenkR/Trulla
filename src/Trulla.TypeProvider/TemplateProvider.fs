@@ -7,65 +7,45 @@ open ProviderImplementation.ProvidedTypes.UncheckedQuotations
 open FSharp.Core.CompilerServices
 open Microsoft.FSharp.Quotations
 open Trulla.Internal
+open Trulla.Internal.Inference
 
-type TpType =
-    | DotnetType of Type
-    | DotnetTypeWithGenericRecordArgument of Type * string
-    | RecordRef of string
-
-type FieldDef =
-    {
-        name: string
-        fieldType: TpType
-    }
-
-type RecordDef =
-    {
-        isRoot: bool
-        name: string
-        fields: FieldDef list
-    }
-
-//module SolveResult =
-//    let toTpModel (solveResult: SolveResult) =
-//        let modelDef =
-//            [
-//                for recName,fields in solveResult.records |> Map.toList do
-//                    let fields =
-//                        [ for (fname,ftype) in fields do
-//                            { 
-//                                name = fname
-//                                fieldType =
-//                                    match ftype with
-//                                    | 
-//                            }
-//                        ]
-//            ]
-
-module internal TypeProviderHelper =
+module internal ModelCompiler =
     let addRecords (recordDefs: RecordDef list) =
-        let addRecord (def: RecordDef) =
-            ProvidedTypeDefinition(def.name, Some typeof<obj>, isErased = false)
-        let finalizeRecord (addedRecords: ProvidedTypeDefinition list) (def: RecordDef) =
-            let findRecordType name = addedRecords |> List.find (fun x -> x.Name = name)
-            let recordType = findRecordType def.name
+        let toProvidedRecord (def: RecordDef) =
+            let recordName =
+                match def.id with
+                | Root -> "Root"
+                | TVar _ -> 
+                    // TODO: How we know that we have at least one?
+                    // TODO: Pascal case names / general: name checks all over the place
+                    def.potentialNames[0]
+            ProvidedTypeDefinition(recordName, Some typeof<obj>, isErased = false)
+        let finalizeProvidedRecord 
+            (providedRecords: Map<TVar, ProvidedTypeDefinition>)
+            (providedRecord: ProvidedTypeDefinition)
+            (def: RecordDef) 
+            =
             let fields =
-                [
-                    for field in def.fields do
-                        let fieldType =
-                            match field.fieldType with
-                            | DotnetType t -> t
-                            | RecordRef s -> findRecordType s
-                        let provField = ProvidedField(field.name, fieldType)
-                        do recordType.AddMember(provField)
-                        provField,fieldType
+                [ for field in def.fields do
+                    let fieldType =
+                        let rec toDotnetType typ =
+                            match typ with
+                            | Mono KnownTypes.string -> typeof<string>
+                            | Mono KnownTypes.bool -> typeof<bool>
+                            | Poly (KnownTypes.sequence, pt) ->
+                                typedefof<List<_>>.MakeGenericType([| toDotnetType pt |])
+                            | Record tvar -> providedRecords[tvar]
+                            // TODO: See comments in ModelInference / FinalTyp: This gap has to be eliminated
+                            //| Var _ -> "obj"
+                            | _ -> failwith $"Unsupported reference for type '{typ}'."
+                        toDotnetType field.typ
+                    let provField = ProvidedField(field.name, fieldType)
+                    do providedRecord.AddMember(provField)
+                    provField,fieldType
                 ]
             let ctor = 
                 ProvidedConstructor(
-                    [
-                        for provField,fieldType in fields do
-                            ProvidedParameter(provField.Name, fieldType)
-                    ],
+                    fields |> List.map (fun (provField,fieldType) -> ProvidedParameter(provField.Name, fieldType)),
                     invokeCode =
                         function
                         | this :: args ->
@@ -75,11 +55,19 @@ module internal TypeProviderHelper =
                             |> List.fold (fun a b -> Expr.Sequential(a, b)) <@@ () @@>
                         | args -> failwith $"Invalid property setter params: {args}"
                 )
-            recordType.AddMember(ctor)
-            recordType
+            providedRecord.AddMember(ctor)
+            def,providedRecord
 
-        let addedRecords = recordDefs |> List.map addRecord
-        let finalizedRecords = recordDefs |> List.map (finalizeRecord addedRecords)
+        let providedRecords =
+            recordDefs
+            |> List.map (fun recDef -> recDef, toProvidedRecord recDef)
+        let providedRecordsMap = 
+            providedRecords 
+            |> List.map (fun (recDef, providedRec) -> recDef.id, providedRec)
+            |> Map.ofList
+        let finalizedRecords = 
+            providedRecords
+            |> List.map (fun (recDef, providedRec) -> finalizeProvidedRecord providedRecordsMap providedRec recDef)
         
         finalizedRecords
         
@@ -99,7 +87,7 @@ type TemplateProviderImplemtation (config : TypeProviderConfig) as this =
     
     let templateProviderForStringLiteral =
         let providerType = ProvidedTypeDefinition(asm, ns, "Template", Some typeof<obj>, isErased = false)
-        providerType.DefineStaticParameters(
+        do providerType.DefineStaticParameters(
             [ProvidedStaticParameter("Template", typeof<string>)],
             fun typeName args ->
                 let solveResult =
@@ -107,53 +95,28 @@ type TemplateProviderImplemtation (config : TypeProviderConfig) as this =
                     Parsing.parseTemplate template |> Inference.solve
                 match solveResult with
                 | Error errors -> failwith $"Template error: {errors}"
-                | Ok solveResult->
-                    //let modelDef =
-                    //    [
-                    //        for recName,fields in solveResult.records |> Map.toList do
-                    //            let fields =
-                    //                [ for field in fields do
-                    //                    { name = field; fieldType = DotnetType typeof<string> }
-                    //                ]
-                    //    ]
-                        
-                    //    |> Map.map (fun recName fields ->
-                    //        { name = recName; fields = fields |> List.map (fun field ->
-                    //            ) }
-
-                    let modelDef =
-                        [
-                            {
-                                name = "Root"
-                                isRoot = true
-                                fields = [
-                                    { name = "MyString1"; fieldType = DotnetType typeof<string> }
-                                    { name = "MyParent"; fieldType = RecordRef "MyType" }
-                                ]
-                            }
-                            {
-                                name = "MyType"
-                                isRoot = false
-                                fields = [
-                                    { name = "MyString1"; fieldType = DotnetType typeof<string> }
-                                    { name = "MyString2"; fieldType = DotnetType typeof<string> }
-                                ]
-                            }
-                        ]
-                
-                    let asm = ProvidedAssembly()
-                
-                    let records = TypeProviderHelper.addRecords modelDef
+                | Ok solveResult ->
+                    let addedRecords = ModelCompiler.addRecords solveResult.records
+                    let rootRecord =
+                        addedRecords
+                        |> List.find (fun (r,_) ->
+                            // Wieder sowas: Es sollte klar sein, dass es genau einen Root-Recotd geben MUSS
+                            match r.id with Root -> true | _ -> false)
+                        |> snd
+                    let providedRecords = addedRecords |> List.map snd
                     let renderFunction =
                         ProvidedMethod(
-                            "Render", 
-                            [ProvidedParameter("model", records[0])],
+                            "Render",
+                            [ProvidedParameter("model", rootRecord)],
                             typeof<string>,
                             isStatic = true,
                             invokeCode = fun args -> <@@ "TODO" @@>)
-                    let modelType = ProvidedTypeDefinition(asm, ns, typeName, Some typeof<obj>, isErased = false, hideObjectMethods = true)
+                    
+                    let asm = ProvidedAssembly()
+                    let modelType = ProvidedTypeDefinition(
+                        asm, ns, typeName, Some typeof<obj>, isErased = false, hideObjectMethods = true)
                     do 
-                        modelType.AddMembers records
+                        modelType.AddMembers providedRecords
                         modelType.AddMembers [renderFunction]
                         asm.AddTypes [modelType]
                     modelType

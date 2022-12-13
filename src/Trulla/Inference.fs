@@ -7,7 +7,7 @@ type TVar =
     | Root
     | TVar of int
 
-type BindingContext = Map<string, TVar>
+type private BindingContext = Map<string, TVar>
 
 type TVal<'a> =
     { 
@@ -23,10 +23,45 @@ type TExp =
     | Hole of TVal<MemberExp>
     | For of ident: TVal<string> * exp: TVal<MemberExp> * body: TExp list
     | If of cond: TVal<MemberExp> * body: TExp list
+
 and Body = BindingContext * TExp list
+
 and MemberExp =
     | AccessExp of {| instanceExp: TVal<MemberExp>; memberName: string |}
     | IdentExp of string
+
+type Typ =
+    | Mono of string
+    | Poly of name: string * typParam: Typ
+    | Field of Field
+    | Record of TVar
+    | Var of TVar
+
+//// TODO: After solving, a transition should happen from Type to FinalTyp
+//type FinalTyp =
+//    | FMono of string
+//    | FPoly of name: string * typParam: FinalTyp
+//    | FField of Field
+//    | FRecord of TVar
+
+and Field = 
+    { 
+        name: string
+        typ: Typ
+    }
+
+type RecordDef =
+    {
+        id: TVar
+        fields: Field list
+        potentialNames: string list
+    }
+
+type SolveResult =
+    {
+        tree: TExp list
+        records: RecordDef list
+    }
 
 module TVal =
     let create range tvar bindingContext value =
@@ -112,50 +147,11 @@ let buildTree (tokens: PVal<Token> list) =
     with TrullaException err ->
         Error [err]
 
-type Typ =
-    | Mono of string
-    | Poly of name: string * typParam: Typ
-    | Field of Field
-    | Record of TVar
-    | Var of TVar
-and Field = 
-    { 
-        name: string
-        typ: Typ 
-    }
-
-//// TODO: After solving, a transition should happen from Type to FinalTyp
-//type FinalTyp =
-//    | FMono of string
-//    | FPoly of name: string * typParam: FinalTyp
-//    | FField of Field
-//    | FRecord of TVar
-
-// TODO: Problem should beTypr * Type; later, resolve the ranges
-type ProblemData = TVar * Typ
-type SolutionData = TVar * Typ // should be FinalTyp
-type Problem =
+type private ProblemData = TVar * Typ
+type private SolutionData = TVar * Typ // should be FinalTyp?
+type private Problem =
     | Unsolved of ProblemData
     | Solved of SolutionData
-
-type RecordName =
-    {
-        record: TVar
-        name: string
-    }
-
-type RecordDef =
-    {
-        id: TVar
-        fields: Field list
-        potentialNames: RecordName list
-    }
-
-type SolveResult =
-    {
-        tree: TExp list
-        records: RecordDef list
-    }
     
 module KnownTypes =
     // TODO: reserve these keywords + parser tests
@@ -165,8 +161,8 @@ module KnownTypes =
     let sequenceOf elemTypId = sequence, elemTypId
 
 // TODO: Prevent shadowing
-let buildProblems (tree: TExp list) =
-    let mutable possibleRecordNames = []
+let private buildProblems (tree: TExp list) =
+    let mutable potentialRecordNames = []
 
     let rec constrainMemberExp (membExp: TVal<MemberExp>) =
         match membExp.value with
@@ -179,12 +175,9 @@ let buildProblems (tree: TExp list) =
                         Field { name = accExp.memberName; typ = Var membExp.tvar }
                     )
                     |> Unsolved 
-                do possibleRecordNames <-
-                    {
-                        record = accExp.instanceExp.tvar
-                        name = MemberExp.getLastSegment accExp.instanceExp.value
-                    }
-                    :: possibleRecordNames
+                do potentialRecordNames <-
+                    (accExp.instanceExp.tvar, MemberExp.getLastSegment accExp.instanceExp.value)
+                    :: potentialRecordNames
             ]
         | IdentExp ident ->
             let tvarIdent = membExp.bindingContext |> Map.tryFind ident
@@ -217,14 +210,14 @@ let buildProblems (tree: TExp list) =
 
     {|
         problems = constrainTree tree
-        possibleRecordNames = possibleRecordNames
+        possibleRecordNames = potentialRecordNames
     |}
 
 type private Unification =
     | Unified of Problem list
     | KeepOriginal
 
-let solveProblems (problems: Problem list) =
+let private solveProblems (problems: Problem list) =
     let rec subst tvarToReplace withTyp inTyp =
         ////printfn $"Substing: {tvarToReplace} in {inTyp}"
         let withTyp =
@@ -311,9 +304,13 @@ let solve parserResult =
         let getPotentialRecordNames =
             let map = 
                 problems.possibleRecordNames
-                |> List.groupBy (fun x -> x.record)
+                |> List.groupBy fst
                 |> Map.ofList
-            fun recId -> map |> Map.tryFind recId |> Option.defaultValue []
+                |> Map.map (fun _ v -> v |> List.map snd)
+            fun recId ->
+                map
+                |> Map.tryFind recId
+                |> Option.defaultValue []
         let records =
             solution
             |> List.choose (fun (tvar,t) ->
