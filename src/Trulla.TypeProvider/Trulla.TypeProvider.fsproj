@@ -17,10 +17,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Trulla\Trulla.fsproj" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Update="FSharp.Core" Version="6.0.0">
       <!-- This excludes FSharp.Core.xml and FSharp.Core.resources.dll while referencing the right FSharp.Core.dll version -->
       <ExcludeAssets>runtime;contentFiles</ExcludeAssets>
