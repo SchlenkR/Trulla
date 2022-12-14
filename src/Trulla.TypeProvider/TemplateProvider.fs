@@ -7,9 +7,9 @@ open Microsoft.FSharp.Quotations
 
 module Expression =
     let finalExp =
-        // Working:
-        let varX = Var("x", typeof<string>)
-        Expr.Let(varX, Expr.Value("Hello"), Expr.Var(varX))
+        //// Working:
+        //let varX = Var("x", typeof<string>)
+        //Expr.Let(varX, Expr.Value("Hello"), Expr.Var(varX))
 
         //// Also working:
         //let varX = Var("x", typeof<string>)
@@ -18,11 +18,11 @@ module Expression =
         //    (%%letExpr: string)
         //@@>
     
-        //// Not working (with or without cast / typed or untyped: doesn't matter):
-        //let varExpr = Expr.Var(Var("x", typeof<string>))
-        //<@@
-        //    let x = "World" in (%%varExpr: string)
-        //@@>
+        // Not working (with or without Expr.Cast<string> / with type annotations or not: doesn't matter):
+        let varExpr = Expr.Var(Var("x", typeof<string>))
+        <@@
+            let x = "World" in (%%varExpr: string)
+        @@>
 
 
 // -------------------------------
