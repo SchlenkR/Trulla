@@ -2,12 +2,12 @@
 
 open System.Text
 open System.Reflection
+open Trulla.Internal
+open Trulla.Internal.Inference
 open ProviderImplementation.ProvidedTypes
 open ProviderImplementation.ProvidedTypes.UncheckedQuotations
 open FSharp.Core.CompilerServices
 open Microsoft.FSharp.Quotations
-open Trulla.Internal
-open Trulla.Internal.Inference
 
 module private Expr =
     let allSequential exprs =
@@ -67,15 +67,23 @@ module internal ModelCompiler =
         finalizedRecords
 
     let createRenderMethod rootRecord (tree: TExp list) =
-        let sb = StringBuilder()
+        let memberAccessExp (exp: TVal<MemberExp>) =
+            failwith "TODO"
+            //match exp.value with
+            //| IdentExp ident ->
+            //    let isBound = exp.bindingContext |> Map.containsKey ident
+            //    let rootPrefix = if isBound then "" else rootIdentifier + dotIntoMember
+            //    rootPrefix + ident
+            //| AccessExp acc -> (memberExpToIdent acc.instanceExp) + dotIntoMember + acc.memberName
+
         let rec createRenderExprs (tree: TExp list) =
             [ for texp in tree do
                 match texp with
                 | Text txt ->
-                    yield <@@ sb.Append(txt) |> ignore @@>
+                    yield <@ fun (append: string -> unit) -> append txt @>
                 | Hole hole ->
-                    //sbAppend indent (memberExpToIdent hole)
                     ()
+                    //yield <@ fun (append: string -> unit) -> append (memberExpToIdent hole) @>
                 | For (ident,exp,body) ->
                     //lni indent $"for %s{ident.value} in {memberExpToIdent exp} do"
                     //render (indent + 1) body
@@ -89,13 +97,30 @@ module internal ModelCompiler =
         //    createRenderExprs tree
         //    @ [ <@@ sb.ToString() @@> ]
         //    |> Expr.allSequential
+        //let finalExp =
+        //    let appendHello = <@ fun (append: string -> unit) -> append "Hello" @>
+        //    <@@ 
+        //        let sb = StringBuilder()
+        //        let append (txt: string) = sb.Append(txt) |> ignore
+        //        (%appendHello) append
+        //        sb.ToString()
+        //    @@>
         let finalExp =
-            let appendHello = <@ fun (append: string -> unit) -> append "Hello" @>
-            <@@ 
-                let sb = StringBuilder()
-                let append (txt: string) = sb.Append(txt) |> ignore
-                (%appendHello) append
-                sb.ToString()
+            // Working:
+            //let varX = Var("x", typeof<string>)
+            //Expr.Let(varX, Expr.Value("Hello"), Expr.Var(varX))
+            
+            // Also working:
+            //let varX = Var("x", typeof<string>)
+            //let letExpr = Expr.Let(varX, Expr.Value("Hello"), Expr.Var(varX))
+            //<@@
+            //    (%%letExpr: string)
+            //@@>
+
+            // Not working (with or without cast / typed or untyped: doesn't matter):
+            let varExpr = Expr.Var(Var("x", typeof<string>))
+            <@@
+                let x = "World" in (%%varExpr: string)
             @@>
 
         ProvidedMethod(
