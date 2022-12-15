@@ -1,5 +1,6 @@
 ﻿namespace Trulla.TypeProviderImplementation
 
+open System.Text
 open System.Reflection
 
 open Trulla
@@ -80,26 +81,24 @@ module private ModelCompiler =
         //        rootPrefix + ident
         //    | AccessExp acc -> (memberExpToIdent acc.instanceExp) + dotIntoMember + acc.memberName
 
-        //let rec createRenderExprs (varRoot: Expr) (tree: TExp list) =
-        //    [ for texp in tree do
-        //        match texp with
-        //        | Text txt ->
-        //            yield <@ fun (append: string -> unit) -> append txt @>
-        //        | Hole hole ->
-        //            ()
-        //            //yield <@ fun (append: string -> unit) -> append (memberExpToIdent hole) @>
-        //        | For (ident,exp,body) ->
-        //            //lni indent $"for %s{ident.value} in {memberExpToIdent exp} do"
-        //            //render (indent + 1) body
-        //            ()
-        //        | If (cond,body) ->
-        //            //lni indent $"if {memberExpToIdent cond} then"
-        //            //render (indent + 1) body
-        //            ()
-        //    ]
         let rec createRenderExprs (varRoot: Expr) (tree: TExp list) =
-            Expr.Call(varRoot, typeof<obj>.GetMethod("ToString", BindingFlags.Instance ||| BindingFlags.Public), [])
-            //<@@ (%%varRoot: obj) |> fun x -> x.ToString() @@>
+            [ for texp in tree do
+                match texp with
+                | Text txt ->
+                    yield <@ fun (append: string -> unit) -> append txt @>
+                | Hole hole ->
+                    ()
+                    //yield <@ fun (append: string -> unit) -> append (memberExpToIdent hole) @>
+                | For (ident,exp,body) ->
+                    //lni indent $"for %s{ident.value} in {memberExpToIdent exp} do"
+                    //render (indent + 1) body
+                    ()
+                | If (cond,body) ->
+                    //lni indent $"if {memberExpToIdent cond} then"
+                    //render (indent + 1) body
+                    ()
+            ]
+
         //let finalExp =
         //    createRenderExprs tree
         //    @ [ <@@ sb.ToString() @@> ]
@@ -139,9 +138,41 @@ module private ModelCompiler =
             //invokeCode = fun args -> finalExp)
             invokeCode = fun args ->
                 let boxedRoot = Expr.Coerce(args[0], typeof<obj>)
-                <@@ 
-                    Runtime.say (%%boxedRoot)
-                @@>
+
+                let sbVar = Var("sb", typeof<StringBuilder>)
+                let withStringBuilder body =
+                    Expr.Let(
+                        sbVar,
+                        Expr.NewObject(typeof<StringBuilder>.GetConstructor([||]), []),
+                        body)
+                let append value =
+                    Expr.Call(Expr.Var(sbVar), typeof<StringBuilder>.GetMethod("Append", [| typeof<string> |]), [value])
+                let sbToString = 
+                    Expr.Call(Expr.Var(sbVar), typeof<StringBuilder>.GetMethod("ToString", [||]), [])
+
+                [
+                    append (Expr.Value("Hello"))
+                    append (Expr.Value("Hello"))
+                    append (Expr.Value("Hello"))
+                    append (Expr.Value("Hello"))
+                    sbToString
+                ]
+                |> Expr.allSequential
+                |> withStringBuilder
+
+                //let appendFunction = Expr.Var(Var("append", typeof<string -> unit>))
+                //let renderExpr = Expr.Application(appendFunction, Expr.Value("Hello WOrld"))
+                //<@@
+                //    let sb = System.Text.StringBuilder()
+                //    let append (txt: string) = sb.Append(txt) |> ignore
+                //    //(%appendHello) append
+                //    (%%renderExpr)
+                //    sb.ToString()
+                //@@>
+                
+                //<@@ 
+                //    Runtime.say (%%boxedRoot)
+                //@@>
         )
         
 [<TypeProvider>]
