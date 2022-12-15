@@ -15,6 +15,9 @@ module private Expr =
     let allSequential exprs =
         exprs |> List.fold (fun a b -> Expr.Sequential(a, b)) <@@ () @@>
 
+module Runtime =
+    let say (i: obj) = i.ToString()
+
 module private ModelCompiler =
     let addRecords (recordDefs: RecordDef list) =
         let toProvidedRecord (def: RecordDef) =
@@ -137,8 +140,7 @@ module private ModelCompiler =
             invokeCode = fun args ->
                 let boxedRoot = Expr.Coerce(args[0], typeof<obj>)
                 <@@ 
-                    let say (i: obj) = i.ToString()
-                    say (%%boxedRoot)
+                    Runtime.say (%%boxedRoot)
                 @@>
         )
         
@@ -146,7 +148,7 @@ module private ModelCompiler =
 type TemplateProviderImplemtation (config : TypeProviderConfig) as this =
     inherit TypeProviderForNamespaces (
         config,
-        assemblyReplacementMap = [("Trulla.TypeProvider", "TemplateProvider")],
+        //assemblyReplacementMap = [("Trulla.TypeProvider", "TemplateProvider")],
         addDefaultProbingLocation = true
     )
 
