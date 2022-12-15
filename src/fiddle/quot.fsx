@@ -1,5 +1,3 @@
-#r "nuget: QuotationCompiler"
-
 open System.Text
 open System.Reflection
 open FSharp.Core.CompilerServices
@@ -28,3 +26,15 @@ let appendHello = Expr.Application(Expr.Var(Var("append", typeof<string -> unit>
     do append "Hello World"
     sb.ToString()
 @@>
+
+
+
+
+open Microsoft.FSharp.Quotations
+
+let varX = Var("x", typeof<string>)
+let a = Expr.Let(varX, Expr.Value("Hello"), Expr.Var(varX))
+
+let varExpr = Expr.Var(Var("x", typeof<string>))
+let b = <@@let x = "Hello" in (%%varExpr: string)@@>
+

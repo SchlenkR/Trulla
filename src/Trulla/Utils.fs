@@ -1,4 +1,4 @@
-﻿module Trulla.Internal.Utils
+﻿namespace Trulla.Internal.Utils
 
 [<AutoOpen>]
 module Result =

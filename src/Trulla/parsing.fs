@@ -1,4 +1,4 @@
-﻿module Trulla.Internal.Parsing
+﻿namespace Trulla.Internal.Parsing
 
 open FParsec
 
@@ -21,6 +21,8 @@ type Token =
 and MemberToken =
     | AccessToken of {| instanceExp: PVal<MemberToken>; memberName: string |}
     | IdentToken of string
+
+type ParseResult = Result<PVal<Token> list, TrullaError list>
 
 module Consts =
     let beginExp = "{{"
@@ -84,54 +86,56 @@ module ParserHelper =
     let blanks : Parser<_, unit> = skipMany (skipChar ' ')
     let blanks1 : Parser<_, unit> = skipMany1 (skipChar ' ')
 
-let beginExp = pstring Consts.beginExp .>> notFollowedBy (pstring "{")
-let tmplExp =
-    let endExp = pstring Consts.endExp
-    let ident = many1Chars2 letter (letter <|> digit)
-    let propAccess =
-        sepBy1 (withPos  ident) (pchar '.')
-        |>> fun segments -> MemberToken.createFromSegments segments
+[<RequireQualifiedAccess>]
+module Parsing =
+    let beginExp = pstring Consts.beginExp .>> notFollowedBy (pstring "{")
+    let tmplExp =
+        let endExp = pstring Consts.endExp
+        let ident = many1Chars2 letter (letter <|> digit)
+        let propAccess =
+            sepBy1 (withPos  ident) (pchar '.')
+            |>> fun segments -> MemberToken.createFromSegments segments
 
-    let body =
-        let forExp = 
-            withPos (
-                pstring Keywords.for' >>. blanks1 >>. withPos ident .>> blanks1 .>> 
-                pstring Keywords.in' .>> blanks1 .>>. propAccess
-            )
-            |>> fun x -> PVal.create x.range (Token.For x.value)
-        let ifExp = 
-            withPos (pstring Keywords.if' >>. blanks1 >>. propAccess)
-            |>> fun x -> PVal.create x.range (Token.If x.value)
-        //let elseIfExp = pstring Keywords.elseIf' >>. blanks1 >>. propAccess |>> ElseIf
-        //let elseExp = pstring Keywords.else' |>> fun _ -> Else
-        let endExp = 
-            withPos (pstring Keywords.end')
-            |>> fun x -> PVal.create x.range (Token.End)
-        let holeExp = 
-            withPos propAccess
-            |>> fun x -> PVal.create x.range (Token.Hole x.value)
+        let body =
+            let forExp = 
+                withPos (
+                    pstring Keywords.for' >>. blanks1 >>. withPos ident .>> blanks1 .>> 
+                    pstring Keywords.in' .>> blanks1 .>>. propAccess
+                )
+                |>> fun x -> PVal.create x.range (Token.For x.value)
+            let ifExp = 
+                withPos (pstring Keywords.if' >>. blanks1 >>. propAccess)
+                |>> fun x -> PVal.create x.range (Token.If x.value)
+            //let elseIfExp = pstring Keywords.elseIf' >>. blanks1 >>. propAccess |>> ElseIf
+            //let elseExp = pstring Keywords.else' |>> fun _ -> Else
+            let endExp = 
+                withPos (pstring Keywords.end')
+                |>> fun x -> PVal.create x.range (Token.End)
+            let holeExp = 
+                withPos propAccess
+                |>> fun x -> PVal.create x.range (Token.Hole x.value)
+            choice [
+                forExp
+                ifExp
+                ////elseIfExp
+                ////elseExp
+                endExp
+                holeExp
+                ]
+        beginExp .>> blanks >>. body .>> blanks .>> endExp
+    let expOrText =
         choice [
-            forExp
-            ifExp
-            ////elseIfExp
-            ////elseExp
-            endExp
-            holeExp
+            tmplExp
+            withPos (chars1Until beginExp) |>> fun x -> PVal.create x.range (Token.Text x.value)
+            withPos (many1Chars anyChar) |>> fun x -> PVal.create x.range (Token.Text x.value)
             ]
-    beginExp .>> blanks >>. body .>> blanks .>> endExp
-let expOrText =
-    choice [
-        tmplExp
-        withPos (chars1Until beginExp) |>> fun x -> PVal.create x.range (Token.Text x.value)
-        withPos (many1Chars anyChar) |>> fun x -> PVal.create x.range (Token.Text x.value)
-        ]
-let ptemplate = many expOrText .>> eof
+    let ptemplate = many expOrText .>> eof
 
-let parseTemplate templateString =
-    match run ptemplate templateString with
-    | Success (tokenList,_,_) -> Result.Ok tokenList
-    | Failure (msg,error,_) ->
-        { ranges = [Position.ofFParsec 0L error.Position |> Position.toRange]
-          message = msg }
-        |> List.singleton
-        |> Result.Error
+    let parseTemplate templateString =
+        match run ptemplate templateString with
+        | Success (tokenList,_,_) -> Result.Ok tokenList
+        | Failure (msg,error,_) ->
+            { ranges = [Position.ofFParsec 0L error.Position |> Position.toRange]
+              message = msg }
+            |> List.singleton
+            |> Result.Error

@@ -1,9 +1,11 @@
 ﻿namespace Trulla.TypeProviderImplementation
 
-open System.Text
 open System.Reflection
-open Trulla.Internal
+
+open Trulla
+open Trulla.Internal.Ast
 open Trulla.Internal.Inference
+
 open ProviderImplementation.ProvidedTypes
 open ProviderImplementation.ProvidedTypes.UncheckedQuotations
 open FSharp.Core.CompilerServices
@@ -13,7 +15,7 @@ module private Expr =
     let allSequential exprs =
         exprs |> List.fold (fun a b -> Expr.Sequential(a, b)) <@@ () @@>
 
-module internal ModelCompiler =
+module private ModelCompiler =
     let addRecords (recordDefs: RecordDef list) =
         let toProvidedRecord (def: RecordDef) =
             ProvidedTypeDefinition(def.name, Some typeof<obj>, isErased = false)
@@ -66,33 +68,35 @@ module internal ModelCompiler =
             |> List.map (fun (recDef, providedRec) -> finalizeProvidedRecord providedRecordsMap providedRec recDef)
         finalizedRecords
 
-    let createRenderMethod rootRecord (tree: TExp list) =
-        let memberAccessExp (exp: TVal<MemberExp>) =
-            failwith "TODO"
-            //match exp.value with
-            //| IdentExp ident ->
-            //    let isBound = exp.bindingContext |> Map.containsKey ident
-            //    let rootPrefix = if isBound then "" else rootIdentifier + dotIntoMember
-            //    rootPrefix + ident
-            //| AccessExp acc -> (memberExpToIdent acc.instanceExp) + dotIntoMember + acc.memberName
+    let createRenderMethod providedRootRecord (tree: TExp list) =
+        //let memberAccessExp (exp: TVal<MemberExp>) =
+        //    match exp.value with
+        //    | IdentExp ident ->
+        //        let isBound = exp.bindingContext |> Map.containsKey ident
+        //        let rootPrefix = if isBound then "" else rootIdentifier + dotIntoMember
+        //        rootPrefix + ident
+        //    | AccessExp acc -> (memberExpToIdent acc.instanceExp) + dotIntoMember + acc.memberName
 
-        let rec createRenderExprs (tree: TExp list) =
-            [ for texp in tree do
-                match texp with
-                | Text txt ->
-                    yield <@ fun (append: string -> unit) -> append txt @>
-                | Hole hole ->
-                    ()
-                    //yield <@ fun (append: string -> unit) -> append (memberExpToIdent hole) @>
-                | For (ident,exp,body) ->
-                    //lni indent $"for %s{ident.value} in {memberExpToIdent exp} do"
-                    //render (indent + 1) body
-                    ()
-                | If (cond,body) ->
-                    //lni indent $"if {memberExpToIdent cond} then"
-                    //render (indent + 1) body
-                    ()
-            ]
+        //let rec createRenderExprs (varRoot: Expr) (tree: TExp list) =
+        //    [ for texp in tree do
+        //        match texp with
+        //        | Text txt ->
+        //            yield <@ fun (append: string -> unit) -> append txt @>
+        //        | Hole hole ->
+        //            ()
+        //            //yield <@ fun (append: string -> unit) -> append (memberExpToIdent hole) @>
+        //        | For (ident,exp,body) ->
+        //            //lni indent $"for %s{ident.value} in {memberExpToIdent exp} do"
+        //            //render (indent + 1) body
+        //            ()
+        //        | If (cond,body) ->
+        //            //lni indent $"if {memberExpToIdent cond} then"
+        //            //render (indent + 1) body
+        //            ()
+        //    ]
+        let rec createRenderExprs (varRoot: Expr) (tree: TExp list) =
+            Expr.Call(varRoot, typeof<obj>.GetMethod("ToString", BindingFlags.Instance ||| BindingFlags.Public), [])
+            //<@@ (%%varRoot: obj) |> fun x -> x.ToString() @@>
         //let finalExp =
         //    createRenderExprs tree
         //    @ [ <@@ sb.ToString() @@> ]
@@ -105,30 +109,35 @@ module internal ModelCompiler =
         //        (%appendHello) append
         //        sb.ToString()
         //    @@>
-        let finalExp =
-            // Working:
-            //let varX = Var("x", typeof<string>)
-            //Expr.Let(varX, Expr.Value("Hello"), Expr.Var(varX))
+        //let finalExp =
+        //    // Working:
+        //    //let varX = Var("x", typeof<string>)
+        //    //Expr.Let(varX, Expr.Value("Hello"), Expr.Var(varX))
             
-            // Also working:
-            //let varX = Var("x", typeof<string>)
-            //let letExpr = Expr.Let(varX, Expr.Value("Hello"), Expr.Var(varX))
-            //<@@
-            //    (%%letExpr: string)
-            //@@>
+        //    // Also working:
+        //    //let varX = Var("x", typeof<string>)
+        //    //let letExpr = Expr.Let(varX, Expr.Value("Hello"), Expr.Var(varX))
+        //    //<@@
+        //    //    (%%letExpr: string)
+        //    //@@>
 
-            // Not working (with or without cast / typed or untyped: doesn't matter):
-            let varExpr = Expr.Var(Var("x", typeof<string>))
-            <@@
-                let x = "World" in (%%varExpr: string)
-            @@>
+        //    // Not working (with or without cast / typed or untyped: doesn't matter):
+        //    let varExpr = Expr.Var(Var("x", typeof<string>))
+        //    <@@
+        //        let x = "World" in (%%varExpr: string)
+        //    @@>
 
+        let rootModelVarName = "model"
         ProvidedMethod(
             "Render",
-            [ProvidedParameter("model", rootRecord)],
+            [ProvidedParameter(rootModelVarName, providedRootRecord)],
             typeof<string>,
             isStatic = true,
-            invokeCode = fun args -> finalExp)
+            //invokeCode = fun args -> finalExp)
+            invokeCode = fun args ->
+                let varRoot = Expr.Var(Var(rootModelVarName, typeof<obj>))
+                createRenderExprs varRoot tree
+        )
         
 [<TypeProvider>]
 type TemplateProviderImplemtation (config : TypeProviderConfig) as this =
@@ -151,18 +160,18 @@ type TemplateProviderImplemtation (config : TypeProviderConfig) as this =
             fun typeName args ->
                 let solveResult =
                     let template = unbox<string> args.[0]
-                    Parsing.parseTemplate template |> Inference.solve
+                    Solver.solve template
                 match solveResult with
                 | Error errors -> failwith $"Template error: {errors}"
                 | Ok solveResult ->
                     let providedRecords = ModelCompiler.addRecords solveResult.records
-                    let rootRecord =
+                    let providedRootRecord =
                         providedRecords
                         |> List.find (fun (r,_) ->
                             // Wieder sowas: Es sollte klar sein, dass es genau einen Root-Recotd geben MUSS
                             match r.id with Root -> true | _ -> false)
                         |> snd
-                    let renderFunction = ModelCompiler.createRenderMethod rootRecord solveResult.tree
+                    let renderFunction = ModelCompiler.createRenderMethod providedRootRecord solveResult.tree
                     let asm = ProvidedAssembly()
                     let modelType = ProvidedTypeDefinition(
                         asm, ns, typeName, Some typeof<obj>, isErased = false, hideObjectMethods = true)

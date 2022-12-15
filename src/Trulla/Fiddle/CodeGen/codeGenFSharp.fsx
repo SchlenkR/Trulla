@@ -3,15 +3,22 @@
 
 #load "../../Utils.fs"
 #load "../../parsing.fs"
+#load "../../Ast.fs"
 #load "../../Inference.fs"
 
 open System
 open Trulla.Internal.Utils
 open Trulla.Internal.Parsing
+open Trulla.Internal.Ast
 open Trulla.Internal.Inference
 
 let [<Literal>] rootIdentifier = "model"
 let [<Literal>] dotIntoMember = "."
+
+module MemberExp =
+    let getLastSegment = function
+        | AccessExp accExp -> accExp.memberName
+        | IdentExp ident -> ident
 
 let makeTypeName (possibleRecordNames: RecordName list) tvar =
     possibleRecordNames

@@ -8,7 +8,9 @@
   <ItemGroup>
     <Compile Include="Utils.fs" />
     <Compile Include="Parsing.fs" />
+    <Compile Include="Ast.fs" />
     <Compile Include="Inference.fs" />
+    <Compile Include="Solver.fs" />
     <None Include="Fiddle\Parsing\parserTest.fsx" />
     <None Include="Fiddle\Parsing\fiddle.fsx" />
     <None Include="Fiddle\Typing\typingTestsBase.fsx" />

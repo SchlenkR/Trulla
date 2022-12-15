@@ -11,7 +11,7 @@
 
   <ItemGroup>
     <Reference Include="Trulla.TypeProvider">
-      <HintPath>..\..\..\..\..\..\..\..\..\temp\trulla\Trulla.TypeProvider.dll</HintPath>
+      <HintPath>publish\Trulla.TypeProvider.dll</HintPath>
     </Reference>
   </ItemGroup>
 
