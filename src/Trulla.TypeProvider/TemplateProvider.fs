@@ -89,15 +89,22 @@ module private ModelCompiler =
             |> List.map (fun (recDef, providedRec) -> finalizeProvidedRecord providedRecordsMap providedRec recDef)
         finalizedRecords
 
-    let createRenderMethod (providedRootRecord: ProvidedTypeDefinition) (tree: TExp list) =
+    let createRenderMethod 
+        (providedRootRecord: ProvidedTypeDefinition)
+        (providedRecords: Map<TVar, ProvidedTypeDefinition * ProvidedProperty list>)
+        (tree: TExp list)
+        =
         let rec createRenderExprs append (tree: TExp list) (bindingContext: Map<string, Expr * Type>) =
             let rec accessMember (exp: TVal<MemberExp>) =
                 match exp.value with
                 | IdentExp ident -> 
                     bindingContext[ident]
                 | AccessExp acc ->
-                    let instanceAccessExp,instType = accessMember acc.instanceExp
-                    let prop = instType.GetProperty(acc.memberName)
+                    let instanceAccessExp,_ = accessMember acc.instanceExp
+                    let prop = 
+                        providedRecords[acc.instanceExp.tvar] 
+                        |> snd
+                        |> List.find (fun prop -> prop.Name = acc.memberName)
                     Expr.PropertyGet(instanceAccessExp, prop), prop.PropertyType
 
             [ for texp in tree do
@@ -107,19 +114,20 @@ module private ModelCompiler =
                 | Hole hole ->
                     yield accessMember hole |> fst |> append
                 | For (ident,exp,body) ->
-                    //yield Expr.Value("<<<FOR EXPR>>") |> append
+                    yield Expr.Value("<<<FOR EXPR>>") |> append
 
                     let inExpAndType = accessMember exp
                     let bindingContext = bindingContext |> Map.add ident.value inExpAndType
                     let mapping =
                         let tmp = createRenderExprs append body bindingContext |> Expr.allSequential
-                        Expr.Lambda(
-                            Var(ident.value, snd inExpAndType),
-                            Expr.Value(())
-                        )
-                    //let itemsExp = fst inExpAndType
+                        tmp
+                        //Expr.Lambda(
+                        //    Var(ident.value, inExpAndType),
+                        //    Expr.Value(())
+                        //)
+                    ()
+                    ////let itemsExp = fst inExpAndType
 
-                    yield Expr.Value("<<<FOR EXPR>>") |> append
                     //yield <@@ Runtime.iter (%%mapping) (%%itemsExp) @@>
                     //yield
                     //    <@@
@@ -202,8 +210,12 @@ type TemplateProviderImplemtation (config : TypeProviderConfig) as this =
                             // Wieder sowas: Es sollte klar sein, dass es genau einen Root-Recotd geben MUSS
                             match r.id with Root -> true | _ -> false)
                         |> fun (_,provRec,_) -> provRec
-                    let renderFunction = 
-                        ModelCompiler.createRenderMethod providedRootRecord solveResult.tree
+                    let renderFunction =
+                        let recordsAndFields =
+                            providedRecords
+                            |> List.map (fun (recDef,provRec,props) -> recDef.id, (provRec,props))
+                            |> Map.ofList
+                        ModelCompiler.createRenderMethod providedRootRecord recordsAndFields solveResult.tree
                     let asm = ProvidedAssembly()
                     let modelType = ProvidedTypeDefinition(
                         asm, ns, typeName, Some typeof<obj>, isErased = false, hideObjectMethods = true)
