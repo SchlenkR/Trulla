@@ -42,8 +42,17 @@ module private ModelCompiler =
                             //| Var _ -> "obj"
                             | _ -> failwith $"Unsupported reference for type '{typ}'."
                         toDotnetType field.typ
-                    let provField = ProvidedField(field.name, fieldType)
-                    do providedRecord.AddMember(provField)
+                    let fieldName = "_" + field.name
+                    let provField = ProvidedField(fieldName, fieldType)
+                    let provProperty = ProvidedProperty(
+                        field.name, 
+                        fieldType,
+                        getterCode = fun args -> Expr.FieldGet(args[0], provField)
+                    )
+
+                    do
+                        providedRecord.AddMember(provField)
+                        providedRecord.AddMember(provProperty)
                     provField,fieldType
                 ]
             let ctor = 
@@ -72,7 +81,7 @@ module private ModelCompiler =
             |> List.map (fun (recDef, providedRec) -> finalizeProvidedRecord providedRecordsMap providedRec recDef)
         finalizedRecords
 
-    let createRenderMethod providedRootRecord (tree: TExp list) =
+    let createRenderMethod (providedRootRecord: ProvidedTypeDefinition) (tree: TExp list) =
         //let memberAccessExp (exp: TVal<MemberExp>) =
         //    match exp.value with
         //    | IdentExp ident ->
@@ -151,10 +160,11 @@ module private ModelCompiler =
                     Expr.Call(Expr.Var(sbVar), typeof<StringBuilder>.GetMethod("ToString", [||]), [])
 
                 [
-                    append (Expr.Value("Hello"))
-                    append (Expr.Value("Hello"))
-                    append (Expr.Value("Hello"))
-                    append (Expr.Value("Hello"))
+                    append (Expr.Value("Start>>>"))
+                    for p in providedRootRecord.GetProperties(BindingFlags.Public ||| BindingFlags.Instance) do
+                        append (Expr.PropertyGet(Expr.Coerce(boxedRoot, providedRootRecord), p))
+                    append (Expr.Value("<<<End"))
+
                     sbToString
                 ]
                 |> Expr.allSequential
