@@ -48,8 +48,19 @@ let b = <@@let x = "Hello" in (%%varExpr: string)@@>
 @@>
 
 
+
 <@@ 
-    List.map (fun x -> x + 1) [1]
+    List.map (fun x -> x) ["xxx"]
+@@>
+
+<@@
+    fun mapping list -> List.map mapping list
 @@>
 
 
+<@@ 
+    System.Linq.Enumerable.Select(["xxx"], fun x -> x)
+@@>
+
+
+(Microsoft.FSharp.Collections.List :> obj).GetType()

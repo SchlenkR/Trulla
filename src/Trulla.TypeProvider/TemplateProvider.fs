@@ -19,6 +19,7 @@ module private Expr =
 
 module Runtime =
     let say (i: obj) = i.ToString()
+    let iter mapping items = List.iter mapping items
 
 module private ModelCompiler =
     let addRecords (recordDefs: RecordDef list) =
@@ -87,7 +88,7 @@ module private ModelCompiler =
             providedRecords
             |> List.map (fun (recDef, providedRec) -> finalizeProvidedRecord providedRecordsMap providedRec recDef)
         finalizedRecords
-         
+
     let createRenderMethod (providedRootRecord: ProvidedTypeDefinition) (tree: TExp list) =
         let rec createRenderExprs append (tree: TExp list) (bindingContext: Map<string, Expr * Type>) =
             let rec accessMember (exp: TVal<MemberExp>) =
@@ -106,7 +107,25 @@ module private ModelCompiler =
                 | Hole hole ->
                     yield accessMember hole |> fst |> append
                 | For (ident,exp,body) ->
+                    //yield Expr.Value("<<<FOR EXPR>>") |> append
+
+                    let inExpAndType = accessMember exp
+                    let bindingContext = bindingContext |> Map.add ident.value inExpAndType
+                    let mapping =
+                        let tmp = createRenderExprs append body bindingContext |> Expr.allSequential
+                        Expr.Lambda(
+                            Var(ident.value, snd inExpAndType),
+                            Expr.Value(())
+                        )
+                    //let itemsExp = fst inExpAndType
+
                     yield Expr.Value("<<<FOR EXPR>>") |> append
+                    //yield <@@ Runtime.iter (%%mapping) (%%itemsExp) @@>
+                    //yield
+                    //    <@@
+                    //        for x in (%%itemsExp) do
+                    //            (%%mapping) x
+                    //    @@>
                 | If (cond,body) ->
                     yield 
                         Expr.IfThenElse(
