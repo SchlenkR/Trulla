@@ -56,11 +56,6 @@ module TVal =
     let create range tvar bindingContext value =
         { range = range; tvar = tvar; bindingContext = bindingContext; value = value }
 
-module MemberExp =
-    let getLastSegment = function
-        | AccessExp accExp -> accExp.memberName
-        | IdentExp ident -> ident
-
 [<RequireQualifiedAccess>]
 module Ast =
     // TODO: meaningful error messages + location

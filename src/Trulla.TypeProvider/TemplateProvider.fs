@@ -53,21 +53,23 @@ module private ModelCompiler =
                     do
                         providedRecord.AddMember(provField)
                         providedRecord.AddMember(provProperty)
-                    provField,fieldType
+                    provField,fieldType,provProperty
                 ]
             let ctor = 
                 ProvidedConstructor(
-                    fields |> List.map (fun (provField,fieldType) -> ProvidedParameter(provField.Name, fieldType)),
+                    fields |> List.map (fun (provField,fieldType,_) ->
+                        ProvidedParameter(provField.Name, fieldType)),
                     invokeCode =
                         function
                         | this :: args ->
                             List.zip args fields
-                            |> List.map (fun (arg, (f,_)) -> Expr.FieldSetUnchecked(this, f, arg))
+                            |> List.map (fun (arg, (f,_,_)) -> Expr.FieldSetUnchecked(this, f, arg))
                             |> Expr.allSequential
-                        | args -> failwith $"Invalid property setter params: {args}"
+                        | args -> failwith $"Invalid ctor params: {args}"
                 )
-            providedRecord.AddMember(ctor)
-            def,providedRecord
+            do
+                providedRecord.AddMember(ctor)
+            def, providedRecord, fields |> List.map (fun (_,_,provProperty) -> provProperty)
 
         let providedRecords =
             recordDefs
@@ -81,7 +83,11 @@ module private ModelCompiler =
             |> List.map (fun (recDef, providedRec) -> finalizeProvidedRecord providedRecordsMap providedRec recDef)
         finalizedRecords
 
-    let createRenderMethod (providedRootRecord: ProvidedTypeDefinition) (tree: TExp list) =
+    let createRenderMethod
+        (providedRootRecord: ProvidedTypeDefinition)
+        (providedRecords: Map<RecordDef, ProvidedTypeDefinition * ProvidedProperty list>)
+        (tree: TExp list)
+        =
         //let memberAccessExp (exp: TVal<MemberExp>) =
         //    match exp.value with
         //    | IdentExp ident ->
@@ -89,6 +95,15 @@ module private ModelCompiler =
         //        let rootPrefix = if isBound then "" else rootIdentifier + dotIntoMember
         //        rootPrefix + ident
         //    | AccessExp acc -> (memberExpToIdent acc.instanceExp) + dotIntoMember + acc.memberName
+        
+        let accessMember (bindingContext: Map<string, Expr>) (exp: TVal<MemberExp>) =
+            let rec accessMember (bindingContext: Map<string, Expr>) (exp: TVal<MemberExp>) =
+                match exp.value with
+                | IdentExp ident ->
+                    let isBound = exp.bindingContext |> Map.containsKey ident
+                    let rootPrefix = if isBound then "" else rootIdentifier + dotIntoMember
+                    rootPrefix + ident
+                | AccessExp acc -> (memberExpToIdent acc.instanceExp) + dotIntoMember + acc.memberName
 
         let rec createRenderExprs (varRoot: Expr) (tree: TExp list) =
             [ for texp in tree do
@@ -213,16 +228,21 @@ type TemplateProviderImplemtation (config : TypeProviderConfig) as this =
                     let providedRecords = ModelCompiler.addRecords solveResult.records
                     let providedRootRecord =
                         providedRecords
-                        |> List.find (fun (r,_) ->
+                        |> List.find (fun (r,_,_) ->
                             // Wieder sowas: Es sollte klar sein, dass es genau einen Root-Recotd geben MUSS
                             match r.id with Root -> true | _ -> false)
-                        |> snd
-                    let renderFunction = ModelCompiler.createRenderMethod providedRootRecord solveResult.tree
+                        |> fun (_,provRec,_) -> provRec
+                    let renderFunction = 
+                        let recordsAndFields = 
+                            providedRecords 
+                            |> List.map (fun (recDef,provRec,props) -> recDef, (provRec,props))
+                            |> Map.ofList
+                        ModelCompiler.createRenderMethod providedRootRecord recordsAndFields solveResult.tree
                     let asm = ProvidedAssembly()
                     let modelType = ProvidedTypeDefinition(
                         asm, ns, typeName, Some typeof<obj>, isErased = false, hideObjectMethods = true)
                     do 
-                        modelType.AddMembers (providedRecords |> List.map snd)
+                        modelType.AddMembers (providedRecords |> List.map (fun (_,provRec,_) -> provRec))
                         modelType.AddMembers [renderFunction]
                         asm.AddTypes [modelType]
                     modelType

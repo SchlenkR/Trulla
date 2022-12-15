@@ -46,14 +46,15 @@ module Solver =
                 [
                     yield! constrainMemberExp accExp.instanceExp
                     yield
-                        (
+                        Unsolved (
                             accExp.instanceExp.tvar,
                             Field { name = accExp.memberName; typ = Var membExp.tvar }
                         )
-                        |> Unsolved 
-                    do potentialRecordNames <-
-                        (accExp.instanceExp.tvar, MemberExp.getLastSegment accExp.instanceExp.value)
-                        :: potentialRecordNames
+                    let lastSegment =
+                        match accExp.instanceExp.value with
+                        | AccessExp accExp -> accExp.memberName
+                        | IdentExp ident -> ident
+                    do potentialRecordNames <- (accExp.instanceExp.tvar, lastSegment) :: potentialRecordNames
                 ]
             | IdentExp ident ->
                 let tvarIdent = membExp.bindingContext |> Map.tryFind ident
