@@ -23,6 +23,7 @@ let solveParseResult (parserResult: ParseResult) =
                 |> Map.ofList
                 |> Map.map (fun _ v -> v |> List.map snd)
             fun recId ->
+                // why match? Should be indifferent
                 match recId with
                 | Root -> RootRecordName
                 | TVar _ -> map |> Map.find recId |> List.head

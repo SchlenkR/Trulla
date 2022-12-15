@@ -89,90 +89,43 @@ module private ModelCompiler =
         (providedRecords: Map<RecordDef, ProvidedTypeDefinition * ProvidedProperty list>)
         (tree: TExp list)
         =
-        //let memberAccessExp (exp: TVal<MemberExp>) =
-        //    match exp.value with
-        //    | IdentExp ident ->
-        //        let isBound = exp.bindingContext |> Map.containsKey ident
-        //        let rootPrefix = if isBound then "" else rootIdentifier + dotIntoMember
-        //        rootPrefix + ident
-        //    | AccessExp acc -> (memberExpToIdent acc.instanceExp) + dotIntoMember + acc.memberName
 
+        let rec createRenderExprs (tree: TExp list) (bindingContext: Map<string, Expr * Type>) =
+            let rec accessMember (exp: TVal<MemberExp>) =
+                match exp.value with
+                | IdentExp ident -> 
+                    bindingContext[ident]
+                | AccessExp acc ->
+                    let instanceAccessExp,instType = accessMember acc.instanceExp
+                    let prop = instType.GetProperty(acc.memberName)
+                    Expr.PropertyGet(instanceAccessExp, prop), prop.PropertyType
 
-        let rec accessMember
-            (exp: TVal<MemberExp>) 
-            (boundVars: Map<string, Expr * Type>) 
-            (currVar: (Expr * Type) option)
-            =
-            let getProp propName =
-                match currVar with
-                | None -> boundVars[propName]
-                | Some (cp, ct) ->
-                    let prop = ct.GetProperty(propName) 
-                    Expr.PropertyGet(cp, prop), prop.PropertyType
-            match exp.value with
-            | AccessExp acc ->
-                let instanceAccessExp,instType = acc.
-                Expr.PropertyGet(instanceAccessExp)
-            | IdentExp ident -> getProp ident
-
-        let rec createRenderExprs (tree: TExp list) =
             [ for texp in tree do
                 match texp with
                 | Text txt ->
                     yield Expr.Value(txt)
                 | Hole hole ->
-                    yield accessMember hole
+                    yield accessMember hole |> fst
                 | For (ident,exp,body) ->
                     //lni indent $"for %s{ident.value} in {memberExpToIdent exp} do"
                     //render (indent + 1) body
-                    ()
+                    yield Expr.Value("<<<FOR EXPR>>")
                 | If (cond,body) ->
                     yield Expr.IfThenElse(
-                        accessMember cond,
-                        createRenderExprs body |> Expr.allSequential,
+                        accessMember cond |> fst,
+                        createRenderExprs body bindingContext |> Expr.allSequential,
                         Expr.Value(())
                     )
             ]
 
-        //let finalExp =
-        //    createRenderExprs tree
-        //    @ [ <@@ sb.ToString() @@> ]
-        //    |> Expr.allSequential
-        //let finalExp =
-        //    let appendHello = <@ fun (append: string -> unit) -> append "Hello" @>
-        //    <@@ 
-        //        let sb = StringBuilder()
-        //        let append (txt: string) = sb.Append(txt) |> ignore
-        //        (%appendHello) append
-        //        sb.ToString()
-        //    @@>
-        //let finalExp =
-        //    // Working:
-        //    //let varX = Var("x", typeof<string>)
-        //    //Expr.Let(varX, Expr.Value("Hello"), Expr.Var(varX))
-            
-        //    // Also working:
-        //    //let varX = Var("x", typeof<string>)
-        //    //let letExpr = Expr.Let(varX, Expr.Value("Hello"), Expr.Var(varX))
-        //    //<@@
-        //    //    (%%letExpr: string)
-        //    //@@>
-
-        //    // Not working (with or without cast / typed or untyped: doesn't matter):
-        //    let varExpr = Expr.Var(Var("x", typeof<string>))
-        //    <@@
-        //        let x = "World" in (%%varExpr: string)
-        //    @@>
-
-        let rootModelVarName = "model"
         ProvidedMethod(
             "Render",
-            [ProvidedParameter(rootModelVarName, providedRootRecord)],
+            [ProvidedParameter("model", providedRootRecord)],
             typeof<string>,
             isStatic = true,
             //invokeCode = fun args -> finalExp)
             invokeCode = fun args ->
-                let boxedRoot = Expr.Coerce(args[0], typeof<obj>)
+                let boxedRoot = Expr.Coerce(Expr.Coerce(args[0], typeof<obj>), providedRootRecord)
 
                 let sbVar = Var("sb", typeof<StringBuilder>)
                 let withStringBuilder body =
@@ -184,31 +137,29 @@ module private ModelCompiler =
                     Expr.Call(Expr.Var(sbVar), typeof<StringBuilder>.GetMethod("Append", [| typeof<string> |]), [value])
                 let sbToString = 
                     Expr.Call(Expr.Var(sbVar), typeof<StringBuilder>.GetMethod("ToString", [||]), [])
+                // TODO: We use reflection too often; we have the info, but it gets lost
+                let rootBindingContext =
+                    [ for p in providedRootRecord.GetProperties() do
+                        let propertyGet = Expr.PropertyGet(Expr.Coerce(boxedRoot, providedRootRecord), p)
+                        p.Name, (propertyGet, p.PropertyType)
+                    ]
+                    |> Map.ofList
 
                 [
                     append (Expr.Value("Start>>>"))
-                    for p in providedRootRecord.GetProperties(BindingFlags.Public ||| BindingFlags.Instance) do
-                        append (Expr.PropertyGet(Expr.Coerce(boxedRoot, providedRootRecord), p))
+
+                    //for p in providedRootRecord.GetProperties(BindingFlags.Public ||| BindingFlags.Instance) do
+                    //    append (Expr.PropertyGet(Expr.Coerce(boxedRoot, providedRootRecord), p))
+                    
+                    for expr in createRenderExprs tree rootBindingContext do
+                        append expr
+
                     append (Expr.Value("<<<End"))
 
                     sbToString
                 ]
                 |> Expr.allSequential
                 |> withStringBuilder
-
-                //let appendFunction = Expr.Var(Var("append", typeof<string -> unit>))
-                //let renderExpr = Expr.Application(appendFunction, Expr.Value("Hello WOrld"))
-                //<@@
-                //    let sb = System.Text.StringBuilder()
-                //    let append (txt: string) = sb.Append(txt) |> ignore
-                //    //(%appendHello) append
-                //    (%%renderExpr)
-                //    sb.ToString()
-                //@@>
-                
-                //<@@ 
-                //    Runtime.say (%%boxedRoot)
-                //@@>
         )
         
 [<TypeProvider>]

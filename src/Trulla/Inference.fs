@@ -42,6 +42,11 @@ module Inference =
 
         let rec constrainMemberExp (membExp: TVal<MemberExp>) =
             match membExp.value with
+            | IdentExp ident ->
+                let tvarIdent = membExp.bindingContext |> Map.tryFind ident
+                match tvarIdent with
+                | Some tvarIdent -> [ Unsolved (tvarIdent, Var membExp.tvar) ]
+                | None -> [ Unsolved (Root, Field { name = ident; typ = Var membExp.tvar }) ]
             | AccessExp accExp ->
                 [
                     yield! constrainMemberExp accExp.instanceExp
@@ -52,15 +57,12 @@ module Inference =
                         )
                     let lastSegment =
                         match accExp.instanceExp.value with
-                        | AccessExp accExp -> accExp.memberName
                         | IdentExp ident -> ident
-                    do potentialRecordNames <- (accExp.instanceExp.tvar, lastSegment) :: potentialRecordNames
+                        | AccessExp accExp -> accExp.memberName
+                    do potentialRecordNames <-
+                        (accExp.instanceExp.tvar, lastSegment) 
+                        :: potentialRecordNames
                 ]
-            | IdentExp ident ->
-                let tvarIdent = membExp.bindingContext |> Map.tryFind ident
-                match tvarIdent with
-                | Some tvarIdent -> [ Unsolved (tvarIdent, Var membExp.tvar) ]
-                | None -> [ Unsolved (Root, Field { name = ident; typ = Var membExp.tvar }) ]
     
         let rec constrainTree (tree: TExp list) =
             [ for tree in tree do

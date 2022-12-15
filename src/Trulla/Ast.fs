@@ -72,11 +72,11 @@ module Ast =
             let rec ofPExpZero (pexp: PVal<MemberToken>) =
                 let newTVal value = TVal.create pexp.range (newTVar()) bindingContext value
                 match pexp.value with
+                | IdentToken ident ->
+                    newTVal (IdentExp ident)
                 | AccessToken accExp ->
                     let accExp = {| instanceExp = ofPExpZero accExp.instanceExp; memberName = accExp.memberName |}
                     newTVal (AccessExp accExp)
-                | IdentToken ident ->
-                    newTVal (IdentExp ident)
             ofPExpZero pexp
 
         let rec toTree (pointer: int) scopeDepth (bindingContext: BindingContext) =

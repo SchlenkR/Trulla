@@ -18,7 +18,7 @@ type Tmpl = Trulla.Template<TestTemplate2>
 [<EntryPoint>]
 let main _ =
     let root =
-        Tmpl.Root("xxx")
+        Tmpl.Root("MY-NAME-IS")
         //Tmpl.Root(
         //    [
         //        Tmpl.order(false, "Order 1")
