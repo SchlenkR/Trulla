@@ -70,7 +70,11 @@ module private ModelCompiler =
                 )
             do
                 providedRecord.AddMember(ctor)
-            def, providedRecord, fields |> List.map (fun (_,_,provProperty) -> provProperty)
+            (
+                def,
+                providedRecord,
+                fields |> List.map (fun (_,_,provProperty) -> provProperty)
+            )
 
         let providedRecords =
             recordDefs
@@ -83,14 +87,9 @@ module private ModelCompiler =
             providedRecords
             |> List.map (fun (recDef, providedRec) -> finalizeProvidedRecord providedRecordsMap providedRec recDef)
         finalizedRecords
-
-    let createRenderMethod
-        (providedRootRecord: ProvidedTypeDefinition)
-        (providedRecords: Map<RecordDef, ProvidedTypeDefinition * ProvidedProperty list>)
-        (tree: TExp list)
-        =
-
-        let rec createRenderExprs (tree: TExp list) (bindingContext: Map<string, Expr * Type>) =
+         
+    let createRenderMethod (providedRootRecord: ProvidedTypeDefinition) (tree: TExp list) =
+        let rec createRenderExprs append (tree: TExp list) (bindingContext: Map<string, Expr * Type>) =
             let rec accessMember (exp: TVal<MemberExp>) =
                 match exp.value with
                 | IdentExp ident -> 
@@ -103,64 +102,54 @@ module private ModelCompiler =
             [ for texp in tree do
                 match texp with
                 | Text txt ->
-                    yield Expr.Value(txt)
+                    yield Expr.Value(txt) |> append
                 | Hole hole ->
-                    yield accessMember hole |> fst
+                    yield accessMember hole |> fst |> append
                 | For (ident,exp,body) ->
-                    //lni indent $"for %s{ident.value} in {memberExpToIdent exp} do"
-                    //render (indent + 1) body
-                    yield Expr.Value("<<<FOR EXPR>>")
+                    yield Expr.Value("<<<FOR EXPR>>") |> append
                 | If (cond,body) ->
-                    yield Expr.IfThenElse(
-                        accessMember cond |> fst,
-                        createRenderExprs body bindingContext |> Expr.allSequential,
-                        Expr.Value(())
-                    )
+                    yield 
+                        Expr.IfThenElse(
+                            accessMember cond |> fst |> append,
+                            createRenderExprs append body bindingContext |> Expr.allSequential,
+                            Expr.Value(())
+                        )
             ]
+
+        let invokeCode = fun (args: Expr list) ->
+            let boxedRoot = Expr.Coerce(Expr.Coerce(args[0], typeof<obj>), providedRootRecord)
+
+            let sbVar = Var("sb", typeof<StringBuilder>)
+            let withStringBuilder body =
+                Expr.Let(
+                    sbVar,
+                    Expr.NewObject(typeof<StringBuilder>.GetConstructor([||]), []),
+                    body)
+            let append value =
+                Expr.Call(Expr.Var(sbVar), typeof<StringBuilder>.GetMethod("Append", [| typeof<string> |]), [value])
+            let sbToString = 
+                Expr.Call(Expr.Var(sbVar), typeof<StringBuilder>.GetMethod("ToString", [||]), [])
+            // TODO: We use reflection too often; we have the info, but it gets lost
+            let rootBindingContext =
+                [ for p in providedRootRecord.GetProperties() do
+                    let propertyGet = Expr.PropertyGet(Expr.Coerce(boxedRoot, providedRootRecord), p)
+                    p.Name, (propertyGet, p.PropertyType)
+                ]
+                |> Map.ofList
+
+            [
+                yield! createRenderExprs append tree rootBindingContext
+                yield sbToString
+            ]
+            |> Expr.allSequential
+            |> withStringBuilder
 
         ProvidedMethod(
             "Render",
             [ProvidedParameter("model", providedRootRecord)],
             typeof<string>,
             isStatic = true,
-            //invokeCode = fun args -> finalExp)
-            invokeCode = fun args ->
-                let boxedRoot = Expr.Coerce(Expr.Coerce(args[0], typeof<obj>), providedRootRecord)
-
-                let sbVar = Var("sb", typeof<StringBuilder>)
-                let withStringBuilder body =
-                    Expr.Let(
-                        sbVar,
-                        Expr.NewObject(typeof<StringBuilder>.GetConstructor([||]), []),
-                        body)
-                let append value =
-                    Expr.Call(Expr.Var(sbVar), typeof<StringBuilder>.GetMethod("Append", [| typeof<string> |]), [value])
-                let sbToString = 
-                    Expr.Call(Expr.Var(sbVar), typeof<StringBuilder>.GetMethod("ToString", [||]), [])
-                // TODO: We use reflection too often; we have the info, but it gets lost
-                let rootBindingContext =
-                    [ for p in providedRootRecord.GetProperties() do
-                        let propertyGet = Expr.PropertyGet(Expr.Coerce(boxedRoot, providedRootRecord), p)
-                        p.Name, (propertyGet, p.PropertyType)
-                    ]
-                    |> Map.ofList
-
-                [
-                    append (Expr.Value("Start>>>"))
-
-                    //for p in providedRootRecord.GetProperties(BindingFlags.Public ||| BindingFlags.Instance) do
-                    //    append (Expr.PropertyGet(Expr.Coerce(boxedRoot, providedRootRecord), p))
-                    
-                    for expr in createRenderExprs tree rootBindingContext do
-                        append expr
-
-                    append (Expr.Value("<<<End"))
-
-                    sbToString
-                ]
-                |> Expr.allSequential
-                |> withStringBuilder
-        )
+            invokeCode = invokeCode)
         
 [<TypeProvider>]
 type TemplateProviderImplemtation (config : TypeProviderConfig) as this =
@@ -195,11 +184,7 @@ type TemplateProviderImplemtation (config : TypeProviderConfig) as this =
                             match r.id with Root -> true | _ -> false)
                         |> fun (_,provRec,_) -> provRec
                     let renderFunction = 
-                        let recordsAndFields = 
-                            providedRecords 
-                            |> List.map (fun (recDef,provRec,props) -> recDef, (provRec,props))
-                            |> Map.ofList
-                        ModelCompiler.createRenderMethod providedRootRecord recordsAndFields solveResult.tree
+                        ModelCompiler.createRenderMethod providedRootRecord solveResult.tree
                     let asm = ProvidedAssembly()
                     let modelType = ProvidedTypeDefinition(
                         asm, ns, typeName, Some typeof<obj>, isErased = false, hideObjectMethods = true)
