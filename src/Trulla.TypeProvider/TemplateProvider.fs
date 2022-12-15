@@ -135,8 +135,10 @@ module private ModelCompiler =
             isStatic = true,
             //invokeCode = fun args -> finalExp)
             invokeCode = fun args ->
-                let varRoot = Expr.Var(Var(rootModelVarName, typeof<obj>))
-                createRenderExprs varRoot tree
+                <@@ "xxxx" @@>
+                //<@@ ((%%(args[1]) : obj)).ToString() @@>
+                //let varRoot = Expr.Var(Var(rootModelVarName, typeof<obj>))
+                //createRenderExprs varRoot tree
         )
         
 [<TypeProvider>]
