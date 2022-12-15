@@ -135,11 +135,10 @@ module private ModelCompiler =
             isStatic = true,
             //invokeCode = fun args -> finalExp)
             invokeCode = fun args ->
-                let this = Seq.head args
-                let boxed = Expr.Coerce(this, typeof<obj>)
+                let boxedRoot = Expr.Coerce(args[0], typeof<obj>)
                 <@@ 
                     let say (i: obj) = i.ToString()
-                    say %%(boxed) 
+                    say (%%boxedRoot)
                 @@>
         )
         
