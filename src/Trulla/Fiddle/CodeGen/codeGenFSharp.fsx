@@ -5,10 +5,11 @@
 #load "../../parsing.fs"
 #load "../../Ast.fs"
 #load "../../Inference.fs"
+#load "../../Solver.fs" 
 
 open System
+open Trulla
 open Trulla.Internal.Utils
-open Trulla.Internal.Parsing
 open Trulla.Internal.Ast
 open Trulla.Internal.Inference
 
@@ -20,22 +21,15 @@ module MemberExp =
         | AccessExp accExp -> accExp.memberName
         | IdentExp ident -> ident
 
-let makeTypeName (possibleRecordNames: RecordName list) tvar =
+let makeTypeName (possibleRecordNames: RecordDef list) tvar =
     possibleRecordNames
-    |> List.tryFind (fun x -> x.record = tvar)
-    |> Option.map (fun x -> x.name)
-    |> Option.map (fun name ->
-        match name.ToCharArray() |> Array.toList with
+    |> List.find (fun x -> x.id = tvar)
+    |> fun x ->
+        match x.name.ToCharArray() |> Array.toList with
         | c::cs -> Char.ToUpperInvariant c :: cs
         | [] -> failwith "Empty possible record name is not supported."
         |> List.toArray
         |> String
-    )
-    |> Option.defaultWith (fun () ->
-        match tvar with
-        | Root -> "Root"
-        | TVar tvar -> $"T{tvar}"
-    )
 
 // TODO: Make that configurable
 let rec toTypeName possibleRecordNames typ =
@@ -63,15 +57,15 @@ let render (template: string) =
             //if solveResult.records |> Map.containsKey Root
             //then solveResult.records
             //else solveResult.records |> Map.add Root []
-        for tvar,fields in Map.toList records do
-            lni 1 $"""type {makeTypeName solveResult.possibleRecordNames tvar} = {{"""
-            for field in fields do
-                lni 2 $"{field.name}: {toTypeName solveResult.possibleRecordNames field.typ}"
+        for r in records do
+            lni 1 $"""type {makeTypeName records r.id} = {{"""
+            for field in r.fields do
+                lni 2 $"{field.name}: {toTypeName records field.typ}"
             lni 1 "}"
             br
     }
 
-    parseTemplate template |> solve |> Result.map (fun solveResult -> text {
+    Solver.solve template |> Result.map (fun solveResult -> text {
         ln "#if INTERACTIVE"
         ln "#else"
         ln "namespace TODO" // TODO
@@ -92,7 +86,7 @@ let render (template: string) =
         lni 1 "open ModelTypes"
         br
 
-        lni 1 $"let render ({rootIdentifier}: {makeTypeName solveResult.possibleRecordNames Root}) ="
+        lni 1 $"let render ({rootIdentifier}: {makeTypeName solveResult.records Root}) ="
         let sbAppend indent txt = text {
                 ind indent $"""("%s{txt}" """
                 ln "|> __sb.Append |> ignore)"

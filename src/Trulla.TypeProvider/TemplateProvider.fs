@@ -1,5 +1,6 @@
 ﻿namespace Trulla.TypeProviderImplementation
 
+open System
 open System.Text
 open System.Reflection
 
@@ -95,32 +96,42 @@ module private ModelCompiler =
         //        let rootPrefix = if isBound then "" else rootIdentifier + dotIntoMember
         //        rootPrefix + ident
         //    | AccessExp acc -> (memberExpToIdent acc.instanceExp) + dotIntoMember + acc.memberName
-        
-        let accessMember (bindingContext: Map<string, Expr>) (exp: TVal<MemberExp>) =
-            let rec accessMember (bindingContext: Map<string, Expr>) (exp: TVal<MemberExp>) =
-                match exp.value with
-                | IdentExp ident ->
-                    let isBound = exp.bindingContext |> Map.containsKey ident
-                    let rootPrefix = if isBound then "" else rootIdentifier + dotIntoMember
-                    rootPrefix + ident
-                | AccessExp acc -> (memberExpToIdent acc.instanceExp) + dotIntoMember + acc.memberName
 
-        let rec createRenderExprs (varRoot: Expr) (tree: TExp list) =
+
+        let rec accessMember
+            (exp: TVal<MemberExp>) 
+            (boundVars: Map<string, Expr * Type>) 
+            (currVar: (Expr * Type) option)
+            =
+            let getProp propName =
+                match currVar with
+                | None -> boundVars[propName]
+                | Some (cp, ct) ->
+                    let prop = ct.GetProperty(propName) 
+                    Expr.PropertyGet(cp, prop), prop.PropertyType
+            match exp.value with
+            | AccessExp acc ->
+                let instanceAccessExp,instType = acc.
+                Expr.PropertyGet(instanceAccessExp)
+            | IdentExp ident -> getProp ident
+
+        let rec createRenderExprs (tree: TExp list) =
             [ for texp in tree do
                 match texp with
                 | Text txt ->
-                    yield <@ fun (append: string -> unit) -> append txt @>
+                    yield Expr.Value(txt)
                 | Hole hole ->
-                    ()
-                    //yield <@ fun (append: string -> unit) -> append (memberExpToIdent hole) @>
+                    yield accessMember hole
                 | For (ident,exp,body) ->
                     //lni indent $"for %s{ident.value} in {memberExpToIdent exp} do"
                     //render (indent + 1) body
                     ()
                 | If (cond,body) ->
-                    //lni indent $"if {memberExpToIdent cond} then"
-                    //render (indent + 1) body
-                    ()
+                    yield Expr.IfThenElse(
+                        accessMember cond,
+                        createRenderExprs body |> Expr.allSequential,
+                        Expr.Value(())
+                    )
             ]
 
         //let finalExp =

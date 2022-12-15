@@ -6,6 +6,11 @@ namespace TODO
 [<AutoOpen>]
 module rec ModelTypes =
 
+    type Order = {
+        isActive: bool
+        id: string
+    }
+
     type Root = {
         orders: list<Order>
         user: User
@@ -13,11 +18,6 @@ module rec ModelTypes =
 
     type User = {
         name: string
-    }
-
-    type Order = {
-        isActive: bool
-        id: string
     }
 
 

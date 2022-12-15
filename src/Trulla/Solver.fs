@@ -12,8 +12,8 @@ let solveParseResult (parserResult: ParseResult) =
     result {
         let! tokens = parserResult 
         let! tree = Ast.buildTree tokens
-        let problems = Solver.buildProblems tree
-        let! solution = Solver.solveProblems problems.problems
+        let problems = Inference.buildProblems tree
+        let! solution = Inference.solveProblems problems.problems
         let getRecordName =
             // TODO: How we know that we have at least one?
             // TODO: Pascal case names / general: name checks all over the place

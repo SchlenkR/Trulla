@@ -38,3 +38,15 @@ let a = Expr.Let(varX, Expr.Value("Hello"), Expr.Var(varX))
 let varExpr = Expr.Var(Var("x", typeof<string>))
 let b = <@@let x = "Hello" in (%%varExpr: string)@@>
 
+
+
+<@@ 
+    [
+        for x in [1] do
+            x + 1
+    ]
+@@>
+
+<@@ 
+    List.map (fun x -> x + 1) [1]
+@@>

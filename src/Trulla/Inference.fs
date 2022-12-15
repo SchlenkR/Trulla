@@ -35,7 +35,7 @@ type private Unification =
     | KeepOriginal
 
 [<RequireQualifiedAccess>]
-module Solver =
+module Inference =
     // TODO: Prevent shadowing
     let buildProblems (tree: TExp list) =
         let mutable potentialRecordNames = []
