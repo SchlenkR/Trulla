@@ -89,7 +89,9 @@ module private ModelCompiler =
             |> List.map (fun (recDef, providedRec) -> finalizeProvidedRecord providedRecordsMap providedRec recDef)
         finalizedRecords
 
+module private RenderCompiler =
     let createRenderMethod 
+        (solution: Map<TVar, Typ>)
         (providedRootRecord: ProvidedTypeDefinition)
         (providedRecords: Map<TVar, ProvidedTypeDefinition * ProvidedProperty list>)
         (tree: TExp list)
@@ -98,14 +100,14 @@ module private ModelCompiler =
             let rec accessMember (exp: TVal<MemberExp>) =
                 match exp.value with
                 | IdentExp ident -> 
-                    bindingContext[ident]
+                    bindingContext[ident] |> fst
                 | AccessExp acc ->
-                    let instanceAccessExp,_ = accessMember acc.instanceExp
+                    let instanceAccessExp = accessMember acc.instanceExp
                     let prop = 
                         providedRecords[acc.instanceExp.tvar] 
                         |> snd
                         |> List.find (fun prop -> prop.Name = acc.memberName)
-                    Expr.PropertyGet(instanceAccessExp, prop), prop.PropertyType
+                    Expr.PropertyGet(instanceAccessExp, prop)
 
             [ for texp in tree do
                 match texp with
@@ -115,9 +117,13 @@ module private ModelCompiler =
                     yield accessMember hole |> fst |> append
                 | For (ident,exp,body) ->
                     yield Expr.Value("<<<FOR EXPR>>") |> append
-
-                    let inExpAndType = accessMember exp
-                    let bindingContext = bindingContext |> Map.add ident.value inExpAndType
+                    let identType =
+                        // TODO: Is this ok?
+                        match solution[exp.tvar] with 
+                        | Poly (_, typ) -> typ
+                        | _ -> failwith $"Poly type expected"
+                    let inExp = accessMember exp
+                    let bindingContext = bindingContext |> Map.add ident.value inExp
                     let mapping =
                         let tmp = createRenderExprs append body bindingContext |> Expr.allSequential
                         tmp
@@ -215,7 +221,7 @@ type TemplateProviderImplemtation (config : TypeProviderConfig) as this =
                             providedRecords
                             |> List.map (fun (recDef,provRec,props) -> recDef.id, (provRec,props))
                             |> Map.ofList
-                        ModelCompiler.createRenderMethod providedRootRecord recordsAndFields solveResult.tree
+                        RenderCompiler.createRenderMethod providedRootRecord recordsAndFields solveResult.tree
                     let asm = ProvidedAssembly()
                     let modelType = ProvidedTypeDefinition(
                         asm, ns, typeName, Some typeof<obj>, isErased = false, hideObjectMethods = true)

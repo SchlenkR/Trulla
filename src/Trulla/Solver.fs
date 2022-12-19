@@ -6,6 +6,13 @@ open Trulla.Internal.Parsing
 open Trulla.Internal.Ast
 open Trulla.Internal.Inference
 
+type SolveResult =
+    {
+        solution: Map<TVar, Typ>
+        tree: TExp list
+        records: RecordDef list
+    }
+
 let [<Literal>] RootRecordName = "Root"
 
 let solveParseResult (parserResult: ParseResult) =
@@ -46,7 +53,11 @@ let solveParseResult (parserResult: ParseResult) =
                 | [] -> [ makeRecord Root [] ]
                 | records -> records
 
-        return { tree = tree; records = records }
+        return { 
+            solution = solution |> Map.ofList
+            tree = tree
+            records = records 
+        }
     }
 
 let solve template =

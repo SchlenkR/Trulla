@@ -11,17 +11,11 @@ type RecordDef =
         name: string
     }
 
-type SolveResult =
-    {
-        tree: TExp list
-        records: RecordDef list
-    }
-
-type ProblemData = TVar * Typ
-type SolutionData = TVar * Typ // should be FinalTyp?
+type ProblemItem = TVar * Typ
+type SolutionItem = TVar * Typ // should be FinalTyp?
 type Problem =
-    | Unsolved of ProblemData
-    | Solved of SolutionData
+    | Unsolved of ProblemItem
+    | Solved of SolutionItem
 
 module KnownTypes =
     // TODO: reserve these keywords + parser tests
@@ -137,7 +131,7 @@ module Inference =
                 |> TrullaException
                 |> raise
         
-        let substInProblems tvarToReplace withType (inProblems: ProblemData list) newProblem =
+        let substInProblems tvarToReplace withType (inProblems: ProblemItem list) newProblem =
             ////printfn "RUN substInProblems ..."
             [ for ptvar, ptype in inProblems do
                 let ptype = subst tvarToReplace withType ptype
