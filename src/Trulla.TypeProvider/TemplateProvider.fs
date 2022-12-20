@@ -18,8 +18,73 @@ module private Expr =
         exprs |> List.fold (fun a b -> Expr.Sequential(a, b)) <@@ () @@>
 
 module Runtime =
-    let say (i: obj) = i.ToString()
-    let iter mapping items = List.iter mapping items
+    //let say (i: obj) = i.ToString()
+    
+    let reflectionRender (model: obj) (tree: TExp list) =
+        let sb = StringBuilder()
+        let inline append (value: string) = sb.Append(value) |> ignore
+
+        let rec render (bindingContext: Map<string, obj>) (tree: TExp list) =
+            let rec getIdentBoundValue (exp: TVal<MemberExp>) : obj =
+                failwith "TODO"
+                //match exp.value with
+                //| IdentExp ident -> 
+                //    bindingContext[ident] |> fst
+                //| AccessExp acc ->
+                //    let instanceAccessExp = accessMember acc.instanceExp
+                //    let prop = 
+                //        providedRecords[acc.instanceExp.tvar] 
+                //        |> snd
+                //        |> List.find (fun prop -> prop.Name = acc.memberName)
+                //    Expr.PropertyGet(instanceAccessExp, prop)
+
+            for texp in tree do
+                match texp with
+                | Text txt ->
+                    append txt
+                | Hole hole ->
+                    getIdentBoundValue hole :?> string |> append
+                | For (ident,exp,body) ->
+                    yield Expr.Value("<<<FOR EXPR>>") |> append
+                    let identType =
+                        // TODO: Is this ok?
+                        match solution[exp.tvar] with 
+                        | Poly (_, typ) -> typ
+                        | _ -> failwith $"Poly type expected"
+                    let inExp = getIdentBoundValue exp
+                    let bindingContext = bindingContext |> Map.add ident.value inExp
+                    let mapping =
+                        let tmp = createRenderExprs append body bindingContext |> Expr.allSequential
+                        tmp
+                        //Expr.Lambda(
+                        //    Var(ident.value, inExpAndType),
+                        //    Expr.Value(())
+                        //)
+                    ()
+                    ////let itemsExp = fst inExpAndType
+
+                    //yield <@@ Runtime.iter (%%mapping) (%%itemsExp) @@>
+                    //yield
+                    //    <@@
+                    //        for x in (%%itemsExp) do
+                    //            (%%mapping) x
+                    //    @@>
+                | If (cond,body) ->
+                    yield 
+                        Expr.IfThenElse(
+                            accessMember cond |> fst |> append,
+                            createRenderExprs append body bindingContext |> Expr.allSequential,
+                            Expr.Value(())
+                        )
+
+        let rootBindingContext =
+            [ for p in model.GetType().GetProperties() do
+                p.Name, p.GetValue(model)
+            ]
+            |> Map.ofList
+        do render rootBindingContext tree
+        sb.ToString()
+
 
 module private ModelCompiler =
     let addRecords (recordDefs: RecordDef list) =
@@ -96,86 +161,86 @@ module private RenderCompiler =
         (providedRecords: Map<TVar, ProvidedTypeDefinition * ProvidedProperty list>)
         (tree: TExp list)
         =
-        let rec createRenderExprs append (tree: TExp list) (bindingContext: Map<string, Expr * Type>) =
-            let rec accessMember (exp: TVal<MemberExp>) =
-                match exp.value with
-                | IdentExp ident -> 
-                    bindingContext[ident] |> fst
-                | AccessExp acc ->
-                    let instanceAccessExp = accessMember acc.instanceExp
-                    let prop = 
-                        providedRecords[acc.instanceExp.tvar] 
-                        |> snd
-                        |> List.find (fun prop -> prop.Name = acc.memberName)
-                    Expr.PropertyGet(instanceAccessExp, prop)
+        ////let rec createRenderExprs append (tree: TExp list) (bindingContext: Map<string, Expr * Type>) =
+        ////    let rec accessMember (exp: TVal<MemberExp>) =
+        ////        match exp.value with
+        ////        | IdentExp ident -> 
+        ////            bindingContext[ident] |> fst
+        ////        | AccessExp acc ->
+        ////            let instanceAccessExp = accessMember acc.instanceExp
+        ////            let prop = 
+        ////                providedRecords[acc.instanceExp.tvar] 
+        ////                |> snd
+        ////                |> List.find (fun prop -> prop.Name = acc.memberName)
+        ////            Expr.PropertyGet(instanceAccessExp, prop)
 
-            [ for texp in tree do
-                match texp with
-                | Text txt ->
-                    yield Expr.Value(txt) |> append
-                | Hole hole ->
-                    yield accessMember hole |> fst |> append
-                | For (ident,exp,body) ->
-                    yield Expr.Value("<<<FOR EXPR>>") |> append
-                    let identType =
-                        // TODO: Is this ok?
-                        match solution[exp.tvar] with 
-                        | Poly (_, typ) -> typ
-                        | _ -> failwith $"Poly type expected"
-                    let inExp = accessMember exp
-                    let bindingContext = bindingContext |> Map.add ident.value inExp
-                    let mapping =
-                        let tmp = createRenderExprs append body bindingContext |> Expr.allSequential
-                        tmp
-                        //Expr.Lambda(
-                        //    Var(ident.value, inExpAndType),
-                        //    Expr.Value(())
-                        //)
-                    ()
-                    ////let itemsExp = fst inExpAndType
+        ////    [ for texp in tree do
+        ////        match texp with
+        ////        | Text txt ->
+        ////            yield Expr.Value(txt) |> append
+        ////        | Hole hole ->
+        ////            yield accessMember hole |> fst |> append
+        ////        | For (ident,exp,body) ->
+        ////            yield Expr.Value("<<<FOR EXPR>>") |> append
+        ////            let identType =
+        ////                // TODO: Is this ok?
+        ////                match solution[exp.tvar] with 
+        ////                | Poly (_, typ) -> typ
+        ////                | _ -> failwith $"Poly type expected"
+        ////            let inExp = accessMember exp
+        ////            let bindingContext = bindingContext |> Map.add ident.value inExp
+        ////            let mapping =
+        ////                let tmp = createRenderExprs append body bindingContext |> Expr.allSequential
+        ////                tmp
+        ////                //Expr.Lambda(
+        ////                //    Var(ident.value, inExpAndType),
+        ////                //    Expr.Value(())
+        ////                //)
+        ////            ()
+        ////            ////let itemsExp = fst inExpAndType
 
-                    //yield <@@ Runtime.iter (%%mapping) (%%itemsExp) @@>
-                    //yield
-                    //    <@@
-                    //        for x in (%%itemsExp) do
-                    //            (%%mapping) x
-                    //    @@>
-                | If (cond,body) ->
-                    yield 
-                        Expr.IfThenElse(
-                            accessMember cond |> fst |> append,
-                            createRenderExprs append body bindingContext |> Expr.allSequential,
-                            Expr.Value(())
-                        )
-            ]
+        ////            //yield <@@ Runtime.iter (%%mapping) (%%itemsExp) @@>
+        ////            //yield
+        ////            //    <@@
+        ////            //        for x in (%%itemsExp) do
+        ////            //            (%%mapping) x
+        ////            //    @@>
+        ////        | If (cond,body) ->
+        ////            yield 
+        ////                Expr.IfThenElse(
+        ////                    accessMember cond |> fst |> append,
+        ////                    createRenderExprs append body bindingContext |> Expr.allSequential,
+        ////                    Expr.Value(())
+        ////                )
+        ////    ]
 
-        let invokeCode = fun (args: Expr list) ->
-            let boxedRoot = Expr.Coerce(Expr.Coerce(args[0], typeof<obj>), providedRootRecord)
+        ////let invokeCode = fun (args: Expr list) ->
+        ////    let boxedRoot = Expr.Coerce(Expr.Coerce(args[0], typeof<obj>), providedRootRecord)
 
-            let sbVar = Var("sb", typeof<StringBuilder>)
-            let withStringBuilder body =
-                Expr.Let(
-                    sbVar,
-                    Expr.NewObject(typeof<StringBuilder>.GetConstructor([||]), []),
-                    body)
-            let append value =
-                Expr.Call(Expr.Var(sbVar), typeof<StringBuilder>.GetMethod("Append", [| typeof<string> |]), [value])
-            let sbToString = 
-                Expr.Call(Expr.Var(sbVar), typeof<StringBuilder>.GetMethod("ToString", [||]), [])
-            // TODO: We use reflection too often; we have the info, but it gets lost
-            let rootBindingContext =
-                [ for p in providedRootRecord.GetProperties() do
-                    let propertyGet = Expr.PropertyGet(Expr.Coerce(boxedRoot, providedRootRecord), p)
-                    p.Name, (propertyGet, p.PropertyType)
-                ]
-                |> Map.ofList
+        ////    let sbVar = Var("sb", typeof<StringBuilder>)
+        ////    let withStringBuilder body =
+        ////        Expr.Let(
+        ////            sbVar,
+        ////            Expr.NewObject(typeof<StringBuilder>.GetConstructor([||]), []),
+        ////            body)
+        ////    let append value =
+        ////        Expr.Call(Expr.Var(sbVar), typeof<StringBuilder>.GetMethod("Append", [| typeof<string> |]), [value])
+        ////    let sbToString = 
+        ////        Expr.Call(Expr.Var(sbVar), typeof<StringBuilder>.GetMethod("ToString", [||]), [])
+        ////    // TODO: We use reflection too often; we have the info, but it gets lost
+        ////    let rootBindingContext =
+        ////        [ for p in providedRootRecord.GetProperties() do
+        ////            let propertyGet = Expr.PropertyGet(Expr.Coerce(boxedRoot, providedRootRecord), p)
+        ////            p.Name, (propertyGet, p.PropertyType)
+        ////        ]
+        ////        |> Map.ofList
 
-            [
-                yield! createRenderExprs append tree rootBindingContext
-                yield sbToString
-            ]
-            |> Expr.allSequential
-            |> withStringBuilder
+        ////    [
+        ////        yield! createRenderExprs append tree rootBindingContext
+        ////        yield sbToString
+        ////    ]
+        ////    |> Expr.allSequential
+        ////    |> withStringBuilder
 
         ProvidedMethod(
             "Render",

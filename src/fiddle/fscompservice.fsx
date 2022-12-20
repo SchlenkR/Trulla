@@ -4,9 +4,7 @@ open System.IO
 open System.Threading
 open FSharp.Compiler.Interactive.Shell
 
-let mutable session : FsiEvaluationSession option = None
-
-ThreadPool.QueueUserWorkItem(fun _ ->
+let eval expr = ThreadPool.QueueUserWorkItem(fun _ ->
     let defaultArgs =
         [| 
             "fsi.exe"
@@ -21,14 +19,13 @@ ThreadPool.QueueUserWorkItem(fun _ ->
     
     let fsiConfig = FsiEvaluationSession.GetDefaultConfiguration()
     
-    session <- 
+    let session =
         FsiEvaluationSession.Create(fsiConfig, defaultArgs, inStream, outStream, errStream, collectible = true)
-        |> Some
+
+    let res,diag = session.EvalExpressionNonThrowing(expr)
+    match res with
+    | Choice1Of2 v -> printfn $"result = {v.Value.ReflectionValue}"
+    | Choice2Of2 err -> printfn $"Error: {err}"
 )
 
-
-session |> Option.iter (fun session ->
-    let v = session.EvalExpression("222")
-    printfn "result = %A" v.Value.ReflectionValue
-)
-
+eval "4444"

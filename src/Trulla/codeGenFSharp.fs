@@ -1,11 +1,4 @@
-﻿
-#r "nuget: FParsec, 1.1.1"
-
-#load "../../Utils.fs"
-#load "../../parsing.fs"
-#load "../../Ast.fs"
-#load "../../Inference.fs"
-#load "../../Solver.fs" 
+﻿module Trulla.Internal.CodeGenFSharp
 
 open System
 open Trulla
@@ -51,7 +44,7 @@ let rec memberExpToIdent (exp: TVal<MemberExp>) =
     | AccessExp acc -> (memberExpToIdent acc.instanceExp) + dotIntoMember + acc.memberName
 
 let render (template: string) =
-    let renderRecords (solveResult: SolveResult) = text {
+    let renderRecords (solveResult: Solver.SolveResult) = text {
         let records = solveResult.records
             // TODO: Why this?
             //if solveResult.records |> Map.containsKey Root
