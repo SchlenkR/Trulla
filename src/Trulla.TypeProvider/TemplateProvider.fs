@@ -4,6 +4,7 @@ open System
 open System.Text
 open System.Reflection
 open System.Collections
+open System.Linq
 
 open Trulla
 open Trulla.Internal.Ast
@@ -13,7 +14,6 @@ open ProviderImplementation.ProvidedTypes
 open ProviderImplementation.ProvidedTypes.UncheckedQuotations
 open FSharp.Core.CompilerServices
 open Microsoft.FSharp.Quotations
-open System.Linq
 
 module private Expr =
     let allSequential exprs =

@@ -18,7 +18,7 @@ Your Orders
 let [<Literal>] TestTemplate2 = """Hello {{xxx}} Hans"""
 
 
-type Tmpl = Trulla.Template<TestTemplate1 >
+type Tmpl = Trulla.Template<TestTemplate1>
 
 let root =
     //Tmpl.Root("MY-NAME-IS")

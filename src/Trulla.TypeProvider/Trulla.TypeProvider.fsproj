@@ -14,7 +14,6 @@
 
   <ItemGroup>
     <PackageReference Include="FParsec" Version="1.1.1" />
-    <PackageReference Include="FSharp.Compiler.Service" Version="42.7.101" />
   </ItemGroup>
 
   <ItemGroup>
@@ -23,7 +22,7 @@
 
   <ItemGroup>
     <PackageReference Update="FSharp.Core" Version="6.0.0">
-      <!-- This excludes FSharp.Core.xml and FSharp.Core.resources.dll while referencing the right FSharp.Core.dll version -->
+       <!--This excludes FSharp.Core.xml and FSharp.Core.resources.dll while referencing the right FSharp.Core.dll version-->
       <ExcludeAssets>runtime;contentFiles</ExcludeAssets>
     </PackageReference>
   </ItemGroup>
