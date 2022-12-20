@@ -3,6 +3,7 @@
 open System
 open System.Text
 open System.Reflection
+open System.Collections
 
 open Trulla
 open Trulla.Internal.Ast
@@ -12,6 +13,7 @@ open ProviderImplementation.ProvidedTypes
 open ProviderImplementation.ProvidedTypes.UncheckedQuotations
 open FSharp.Core.CompilerServices
 open Microsoft.FSharp.Quotations
+open System.Linq
 
 module private Expr =
     let allSequential exprs =
@@ -20,23 +22,27 @@ module private Expr =
 module Runtime =
     //let say (i: obj) = i.ToString()
     
+    // Why falling back to reflection?
+    // 1) Staying open for Fable
+    // 2) I want to get this thing done.
+    //    and using the IL emit approach
+    //    (commented code below) is quite complicated and things like
+    //    quotation splicing / list iteration don't seem to work the
+    //    way I think they should be (maybe I'm doing something wrong or
+    //    there are bugs / unimplemented things in TP-SDK quotation processing).
     let reflectionRender (model: obj) (tree: TExp list) =
         let sb = StringBuilder()
         let inline append (value: string) = sb.Append(value) |> ignore
 
         let rec render (bindingContext: Map<string, obj>) (tree: TExp list) =
             let rec getIdentBoundValue (exp: TVal<MemberExp>) : obj =
-                failwith "TODO"
-                //match exp.value with
-                //| IdentExp ident -> 
-                //    bindingContext[ident] |> fst
-                //| AccessExp acc ->
-                //    let instanceAccessExp = accessMember acc.instanceExp
-                //    let prop = 
-                //        providedRecords[acc.instanceExp.tvar] 
-                //        |> snd
-                //        |> List.find (fun prop -> prop.Name = acc.memberName)
-                //    Expr.PropertyGet(instanceAccessExp, prop)
+                match exp.value with
+                | IdentExp ident -> 
+                    bindingContext[ident]
+                | AccessExp acc ->
+                    let instance = getIdentBoundValue acc.instanceExp
+                    let prop = instance.GetType().GetProperty(acc.memberName)
+                    prop.GetValue(instance)
 
             for texp in tree do
                 match texp with
@@ -45,37 +51,14 @@ module Runtime =
                 | Hole hole ->
                     getIdentBoundValue hole :?> string |> append
                 | For (ident,exp,body) ->
-                    yield Expr.Value("<<<FOR EXPR>>") |> append
-                    let identType =
-                        // TODO: Is this ok?
-                        match solution[exp.tvar] with 
-                        | Poly (_, typ) -> typ
-                        | _ -> failwith $"Poly type expected"
-                    let inExp = getIdentBoundValue exp
-                    let bindingContext = bindingContext |> Map.add ident.value inExp
-                    let mapping =
-                        let tmp = createRenderExprs append body bindingContext |> Expr.allSequential
-                        tmp
-                        //Expr.Lambda(
-                        //    Var(ident.value, inExpAndType),
-                        //    Expr.Value(())
-                        //)
-                    ()
-                    ////let itemsExp = fst inExpAndType
-
-                    //yield <@@ Runtime.iter (%%mapping) (%%itemsExp) @@>
-                    //yield
-                    //    <@@
-                    //        for x in (%%itemsExp) do
-                    //            (%%mapping) x
-                    //    @@>
+                    let objSeq = (getIdentBoundValue exp :?> IEnumerable).Cast<obj>()
+                    for x in objSeq do
+                        let bindingContext = bindingContext |> Map.add ident.value x
+                        render bindingContext body
                 | If (cond,body) ->
-                    yield 
-                        Expr.IfThenElse(
-                            accessMember cond |> fst |> append,
-                            createRenderExprs append body bindingContext |> Expr.allSequential,
-                            Expr.Value(())
-                        )
+                    let cond = getIdentBoundValue cond :?> bool
+                    if cond then
+                        render bindingContext body
 
         let rootBindingContext =
             [ for p in model.GetType().GetProperties() do
@@ -155,12 +138,7 @@ module private ModelCompiler =
         finalizedRecords
 
 module private RenderCompiler =
-    let createRenderMethod 
-        (solution: Map<TVar, Typ>)
-        (providedRootRecord: ProvidedTypeDefinition)
-        (providedRecords: Map<TVar, ProvidedTypeDefinition * ProvidedProperty list>)
-        (tree: TExp list)
-        =
+    let createRenderMethod (providedRootRecord: ProvidedTypeDefinition) =
         ////let rec createRenderExprs append (tree: TExp list) (bindingContext: Map<string, Expr * Type>) =
         ////    let rec accessMember (exp: TVal<MemberExp>) =
         ////        match exp.value with
@@ -247,7 +225,10 @@ module private RenderCompiler =
             [ProvidedParameter("model", providedRootRecord)],
             typeof<string>,
             isStatic = true,
-            invokeCode = invokeCode)
+            invokeCode = fun args ->
+                let boxedRoot = Expr.Coerce(args[0], typeof<obj>)
+                <@@ Runtime.reflectionRender (%%boxedRoot) @@>
+        )
         
 [<TypeProvider>]
 type TemplateProviderImplemtation (config : TypeProviderConfig) as this =
@@ -282,11 +263,12 @@ type TemplateProviderImplemtation (config : TypeProviderConfig) as this =
                             match r.id with Root -> true | _ -> false)
                         |> fun (_,provRec,_) -> provRec
                     let renderFunction =
-                        let recordsAndFields =
-                            providedRecords
-                            |> List.map (fun (recDef,provRec,props) -> recDef.id, (provRec,props))
-                            |> Map.ofList
-                        RenderCompiler.createRenderMethod providedRootRecord recordsAndFields solveResult.tree
+                        //let recordsAndFields =
+                        //    providedRecords
+                        //    |> List.map (fun (recDef,provRec,props) -> recDef.id, (provRec,props))
+                        //    |> Map.ofList
+                        //RenderCompiler.createRenderMethod providedRootRecord recordsAndFields solveResult.tree
+                        RenderCompiler.createRenderMethod providedRootRecord
                     let asm = ProvidedAssembly()
                     let modelType = ProvidedTypeDefinition(
                         asm, ns, typeName, Some typeof<obj>, isErased = false, hideObjectMethods = true)

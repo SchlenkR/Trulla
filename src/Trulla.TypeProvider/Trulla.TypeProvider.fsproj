@@ -9,7 +9,6 @@
   <ItemGroup>
     <Compile Include="TpSdk\ProvidedTypes.fsi" />
     <Compile Include="TpSdk\ProvidedTypes.fs" />
-    <Compile Include="CompilerService.fs" />
     <Compile Include="TemplateProvider.fs" />
   </ItemGroup>
 

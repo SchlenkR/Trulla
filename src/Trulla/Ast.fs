@@ -121,6 +121,7 @@ module Ast =
                             endTokenDetected <- true
                 ]
             pointer,tree,scopeDepth
+
         try 
             let _,tree,scopeDepth = toTree 0 0 Map.empty
             if scopeDepth > 0 then
