@@ -1,4 +1,14 @@
-﻿module Trulla.Internal.CodeGenFSharp
+﻿
+#r "nuget: FParsec, 1.1.1"
+
+#load "../../Utils.fs"
+#load "../../Parsing.fs"
+#load "../../Ast.fs"
+#load "../../Inference.fs"
+#load "../../Solver.fs"
+#load "./codeGenFSharp.fsx"
+
+//module Trulla.Internal.CodeGenFSharp
 
 open System
 open Trulla
