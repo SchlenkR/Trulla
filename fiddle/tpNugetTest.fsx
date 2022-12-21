@@ -23,3 +23,16 @@ let root =
         Tmpl.user("Hans"))
 
 Tmpl.Render(root) |> printfn "%s"
+
+// this will print:
+
+(*
+Hello Hans, how are you?
+
+Your Orders
+---
+ID: Order 1
+
+ID: Order 2
+ORDER IS ACTIVE
+*)
