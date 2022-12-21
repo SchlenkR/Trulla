@@ -3,7 +3,7 @@
 open FParsec
 
 #load "../../parsing.fs"
-open Trulla.Internal.Parsing
+open Trulla.Core.Parsing
 
 let test p str =
     match run p str with

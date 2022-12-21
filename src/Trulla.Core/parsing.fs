@@ -1,4 +1,4 @@
-﻿namespace Trulla.Internal.Parsing
+﻿namespace Trulla.Core.Parsing
 
 open FParsec
 

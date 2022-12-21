@@ -7,8 +7,8 @@ fsi.PrintLength <- 150
 #load "../../Parsing.fs"
 #load "../../Utils.fs"
 #load "../../ModelInference.fs"
-open Trulla.Internal.Parsing
-open Trulla.Internal.ModelInference
+open Trulla.Core.Parsing
+open Trulla.Core.ModelInference
 
 
 let range number =

@@ -1,10 +1,10 @@
 ﻿[<RequireQualifiedAccess>]
 module Trulla.Solver
 
-open Trulla.Internal.Utils
-open Trulla.Internal.Parsing
-open Trulla.Internal.Ast
-open Trulla.Internal.Inference
+open Trulla.Core.Utils
+open Trulla.Core.Parsing
+open Trulla.Core.Ast
+open Trulla.Core.Inference
 
 type SolveResult =
     {

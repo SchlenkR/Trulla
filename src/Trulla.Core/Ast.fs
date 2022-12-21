@@ -1,7 +1,7 @@
-﻿namespace Trulla.Internal.Ast
+﻿namespace Trulla.Core.Ast
 
-open Trulla.Internal.Utils
-open Trulla.Internal.Parsing
+open Trulla.Core.Utils
+open Trulla.Core.Parsing
 
 type TVar =
     | Root

@@ -1,7 +1,7 @@
 ﻿
 #load "typingTestsBase.fsx"
 
-open Trulla.Internal.Typing
+open Trulla.Core.Typing
 open TypingTestsBase
 
 

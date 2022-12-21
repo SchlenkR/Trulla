@@ -8,13 +8,13 @@
 #load "../../Solver.fs"
 #load "./codeGenFSharp.fsx"
 
-//module Trulla.Internal.CodeGenFSharp
+//module Trulla.Core.CodeGenFSharp
 
 open System
 open Trulla
-open Trulla.Internal.Utils
-open Trulla.Internal.Ast
-open Trulla.Internal.Inference
+open Trulla.Core.Utils
+open Trulla.Core.Ast
+open Trulla.Core.Inference
 
 let [<Literal>] rootIdentifier = "model"
 let [<Literal>] dotIntoMember = "."

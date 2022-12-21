@@ -3,28 +3,29 @@
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <TargetFrameworks>netstandard2.0</TargetFrameworks>
+    <DefineConstants>IS_DESIGNTIME</DefineConstants>
     <DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
   </PropertyGroup>
 
   <ItemGroup>
     <Compile Include="..\TpSdk\ProvidedTypes.fsi" />
     <Compile Include="..\TpSdk\ProvidedTypes.fs" />
-    <Compile Include="Runtime.fs" />
+    <Compile Include="TrullaProvider.fs" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Trulla\Trulla.fsproj" />
+    <PackageReference Include="FParsec" Version="1.1.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Trulla.Core\Trulla.Core.fsproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Update="FSharp.Core" Version="6.0.0">
-       <!--This excludes FSharp.Core.xml and FSharp.Core.resources.dll while referencing the right FSharp.Core.dll version-->
-      <ExcludeAssets>runtime;contentFiles</ExcludeAssets>
+      <!--This excludes FSharp.Core.xml and FSharp.Core.resources.dll while referencing the right FSharp.Core.dll version-->
+      <ExcludeAssets>all</ExcludeAssets>
     </PackageReference>
-    <ProjectReference Include="..\TrullaProvider.DesignTime\TrullaProvider.DesignTime.fsproj">
-      <IsFSharpDesignTimeProvider>true</IsFSharpDesignTimeProvider>
-      <PrivateAssets>all</PrivateAssets>
-    </ProjectReference>
   </ItemGroup>
 
 </Project>

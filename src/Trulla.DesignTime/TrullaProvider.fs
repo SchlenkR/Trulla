@@ -1,10 +1,10 @@
-﻿namespace Trulla
+﻿namespace Trulla.DesignTime
 
 open System.Reflection
 
 open Trulla
-open Trulla.Internal.Ast
-open Trulla.Internal.Inference
+open Trulla.Core.Ast
+open Trulla.Core.Inference
 
 open ProviderImplementation.ProvidedTypes
 open ProviderImplementation.ProvidedTypes.UncheckedQuotations
@@ -173,14 +173,14 @@ module private RenderCompiler =
             isStatic = true,
             invokeCode = fun args ->
                 let boxedRoot = Expr.Coerce(args[0], typeof<obj>)
-                <@@ Runtime.reflectionRender (%%boxedRoot) @@>
+                <@@ Rendering.reflectionRender (%%boxedRoot) @@>
         )
         
 [<TypeProvider>]
-type TemplateProviderImplemtation (config : TypeProviderConfig) as this =
+type TrullaProviderImplementation(config : TypeProviderConfig) as this =
     inherit TypeProviderForNamespaces(
         config,
-        assemblyReplacementMap = [("TrullaProvider.DesignTime", "TrullaProvider.Runtime")],
+        assemblyReplacementMap = [("Trulla.DesignTime", "Trulla")],
         addDefaultProbingLocation = true
     )
 

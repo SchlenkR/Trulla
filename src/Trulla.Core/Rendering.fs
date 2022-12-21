@@ -4,7 +4,7 @@ open System.Text
 open System.Collections
 open System.Linq
 
-open Trulla.Internal.Ast
+open Trulla.Core.Ast
     
 // Why falling back to reflection?
 // 1) Staying open for Fable
@@ -14,7 +14,7 @@ open Trulla.Internal.Ast
 //    quotation splicing / list iteration don't seem to work the
 //    way I think they should be (maybe I'm doing something wrong or
 //    there are bugs / unimplemented things in TP-SDK quotation processing).
-module Runtime =
+module Rendering =
     let reflectionRender (model: obj) (tree: TExp list) =
         let sb = StringBuilder()
         let inline append (value: string) = sb.Append(value) |> ignore
@@ -52,9 +52,3 @@ module Runtime =
             |> Map.ofList
         do render rootBindingContext tree
         sb.ToString()
-
-#if !IS_DESIGNTIME
-// Put the TypeProviderAssemblyAttribute in the runtime DLL, pointing to the design-time DLL
-[<assembly:CompilerServices.TypeProviderAssembly("TrullaProvider.DesignTime.dll")>]
-do ()
-#endif

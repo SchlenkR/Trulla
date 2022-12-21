@@ -1,8 +1,8 @@
-﻿namespace Trulla.Internal.Inference
+﻿namespace Trulla.Core.Inference
 
-open Trulla.Internal.Utils
-open Trulla.Internal.Parsing
-open Trulla.Internal.Ast
+open Trulla.Core.Utils
+open Trulla.Core.Parsing
+open Trulla.Core.Ast
 
 type RecordDef =
     {

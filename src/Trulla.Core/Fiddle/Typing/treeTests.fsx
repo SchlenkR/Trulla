@@ -1,8 +1,8 @@
 ﻿
 #load "typingTestsBase.fsx"
 
-open Trulla.Internal.Parsing
-open Trulla.Internal.ModelInference
+open Trulla.Core.Parsing
+open Trulla.Core.ModelInference
 open TypingTestsBase
 
 

@@ -3,15 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.32014.148
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Trulla", "Trulla\Trulla.fsproj", "{7AA8BF26-2B04-440F-A581-53E40A0A0291}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Trulla.Core", "Trulla.Core\Trulla.Core.fsproj", "{7AA8BF26-2B04-440F-A581-53E40A0A0291}"
 EndProject
-Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Trulla.Tests", "Trulla.Tests\Trulla.Tests.fsproj", "{A2DA73DB-F573-49B0-9252-6CA4F9F6C0A7}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Trulla", "Trulla\Trulla.fsproj", "{C216CB26-B4D6-4850-BDF3-9B8DDFB09912}"
 EndProject
-Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "TrullaProvider.DesignTime", "TrullaProvider.DesignTime\TrullaProvider.DesignTime.fsproj", "{2ACBBDA1-928F-437A-BF91-C3D4D0C4C5CE}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Test", "Test", "{9835F9D0-14C2-4C4C-A770-9F7AA386FCD0}"
-EndProject
-Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "TrullaProvider", "TrullaProvider\TrullaProvider.fsproj", "{6BE036E4-F3C2-4B60-834F-3CE3AEE9343B}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Trulla.DesignTime", "Trulla.DesignTime\Trulla.DesignTime.fsproj", "{98285E4E-2C02-4C25-89E6-11F67905D1F7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -23,24 +19,17 @@ Global
 		{7AA8BF26-2B04-440F-A581-53E40A0A0291}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7AA8BF26-2B04-440F-A581-53E40A0A0291}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7AA8BF26-2B04-440F-A581-53E40A0A0291}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A2DA73DB-F573-49B0-9252-6CA4F9F6C0A7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A2DA73DB-F573-49B0-9252-6CA4F9F6C0A7}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A2DA73DB-F573-49B0-9252-6CA4F9F6C0A7}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A2DA73DB-F573-49B0-9252-6CA4F9F6C0A7}.Release|Any CPU.Build.0 = Release|Any CPU
-		{2ACBBDA1-928F-437A-BF91-C3D4D0C4C5CE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{2ACBBDA1-928F-437A-BF91-C3D4D0C4C5CE}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{2ACBBDA1-928F-437A-BF91-C3D4D0C4C5CE}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{2ACBBDA1-928F-437A-BF91-C3D4D0C4C5CE}.Release|Any CPU.Build.0 = Release|Any CPU
-		{6BE036E4-F3C2-4B60-834F-3CE3AEE9343B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{6BE036E4-F3C2-4B60-834F-3CE3AEE9343B}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{6BE036E4-F3C2-4B60-834F-3CE3AEE9343B}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{6BE036E4-F3C2-4B60-834F-3CE3AEE9343B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C216CB26-B4D6-4850-BDF3-9B8DDFB09912}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C216CB26-B4D6-4850-BDF3-9B8DDFB09912}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C216CB26-B4D6-4850-BDF3-9B8DDFB09912}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C216CB26-B4D6-4850-BDF3-9B8DDFB09912}.Release|Any CPU.Build.0 = Release|Any CPU
+		{98285E4E-2C02-4C25-89E6-11F67905D1F7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{98285E4E-2C02-4C25-89E6-11F67905D1F7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{98285E4E-2C02-4C25-89E6-11F67905D1F7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{98285E4E-2C02-4C25-89E6-11F67905D1F7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(NestedProjects) = preSolution
-		{A2DA73DB-F573-49B0-9252-6CA4F9F6C0A7} = {9835F9D0-14C2-4C4C-A770-9F7AA386FCD0}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {31B03B52-7B87-4BEA-957A-9CFD25936243}
