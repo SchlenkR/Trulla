@@ -10,8 +10,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="Trulla">
-      <HintPath>.tpPublish\Trulla.dll</HintPath>
+    <Reference Include="FSharp.Text.TypedTemplateProvider">
+      <HintPath>.tpPublish\FSharp.Text.TypedTemplateProvider.dll</HintPath>
     </Reference>
   </ItemGroup>
 

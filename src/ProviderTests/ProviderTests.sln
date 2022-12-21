@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.4.33122.133
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "TrullaProvider.Tests", "TrullaProvider.Tests.fsproj", "{4FE354C8-0FC1-463D-8710-997821A2F760}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "ProviderTests", "ProviderTests.fsproj", "{4FE354C8-0FC1-463D-8710-997821A2F760}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

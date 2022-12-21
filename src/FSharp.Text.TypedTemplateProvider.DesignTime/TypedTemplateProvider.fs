@@ -1,4 +1,4 @@
-﻿namespace Trulla.DesignTime
+﻿namespace FSharp.Text.TypedTemplateProvider.DesignTime
 
 open System.Reflection
 
@@ -10,6 +10,9 @@ open ProviderImplementation.ProvidedTypes
 open ProviderImplementation.ProvidedTypes.UncheckedQuotations
 open FSharp.Core.CompilerServices
 open Microsoft.FSharp.Quotations
+
+module private Consts =
+    let providerNamespaceName = "FSharp.Text.TypedTemplateProvider"
 
 module private Expr =
     let allSequential exprs =
@@ -84,7 +87,11 @@ module private ModelCompiler =
         finalizedRecords
 
 module private RenderCompiler =
-    let createRenderMethod (providedRootRecord: ProvidedTypeDefinition) (template: string) =
+    let createRenderMethod 
+        (providedRootRecord: ProvidedTypeDefinition) 
+        (template: string) 
+        (modelArgName: string) 
+        =
         ////let rec createRenderExprs append (tree: TExp list) (bindingContext: Map<string, Expr * Type>) =
         ////    let rec accessMember (exp: TVal<MemberExp>) =
         ////        match exp.value with
@@ -168,33 +175,37 @@ module private RenderCompiler =
 
         ProvidedMethod(
             "Render",
-            [ProvidedParameter("model", providedRootRecord)],
+            [ProvidedParameter(modelArgName, providedRootRecord)],
             typeof<string>,
             isStatic = true,
             invokeCode = fun args ->
                 let boxedRoot = Expr.Coerce(args[0], typeof<obj>)
                 <@@ Rendering.reflectionRender (%%boxedRoot) template @@>
         )
-        
+    
 [<TypeProvider>]
-type TrullaProviderImplementation(config : TypeProviderConfig) as this =
+type TemplateProviderImplementation(config : TypeProviderConfig) as this =
     inherit TypeProviderForNamespaces(
         config,
-        assemblyReplacementMap = [("Trulla.DesignTime", "Trulla")],
+        assemblyReplacementMap = [("FSharp.Text.TypedTemplateProvider.DesignTime", "FSharp.Text.TypedTemplateProvider")],
         addDefaultProbingLocation = true
     )
+    
+    let providerName = "Template"
+    // TODO: Allow for passing file name instead of string literal
+    let templateParameterName = "TextTemplate"
+    let modelArgName = "model"
 
     let asm = Assembly.GetExecutingAssembly()
     
     // check we contain a copy of runtime files, and are not referencing the runtime DLL
     do assert (typeof<TpRuntime>.Assembly.GetName().Name = asm.GetName().Name)  
 
-    let ns = "Trulla"
-    
     let templateProviderForStringLiteral =
-        let providerType = ProvidedTypeDefinition(asm, ns, "Template", Some typeof<obj>, isErased = false)
+        let providerType = ProvidedTypeDefinition(
+            asm, Consts.providerNamespaceName, providerName, Some typeof<obj>, isErased = false)
         do providerType.DefineStaticParameters(
-            [ProvidedStaticParameter("Template", typeof<string>)],
+            [ProvidedStaticParameter(templateParameterName, typeof<string>)],
             fun typeName args ->
                 let template = unbox<string> args.[0]
                 let solveResult = Solver.solve template
@@ -214,10 +225,10 @@ type TrullaProviderImplementation(config : TypeProviderConfig) as this =
                         //    |> List.map (fun (recDef,provRec,props) -> recDef.id, (provRec,props))
                         //    |> Map.ofList
                         //RenderCompiler.createRenderMethod providedRootRecord recordsAndFields solveResult.tree
-                        RenderCompiler.createRenderMethod providedRootRecord template
+                        RenderCompiler.createRenderMethod providedRootRecord template modelArgName
                     let asm = ProvidedAssembly()
                     let modelType = ProvidedTypeDefinition(
-                        asm, ns, typeName, Some typeof<obj>, isErased = false, hideObjectMethods = true)
+                        asm, Consts.providerNamespaceName, typeName, Some typeof<obj>, isErased = false, hideObjectMethods = true)
                     do 
                         modelType.AddMembers (providedRecords |> List.map (fun (_,provRec,_) -> provRec))
                         modelType.AddMembers [renderFunction]
@@ -227,4 +238,4 @@ type TrullaProviderImplementation(config : TypeProviderConfig) as this =
 
         providerType
     do
-        this.AddNamespace(ns, [templateProviderForStringLiteral])
+        this.AddNamespace(Consts.providerNamespaceName, [templateProviderForStringLiteral])

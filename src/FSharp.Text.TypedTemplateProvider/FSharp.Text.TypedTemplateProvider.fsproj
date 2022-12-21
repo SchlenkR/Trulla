@@ -35,7 +35,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Trulla.DesignTime\Trulla.DesignTime.fsproj">
+    <ProjectReference Include="..\FSharp.Text.TypedTemplateProvider.DesignTime\FSharp.Text.TypedTemplateProvider.DesignTime.fsproj">
       <IsFSharpDesignTimeProvider>true</IsFSharpDesignTimeProvider>
       <PrivateAssets>all</PrivateAssets>
     </ProjectReference>

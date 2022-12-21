@@ -1,0 +1,33 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFrameworks>netstandard2.0</TargetFrameworks>
+    <GenerateDocumentationFile>False</GenerateDocumentationFile>
+    <DefineConstants>IS_DESIGNTIME</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Common\AssemblyInfo.fs" Link="AssemblyInfo.fs" />
+    <Compile Include="..\FSharp.Text.TypedTemplateProvider\Utils.fs" Link="Core\Utils.fs" />
+    <Compile Include="..\FSharp.Text.TypedTemplateProvider\Parsing.fs" Link="Core\Parsing.fs" />
+    <Compile Include="..\FSharp.Text.TypedTemplateProvider\Ast.fs" Link="Core\Ast.fs" />
+    <Compile Include="..\FSharp.Text.TypedTemplateProvider\Inference.fs" Link="Core\Inference.fs" />
+    <Compile Include="..\FSharp.Text.TypedTemplateProvider\Solver.fs" Link="Core\Solver.fs" />
+    <Compile Include="..\FSharp.Text.TypedTemplateProvider\Rendering.fs" Link="Core\Rendering.fs" />
+    <Compile Include="..\FSharp.Text.TypedTemplateProvider\TpRuntime.fs" Link="Core\TpRuntime.fs" />
+    <Compile Include="TpSdk\ProvidedTypes.fsi" />
+    <Compile Include="TpSdk\ProvidedTypes.fs" />
+    <Compile Include="TypedTemplateProvider.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FParsec" Version="1.1.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Core\" />
+    <Folder Include="TpSdk\" />
+  </ItemGroup>
+
+</Project>

@@ -1,4 +1,4 @@
 
 .\publishTypeProvider.ps1
 
-dotnet run --project ./TrullaProvider.Tests/TrullaProvider.Tests.fsproj
+dotnet run --project ./ProviderTests/ProviderTests.fsproj

@@ -1,9 +1,11 @@
 ﻿module Program
 
+open FSharp.Text.TypedTemplateProvider
+
 module TextOnly =
     let [<Literal>] TestTemplate = """Hello, how are you?"""
 
-    type Tmpl = Trulla.Template<TestTemplate>
+    type Tmpl = Template<TestTemplate>
 
     let root = Tmpl.Root()
     let output = Tmpl.Render(root)
@@ -11,7 +13,7 @@ module TextOnly =
 module ScalarHole =
     let [<Literal>] TestTemplate = """Hello {{userName}}, how are you?"""
 
-    type Tmpl = Trulla.Template<TestTemplate>
+    type Tmpl = Template<TestTemplate>
 
     let root = Tmpl.Root("Hans")
     let output = Tmpl.Render(root)
@@ -27,7 +29,7 @@ module ForLoop =
     {{end}}
     """
 
-    type Tmpl = Trulla.Template<TestTemplate>
+    type Tmpl = Template<TestTemplate>
 
     let root =
         Tmpl.Root(
