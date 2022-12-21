@@ -7,9 +7,11 @@ Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Trulla", "Trulla\Trulla.fsp
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Trulla.Tests", "Trulla.Tests\Trulla.Tests.fsproj", "{A2DA73DB-F573-49B0-9252-6CA4F9F6C0A7}"
 EndProject
-Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Trulla.TypeProvider", "Trulla.TypeProvider\Trulla.TypeProvider.fsproj", "{2ACBBDA1-928F-437A-BF91-C3D4D0C4C5CE}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "TrullaProvider.DesignTime", "TrullaProvider.DesignTime\TrullaProvider.DesignTime.fsproj", "{2ACBBDA1-928F-437A-BF91-C3D4D0C4C5CE}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Test", "Test", "{9835F9D0-14C2-4C4C-A770-9F7AA386FCD0}"
+EndProject
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "TrullaProvider", "TrullaProvider\TrullaProvider.fsproj", "{6BE036E4-F3C2-4B60-834F-3CE3AEE9343B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -29,6 +31,10 @@ Global
 		{2ACBBDA1-928F-437A-BF91-C3D4D0C4C5CE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2ACBBDA1-928F-437A-BF91-C3D4D0C4C5CE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2ACBBDA1-928F-437A-BF91-C3D4D0C4C5CE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6BE036E4-F3C2-4B60-834F-3CE3AEE9343B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6BE036E4-F3C2-4B60-834F-3CE3AEE9343B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6BE036E4-F3C2-4B60-834F-3CE3AEE9343B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6BE036E4-F3C2-4B60-834F-3CE3AEE9343B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

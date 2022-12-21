@@ -10,8 +10,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="Trulla.TypeProvider">
-      <HintPath>publish\Trulla.TypeProvider.dll</HintPath>
+    <Reference Include="TrullaProvider">
+      <HintPath>.tpPublish\TrullaProvider.dll</HintPath>
     </Reference>
   </ItemGroup>
 

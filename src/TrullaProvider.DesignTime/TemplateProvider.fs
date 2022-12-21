@@ -1,10 +1,6 @@
-﻿namespace Trulla.TypeProviderImplementation
+﻿namespace Trulla
 
-open System
-open System.Text
 open System.Reflection
-open System.Collections
-open System.Linq
 
 open Trulla
 open Trulla.Internal.Ast
@@ -18,56 +14,6 @@ open Microsoft.FSharp.Quotations
 module private Expr =
     let allSequential exprs =
         exprs |> List.fold (fun a b -> Expr.Sequential(a, b)) <@@ () @@>
-
-module Runtime =
-    //let say (i: obj) = i.ToString()
-    
-    // Why falling back to reflection?
-    // 1) Staying open for Fable
-    // 2) I want to get this thing done.
-    //    and using the IL emit approach
-    //    (commented code below) is quite complicated and things like
-    //    quotation splicing / list iteration don't seem to work the
-    //    way I think they should be (maybe I'm doing something wrong or
-    //    there are bugs / unimplemented things in TP-SDK quotation processing).
-    let reflectionRender (model: obj) (tree: TExp list) =
-        let sb = StringBuilder()
-        let inline append (value: string) = sb.Append(value) |> ignore
-
-        let rec render (bindingContext: Map<string, obj>) (tree: TExp list) =
-            let rec getIdentBoundValue (exp: TVal<MemberExp>) : obj =
-                match exp.value with
-                | IdentExp ident -> 
-                    bindingContext[ident]
-                | AccessExp acc ->
-                    let instance = getIdentBoundValue acc.instanceExp
-                    let prop = instance.GetType().GetProperty(acc.memberName)
-                    prop.GetValue(instance)
-
-            for texp in tree do
-                match texp with
-                | Text txt ->
-                    append txt
-                | Hole hole ->
-                    getIdentBoundValue hole :?> string |> append
-                | For (ident,exp,body) ->
-                    let objSeq = (getIdentBoundValue exp :?> IEnumerable).Cast<obj>()
-                    for x in objSeq do
-                        let bindingContext = bindingContext |> Map.add ident.value x
-                        render bindingContext body
-                | If (cond,body) ->
-                    let cond = getIdentBoundValue cond :?> bool
-                    if cond then
-                        render bindingContext body
-
-        let rootBindingContext =
-            [ for p in model.GetType().GetProperties() do
-                p.Name, p.GetValue(model)
-            ]
-            |> Map.ofList
-        do render rootBindingContext tree
-        sb.ToString()
-
 
 module private ModelCompiler =
     let addRecords (recordDefs: RecordDef list) =
@@ -232,14 +178,14 @@ module private RenderCompiler =
         
 [<TypeProvider>]
 type TemplateProviderImplemtation (config : TypeProviderConfig) as this =
-    inherit TypeProviderForNamespaces (
+    inherit TypeProviderForNamespaces(
         config,
-        //assemblyReplacementMap = [("Trulla.TypeProvider", "TemplateProvider")],
+        assemblyReplacementMap = [("TrullaProvider.DesignTime", "TrullaProvider.Runtime")],
         addDefaultProbingLocation = true
     )
 
     //// check we contain a copy of runtime files, and are not referencing the runtime DLL
-    //do assert (typeof<BasicProvider.Helpers.SomeRuntimeHelper>.Assembly.GetName().Name = asm.GetName().Name)  
+    //do assert (typeof<Trulla.Runtime>.Assembly.GetName().Name = asm.GetName().Name)  
 
     let asm = Assembly.GetExecutingAssembly()
     let ns = "Trulla"
@@ -282,7 +228,3 @@ type TemplateProviderImplemtation (config : TypeProviderConfig) as this =
         providerType
     do
         this.AddNamespace(ns, [templateProviderForStringLiteral])
-
-
-[<assembly: TypeProviderAssembly()>]
-do ()

@@ -7,13 +7,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="TpSdk\ProvidedTypes.fsi" />
-    <Compile Include="TpSdk\ProvidedTypes.fs" />
-    <Compile Include="TemplateProvider.fs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="FParsec" Version="1.1.1" />
+    <Compile Include="..\TpSdk\ProvidedTypes.fsi" />
+    <Compile Include="..\TpSdk\ProvidedTypes.fs" />
+    <Compile Include="Runtime.fs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -25,6 +21,10 @@
        <!--This excludes FSharp.Core.xml and FSharp.Core.resources.dll while referencing the right FSharp.Core.dll version-->
       <ExcludeAssets>runtime;contentFiles</ExcludeAssets>
     </PackageReference>
+    <ProjectReference Include="..\TrullaProvider.DesignTime\TrullaProvider.DesignTime.fsproj">
+      <IsFSharpDesignTimeProvider>true</IsFSharpDesignTimeProvider>
+      <PrivateAssets>all</PrivateAssets>
+    </ProjectReference>
   </ItemGroup>
 
 </Project>
