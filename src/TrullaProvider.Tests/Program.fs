@@ -1,41 +1,47 @@
-﻿#if INTERACTIVE
-#else
-module Program
-#endif
+﻿module Program
+
+module TextOnly =
+    let [<Literal>] TestTemplate = """Hello, how are you?"""
+
+    type Tmpl = Trulla.Template<TestTemplate>
+
+    let root = Tmpl.Root()
+    let output = Tmpl.Render(root)
+
+module ScalarHole =
+    let [<Literal>] TestTemplate = """Hello {{userName}}, how are you?"""
+
+    type Tmpl = Trulla.Template<TestTemplate>
+
+    let root = Tmpl.Root("Hans")
+    let output = Tmpl.Render(root)
+
+module ForLoop =
+    let [<Literal>] TestTemplate =
+        """Hello {{user.name}}, how are you?
+
+    Your Orders
+    ---
+    {{for order in orders}}ID: {{order.id}}
+    {{if order.isActive}}ORDER IS ACTIVE{{end}}
+    {{end}}
+    """
+
+    type Tmpl = Trulla.Template<TestTemplate>
+
+    let root =
+        Tmpl.Root(
+            [
+                Tmpl.order(false, "Order 1")
+                Tmpl.order(true, "Order 2")
+            ],
+            Tmpl.user("Hans"))
+    let output = Tmpl.Render(root)
 
 
-
-let [<Literal>] TestTemplate1 =
-    """Hello {{user.name}}, how are you?
-
-Your Orders
----
-{{for order in orders}}ID: {{order.id}}
-{{if order.isActive}}ORDER IS ACTIVE{{end}}
-{{end}}
-"""
-
-let [<Literal>] TestTemplate2 = """Hello {{xxx}} Hans"""
-
-
-type Tmpl = Trulla.Template<TestTemplate1>
-
-let root =
-    //Tmpl.Root("MY-NAME-IS")
-    Tmpl.Root(
-        [
-            Tmpl.order(false, "Order 1")
-            Tmpl.order(true, "Order 2")
-        ],
-        Tmpl.user("Hans im Glück"))
-let output = Tmpl.Render(root)
-
-
-
-#if INTERACTIVE
-#else
 [<EntryPoint>]
 let main _ =
-    printfn "%A" output
+    printfn "%s" TextOnly.output
+    printfn "%s" ScalarHole.output
+    printfn "%s" ForLoop.output
     0
-#endif
