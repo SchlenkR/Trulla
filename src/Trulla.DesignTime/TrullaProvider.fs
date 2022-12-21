@@ -84,7 +84,7 @@ module private ModelCompiler =
         finalizedRecords
 
 module private RenderCompiler =
-    let createRenderMethod (providedRootRecord: ProvidedTypeDefinition) =
+    let createRenderMethod (providedRootRecord: ProvidedTypeDefinition) (template: string) =
         ////let rec createRenderExprs append (tree: TExp list) (bindingContext: Map<string, Expr * Type>) =
         ////    let rec accessMember (exp: TVal<MemberExp>) =
         ////        match exp.value with
@@ -173,7 +173,7 @@ module private RenderCompiler =
             isStatic = true,
             invokeCode = fun args ->
                 let boxedRoot = Expr.Coerce(args[0], typeof<obj>)
-                <@@ Rendering.reflectionRender (%%boxedRoot) @@>
+                <@@ Rendering.reflectionRender (%%boxedRoot) template @@>
         )
         
 [<TypeProvider>]
@@ -184,10 +184,11 @@ type TrullaProviderImplementation(config : TypeProviderConfig) as this =
         addDefaultProbingLocation = true
     )
 
-    //// check we contain a copy of runtime files, and are not referencing the runtime DLL
-    //do assert (typeof<Trulla.Runtime>.Assembly.GetName().Name = asm.GetName().Name)  
-
     let asm = Assembly.GetExecutingAssembly()
+    
+    // check we contain a copy of runtime files, and are not referencing the runtime DLL
+    do assert (typeof<Runtime>.Assembly.GetName().Name = asm.GetName().Name)  
+
     let ns = "Trulla"
     
     let templateProviderForStringLiteral =
@@ -195,9 +196,8 @@ type TrullaProviderImplementation(config : TypeProviderConfig) as this =
         do providerType.DefineStaticParameters(
             [ProvidedStaticParameter("Template", typeof<string>)],
             fun typeName args ->
-                let solveResult =
-                    let template = unbox<string> args.[0]
-                    Solver.solve template
+                let template = unbox<string> args.[0]
+                let solveResult = Solver.solve template
                 match solveResult with
                 | Error errors -> failwith $"Template error: {errors}"
                 | Ok solveResult ->
@@ -214,7 +214,7 @@ type TrullaProviderImplementation(config : TypeProviderConfig) as this =
                         //    |> List.map (fun (recDef,provRec,props) -> recDef.id, (provRec,props))
                         //    |> Map.ofList
                         //RenderCompiler.createRenderMethod providedRootRecord recordsAndFields solveResult.tree
-                        RenderCompiler.createRenderMethod providedRootRecord
+                        RenderCompiler.createRenderMethod providedRootRecord template
                     let asm = ProvidedAssembly()
                     let modelType = ProvidedTypeDefinition(
                         asm, ns, typeName, Some typeof<obj>, isErased = false, hideObjectMethods = true)

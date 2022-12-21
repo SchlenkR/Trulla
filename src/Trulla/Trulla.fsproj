@@ -3,7 +3,6 @@
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <TargetFrameworks>netstandard2.0</TargetFrameworks>
-    <DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
   </PropertyGroup>
 
   <ItemGroup>
@@ -11,18 +10,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\Common\AssemblyInfo.fs" Link="AssemblyInfo.fs" />
     <ProjectReference Include="..\Trulla.Core\Trulla.Core.fsproj" />
     <ProjectReference Include="..\Trulla.DesignTime\Trulla.DesignTime.fsproj">
       <IsFSharpDesignTimeProvider>true</IsFSharpDesignTimeProvider>
       <PrivateAssets>all</PrivateAssets>
     </ProjectReference>
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Update="FSharp.Core" Version="6.0.0">
-       <!--This excludes FSharp.Core.xml and FSharp.Core.resources.dll while referencing the right FSharp.Core.dll version-->
-      <ExcludeAssets>all</ExcludeAssets>
-    </PackageReference>
   </ItemGroup>
 
 </Project>

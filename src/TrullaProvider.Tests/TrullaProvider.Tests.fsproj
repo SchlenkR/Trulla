@@ -10,10 +10,16 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Reference Include="FParsec">
+      <HintPath>.tpPublish\FParsec.dll</HintPath>
+    </Reference>
     <Reference Include="Trulla">
       <HintPath>.tpPublish\FParsec.dll</HintPath>
       <HintPath>.tpPublish\Trulla.Core.dll</HintPath>
       <HintPath>.tpPublish\Trulla.dll</HintPath>
+    </Reference>
+    <Reference Include="Trulla.Core">
+      <HintPath>.tpPublish\Trulla.Core.dll</HintPath>
     </Reference>
   </ItemGroup>
 

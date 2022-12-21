@@ -3,11 +3,19 @@
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <TargetFrameworks>netstandard2.0</TargetFrameworks>
+    <GenerateDocumentationFile>False</GenerateDocumentationFile>
     <DefineConstants>IS_DESIGNTIME</DefineConstants>
-    <DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="..\Trulla.Core\Utils.fs" Link="Utils.fs" />
+    <Compile Include="..\Trulla.Core\Parsing.fs" Link="Parsing.fs" />
+    <Compile Include="..\Trulla.Core\Ast.fs" Link="Ast.fs" />
+    <Compile Include="..\Trulla.Core\Inference.fs" Link="Inference.fs" />
+    <Compile Include="..\Trulla.Core\Solver.fs" Link="Solver.fs" />
+    <Compile Include="..\Trulla.Core\Rendering.fs" Link="Rendering.fs" />
+    <Compile Include="..\Trulla.Core\Runtime.fs" Link="Runtime.fs" />
+    <Compile Include="..\Common\AssemblyInfo.fs" Link="AssemblyInfo.fs" />
     <Compile Include="..\TpSdk\ProvidedTypes.fsi" />
     <Compile Include="..\TpSdk\ProvidedTypes.fs" />
     <Compile Include="TrullaProvider.fs" />
@@ -15,17 +23,6 @@
 
   <ItemGroup>
     <PackageReference Include="FParsec" Version="1.1.1" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\Trulla.Core\Trulla.Core.fsproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Update="FSharp.Core" Version="6.0.0">
-      <!--This excludes FSharp.Core.xml and FSharp.Core.resources.dll while referencing the right FSharp.Core.dll version-->
-      <ExcludeAssets>all</ExcludeAssets>
-    </PackageReference>
   </ItemGroup>
 
 </Project>

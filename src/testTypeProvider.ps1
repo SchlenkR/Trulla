@@ -1,4 +1,4 @@
 
-dotnet publish ./Trulla/Trulla.fsproj -f:netstandard2.0 -c Debug /p:PublishDir=../TrullaProvider.Tests/.tpPublish
+.\publishTypeProvider.ps1
 
 dotnet run --project ./TrullaProvider.Tests/TrullaProvider.Tests.fsproj

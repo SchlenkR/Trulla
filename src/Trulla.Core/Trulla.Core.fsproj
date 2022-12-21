@@ -2,7 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <GenerateDocumentationFile>False</GenerateDocumentationFile>
+    <FSharpPreferNetFrameworkTools>False</FSharpPreferNetFrameworkTools>
   </PropertyGroup>
 
   <ItemGroup>
@@ -12,6 +13,7 @@
     <Compile Include="Inference.fs" />
     <Compile Include="Solver.fs" />
     <Compile Include="Rendering.fs" />
+    <Compile Include="Runtime.fs" />
     <None Include="Fiddle\CodeGen\codeGenFSharp.fsx" />
     <None Include="Fiddle\Parsing\parserTest.fsx" />
     <None Include="Fiddle\Parsing\fiddle.fsx" />
