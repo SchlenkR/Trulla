@@ -1,17 +1,16 @@
-# Trulla
+# TypedTemplateProvider (aka "Trulla")
 
-Text template model type provider written in F#.
+...an F# strongly typed text template provider!
 
-The approach of Trulla is:
-* Provide a text template with
+The approach of FSharp.Text.TypedTemplateProvider is:
+* Provide a text template with:
   * template parameters
   * iterations
   * conditionals
-* Trulla infers a model type for the template
+* A model type is infered from a given template.
 * An instance of the model is provided by the user for rendering the final template.
-* The begin and end character sequence for template expressions are configurable, and there is no way escaping them. Choose an appropriate sequence of characters that won't occur in your template.
 
-Limitations
+## Limitations (current)
 
 * The model will only contain  fields of type
   * list
@@ -19,6 +18,8 @@ Limitations
   * bool 
 * There are currently no partials supported
 
-TODO
+## TODOs
+
 * Shadowing (Explanation)
 * Wildcards in bindings
+* The begin and end character sequence for template expressions are configurable, and there is no way escaping them. Choose an appropriate sequence of characters that won't occur in your template.
