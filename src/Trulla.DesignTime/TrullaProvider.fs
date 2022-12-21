@@ -187,7 +187,7 @@ type TrullaProviderImplementation(config : TypeProviderConfig) as this =
     let asm = Assembly.GetExecutingAssembly()
     
     // check we contain a copy of runtime files, and are not referencing the runtime DLL
-    do assert (typeof<Runtime>.Assembly.GetName().Name = asm.GetName().Name)  
+    do assert (typeof<TpRuntime>.Assembly.GetName().Name = asm.GetName().Name)  
 
     let ns = "Trulla"
     

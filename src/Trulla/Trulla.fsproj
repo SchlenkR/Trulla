@@ -6,12 +6,30 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Runtime.fs" />
+    <Compile Include="..\Common\AssemblyInfo.fs" Link="AssemblyInfo.fs" />
+    <Compile Include="Utils.fs" />
+    <Compile Include="Parsing.fs" />
+    <Compile Include="Ast.fs" />
+    <Compile Include="Inference.fs" />
+    <Compile Include="Solver.fs" />
+    <Compile Include="Rendering.fs" />
+    <Compile Include="TpRuntime.fs" />
+    <Compile Include="TpRegistration.fs" />
+    <None Include="Fiddle\CodeGen\codeGenFSharp.fsx" />
+    <None Include="Fiddle\CodeGen\codeGenTests.fsx" />
+    <None Include="Fiddle\CodeGen\output.fsx" />
+    <None Include="Fiddle\Parsing\parserTest.fsx" />
+    <None Include="Fiddle\Parsing\fiddle.fsx" />
+    <None Include="Fiddle\Typing\typingTestsBase.fsx" />
+    <None Include="Fiddle\Typing\treeTests.fsx" />
+    <None Include="Fiddle\Typing\inferenceTests.fsx" />
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="..\Common\AssemblyInfo.fs" Link="AssemblyInfo.fs" />
-    <ProjectReference Include="..\Trulla.Core\Trulla.Core.fsproj" />
+    <PackageReference Include="FParsec" Version="1.1.1" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Trulla.DesignTime\Trulla.DesignTime.fsproj">
       <IsFSharpDesignTimeProvider>true</IsFSharpDesignTimeProvider>
       <PrivateAssets>all</PrivateAssets>

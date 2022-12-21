@@ -7,14 +7,17 @@ open System.Linq
 
 open Trulla.Core.Ast
     
-// Why falling back to reflection?
-// 1) Staying open for Fable
-// 2) I want to get this thing done.
-//    and using the IL emit approach
-//    (commented code below) is quite complicated and things like
-//    quotation splicing / list iteration don't seem to work the
-//    way I think they should be (maybe I'm doing something wrong or
-//    there are bugs / unimplemented things in TP-SDK quotation processing).
+// - Why falling back to reflection?
+//   1) Staying open for Fable
+//   2) I want to get this thing done.
+//      and using the IL emit approach
+//      (commented code below) is quite complicated and things like
+//      quotation splicing / list iteration don't seem to work the
+//      way I think they should be (maybe I'm doing something wrong or
+//      there are bugs / unimplemented things in TP-SDK quotation processing).
+// - Also, we pass the template string and solve it _again_. This would basically
+//   be unnecessary if the render method generation happened completely in the
+//   generative TP.
 let reflectionRender (model: obj) (template: string) =
     let tree = 
         let solveResult = Solver.solve template
