@@ -4,6 +4,8 @@
 
 > Status: Still experimental
 
+[![NuGet Badge](http://img.shields.io/nuget/v/FSharp.Text.TypedTemplateProvider.svg?style=flat)](https://www.nuget.org/packages/FSharp.Text.TypedTemplateProvider)
+
 The approach of FSharp.Text.TypedTemplateProvider is:
 * Provide a text template with:
   * template parameters
