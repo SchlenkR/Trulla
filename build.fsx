@@ -16,6 +16,11 @@ module Properties =
     let nugetServer = "https://api.nuget.org/v3/index.json"
     let nugetPushEnvVarName = "nuget_push"
 
+module Paths =
+    let slnPath = "./src/FSharp.Text.TypedTemplateProvider.sln"
+    let packFolderName = ".pack"
+    let packPath = Path.combine __SOURCE_DIRECTORY__ packFolderName
+    
 [<AutoOpen>]
 module Helper =
 
@@ -60,22 +65,20 @@ do args.assertArgs()
 let clean = "clean", fun () ->
     !! "src/**/bin"
     ++ "src/**/obj"
-    ++ ".pack"
+    ++ Paths.packFolderName
     |> Shell.cleanDirs 
 
-let slnPath = "./src/FSharp.Text.TypedTemplateProvider.sln"
-
 let build = "build", fun () ->
-    Shell.ExecSuccess ("dotnet", $"build {slnPath}")
+    Shell.ExecSuccess ("dotnet", $"build {Paths.slnPath}")
 
 let test = "test", fun () ->
-    Shell.ExecSuccess ("dotnet", $"test {slnPath}")
+    Shell.ExecSuccess ("dotnet", $"test {Paths.slnPath}")
 
 let pack = "pack", fun () ->
     !! "src/FSharp.Text.TypedTemplateProvider/FSharp.Text.TypedTemplateProvider.fsproj"
     |> Seq.iter (fun p ->
         Trace.trace $"SourceDir is: {__SOURCE_DIRECTORY__}"
-        Shell.ExecSuccess ("dotnet", sprintf "pack %s -o %s -c Release" p (Path.combine __SOURCE_DIRECTORY__ ".pack"))
+        Shell.ExecSuccess ("dotnet", sprintf "pack %s -o %s -c Release" p Paths.packPath)
     )
 
 let format = "format", fun () ->
@@ -84,7 +87,7 @@ let format = "format", fun () ->
 // TODO: git tag + release
 let publish = "publish", fun () ->
     let nugetApiKey = Environment.environVar Properties.nugetPushEnvVarName
-    !! ".pack/*.nupkg"
+    !! $"{Paths.packFolderName}/*.nupkg"
     |> Seq.iter (fun p ->
         Shell.ExecSuccess ("dotnet", $"nuget push {p} -k {nugetApiKey} -s {Properties.nugetServer} --skip-duplicate")
     )

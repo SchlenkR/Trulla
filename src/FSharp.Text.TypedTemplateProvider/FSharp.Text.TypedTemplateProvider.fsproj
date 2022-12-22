@@ -13,7 +13,10 @@
   <PropertyGroup>
     <Description>A .Net HTTP client library for F#, C#, and friends</Description>
     <PackageId>FSharp.Text.TypedTemplateProvider</PackageId>
-    <Version>0.0.0-alpha02</Version>
+    <Version>0.0.0-alpha05</Version>
+  </PropertyGroup>
+  
+  <PropertyGroup>
     <!--<FsDocsLicenseLink>https://github.com/fsprojects/FsHttp/blob/master/LICENSE</FsDocsLicenseLink>
     <FsDocsReleaseNotesLink>https://www.nuget.org/packages/FsHttp</FsDocsReleaseNotesLink>-->
     <Authors>Ronald Schlenker</Authors>
@@ -52,6 +55,8 @@
 
   <ItemGroup>
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    <None Include="TpDesignTimeDeps\FParsec.dll" Pack="true" PackagePath="\typeproviders\fsharp41\netstandard2.0" />
+    <None Include="TpDesignTimeDeps\FParsecCS.dll" Pack="true" PackagePath="\typeproviders\fsharp41\netstandard2.0" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,4 +1,5 @@
-#r "nuget: FSharp.Text.TypedTemplateProvider, 0.0.0-alpha01"
+
+#r "nuget: FSharp.Text.TypedTemplateProvider, 0.0.0-alpha05"
 
 open FSharp.Text.TypedTemplateProvider
 
