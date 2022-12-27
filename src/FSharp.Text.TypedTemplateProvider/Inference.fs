@@ -79,6 +79,7 @@ module Inference =
                     yield Unsolved (cond.tvar, Mono KnownTypes.bool)
                     // --->
                     yield! constrainTree children
+                | Else _ -> ()
             ]
 
         {|

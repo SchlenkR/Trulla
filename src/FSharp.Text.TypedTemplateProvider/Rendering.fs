@@ -53,6 +53,10 @@ let reflectionRender (model: obj) (template: string) =
                 let cond = getIdentBoundValue cond :?> bool
                 if cond then
                     render bindingContext body
+            | Else (cond, body) ->
+                let cond = getIdentBoundValue cond :?> bool
+                if not cond then
+                    render bindingContext body
 
     let rootBindingContext =
         [ for p in model.GetType().GetProperties() do

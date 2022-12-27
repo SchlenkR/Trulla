@@ -56,8 +56,8 @@ module private ModelCompiler =
                 ]
             let ctor = 
                 ProvidedConstructor(
-                    fields |> List.map (fun (provField,fieldType,_) ->
-                        ProvidedParameter(provField.Name, fieldType)),
+                    fields |> List.map (fun (provField,fieldType,provProperty) ->
+                        ProvidedParameter(provProperty.Name, fieldType)),
                     invokeCode =
                         function
                         | this :: args ->
