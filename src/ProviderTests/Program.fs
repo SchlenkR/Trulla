@@ -23,9 +23,11 @@ module ForLoop =
         """Hello {{user.name}}, how are you?
 
     Your Orders
-    ---
+    ===
+
     {{for order in orders}}ID: {{order.id}}
-    {{if order.isActive}}ORDER IS ACTIVE{{end}}
+    ({{if order.isActive}}active{{else}}inactive{{end}})
+    ---
     {{end}}
     """
 

@@ -39,9 +39,11 @@ let [<Literal>] TestTemplate = """
     Hello {{user.name}}, how are you?
 
     Your Orders
-    ---
+    ===
+
     {{for order in orders}}ID: {{order.id}}
-    {{if order.isActive}}ORDER IS ACTIVE{{end}}
+    ({{if order.isActive}}active{{else}}inactive{{end}})
+    ---
     {{end}}
     """
 
@@ -64,9 +66,12 @@ This will print:
     Hello Hans, how are you?
 
     Your Orders
-    ---
-    ID: Order 1
+    ===
 
+    ID: Order 1
+    (inactive)
+    ---
     ID: Order 2
-    ORDER IS ACTIVE
+    (active)
+    ---
 ```
