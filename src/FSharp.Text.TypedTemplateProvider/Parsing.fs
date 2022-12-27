@@ -107,7 +107,9 @@ module Parsing =
                 withPos (pstring Keywords.if' >>. blanks1 >>. propAccess)
                 |>> fun x -> PVal.create x.range (Token.If x.value)
             //let elseIfExp = pstring Keywords.elseIf' >>. blanks1 >>. propAccess |>> ElseIf
-            let elseExp = pstring Keywords.else' |>> fun _ -> Token.Else
+            let elseExp = 
+                withPos (pstring Keywords.else')
+                |>> fun x -> PVal.create x.range (Token.Else)
             let end' = 
                 withPos (pstring Keywords.end')
                 |>> fun x -> PVal.create x.range (Token.End)
@@ -118,7 +120,7 @@ module Parsing =
                 for'
                 if'
                 ////elseIfExp
-                ////elseExp
+                elseExp
                 end'
                 hole
                 ]

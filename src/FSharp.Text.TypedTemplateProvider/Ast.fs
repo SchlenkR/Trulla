@@ -23,7 +23,7 @@ type TExp =
     | Hole of TVal<MemberExp>
     | For of ident: TVal<string> * exp: TVal<MemberExp> * body: TExp list
     | If of cond: TVal<MemberExp> * body: TExp list
-    | Else of ifCond: TVal<MemberExp> * body: TExp list
+    | Else of cond: TVal<MemberExp> * body: TExp list
 
 and Body = BindingContext * TExp list
 
@@ -87,13 +87,14 @@ module Ast =
 
         let mutable currTokIdx = 0
         let mutable openScopeStack = []
+        let mutable elseBlockOpen = false
         let rec toTree (bindingContext: BindingContext) =
             
-            let mutable endTokenDetected = false
+            let mutable scopeClosed = false
             let mutable revTree = []
             let addToken x = revTree <- x :: revTree
 
-            do while not endTokenDetected && currTokIdx < tokens.Length do
+            do while not scopeClosed && currTokIdx < tokens.Length do
                 let token = tokens[currTokIdx]
                 currTokIdx <- currTokIdx + 1
 
@@ -129,21 +130,27 @@ module Ast =
                         toTree bindingContext)
                     do addToken x
                 | Token.Else ->
-                    let matchingIfCond =
-                        match openScopeStack with
-                        | (Scope.IfOrElseScope cond) :: _ -> cond
-                        | _ -> raiseTrullaEx "An else needs an if."
-                    let x = Else (
-                        matchingIfCond,
-                        toTree bindingContext)
-                    do addToken x
+                    if elseBlockOpen then
+                        do elseBlockOpen <- false
+                        let matchingIfCond =
+                            match openScopeStack with
+                            | (Scope.IfOrElseScope cond) :: _ -> cond
+                            | _ -> raiseTrullaEx "An else needs an if."
+                        let x = Else (
+                            matchingIfCond,
+                            toTree bindingContext)
+                        do addToken x
+                    else
+                        do currTokIdx <- currTokIdx - 1
+                        do elseBlockOpen <- true
+                        do scopeClosed <- true
                 | Token.End ->
                     match openScopeStack with
                     | [] -> 
                         raiseTrullaEx "Closing a scope is not possible without having a scope open." 
                     | _::xs -> 
                         do openScopeStack <- xs
-                        do endTokenDetected <- true
+                        do scopeClosed <- true
             revTree |> List.rev
 
         try 
