@@ -23,6 +23,7 @@ type TExp =
     | Hole of TVal<MemberExp>
     | For of ident: TVal<string> * exp: TVal<MemberExp> * body: TExp list
     | If of cond: TVal<MemberExp> * body: TExp list
+    | Else of ifCond: TVal<MemberExp> * body: TExp list
 
 and Body = BindingContext * TExp list
 
@@ -52,6 +53,11 @@ and Field =
 
 type AstResult = Result<TExp list, TrullaError list>
 
+[<RequireQualifiedAccess>]
+type private Scope =
+    | IfOrElseScope of cond: TVal<MemberExp>
+    | Other
+
 module TVal =
     let create range tvar bindingContext value =
         { range = range; tvar = tvar; bindingContext = bindingContext; value = value }
@@ -79,52 +85,70 @@ module Ast =
                     newTVal (AccessExp accExp)
             ofPExpZero pexp
 
-        let rec toTree (pointer: int) scopeDepth (bindingContext: BindingContext) =
-            // TODO: Is all that really necessary - the mutable stuff?
-            let mutable pointer = pointer
-            let mutable scopeDepth = scopeDepth
+        let mutable currTokIdx = 0
+        let mutable openScopeStack = []
+        let rec toTree (bindingContext: BindingContext) =
+            
             let mutable endTokenDetected = false
-            let tree =
-                [ while not endTokenDetected && pointer < tokens.Length do
-                    let token = tokens[pointer]
-                    pointer <- pointer + 1
+            let mutable revTree = []
+            let addToken x = revTree <- x :: revTree
 
-                    let processBody bindingContext : TExp list =
-                        let newPointer,children,newScopeDepth = toTree pointer (scopeDepth + 1) bindingContext
-                        scopeDepth <- newScopeDepth
-                        pointer <- newPointer
-                        children
+            do while not endTokenDetected && currTokIdx < tokens.Length do
+                let token = tokens[currTokIdx]
+                currTokIdx <- currTokIdx + 1
 
-                    match token.value with
-                    | Token.Text x -> Text x
-                    | Token.Hole x -> Hole (buildMemberExp bindingContext x)
-                    | Token.For (ident, acc) ->
-                        let accExp = buildMemberExp bindingContext acc
-                        let tvarIdent = newTVar()
-                        For (
-                            TVal.create ident.range tvarIdent bindingContext ident.value,
-                            accExp,
-                            processBody (Map.add ident.value tvarIdent bindingContext))
-                    | Token.If acc ->
-                        If (
-                            buildMemberExp bindingContext acc,
-                            processBody bindingContext)
-                    | Token.End ->
-                        match scopeDepth with
-                        | 0 ->
-                            { ranges = [token.range]
-                              message = "Closing a scope is not possible without having a scope open." }
-                            |> TrullaException
-                            |> raise
-                        | n ->
-                            scopeDepth <- n-1
-                            endTokenDetected <- true
-                ]
-            pointer,tree,scopeDepth
+                let raiseTrullaEx message =
+                    { 
+                        ranges = [token.range]
+                        message = message
+                    }
+                    |> TrullaException
+                    |> raise
+
+                match token.value with
+                | Token.Text x -> 
+                    let x = Text x
+                    do addToken x
+                | Token.Hole x -> 
+                    let x = Hole (buildMemberExp bindingContext x)
+                    do addToken x
+                | Token.For (ident, acc) ->
+                    let accExp = buildMemberExp bindingContext acc
+                    let tvarIdent = newTVar()
+                    do openScopeStack <- Scope.Other :: openScopeStack
+                    let x = For (
+                        TVal.create ident.range tvarIdent bindingContext ident.value,
+                        accExp,
+                        toTree (Map.add ident.value tvarIdent bindingContext))
+                    do addToken x
+                | Token.If acc ->
+                    let cond = buildMemberExp bindingContext acc
+                    do openScopeStack <- (Scope.IfOrElseScope cond) :: openScopeStack
+                    let x = If (
+                        cond,
+                        toTree bindingContext)
+                    do addToken x
+                | Token.Else ->
+                    let matchingIfCond =
+                        match openScopeStack with
+                        | (Scope.IfOrElseScope cond) :: _ -> cond
+                        | _ -> raiseTrullaEx "An else needs an if."
+                    let x = Else (
+                        matchingIfCond,
+                        toTree bindingContext)
+                    do addToken x
+                | Token.End ->
+                    match openScopeStack with
+                    | [] -> 
+                        raiseTrullaEx "Closing a scope is not possible without having a scope open." 
+                    | _::xs -> 
+                        do openScopeStack <- xs
+                        do endTokenDetected <- true
+            revTree |> List.rev
 
         try 
-            let _,tree,scopeDepth = toTree 0 0 Map.empty
-            if scopeDepth > 0 then
+            let tree = toTree Map.empty
+            if openScopeStack.Length > 0 then
                 // TODO: Range.zero is wrong
                 { ranges = [Range.zero]; message = "TODO: Unclosed scope detected." }
                 |> List.singleton

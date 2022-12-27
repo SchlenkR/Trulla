@@ -16,7 +16,7 @@ type Token =
     | For of ident: PVal<string> * exp: PVal<MemberToken>
     | If of PVal<MemberToken>
     //| ElseIf of Access
-    //| Else
+    | Else
     | End
 and MemberToken =
     | AccessToken of {| instanceExp: PVal<MemberToken>; memberName: string |}
@@ -88,7 +88,7 @@ module ParserHelper =
 
 [<RequireQualifiedAccess>]
 module Parsing =
-    let beginExp = pstring Consts.beginExp .>> notFollowedBy (pstring "{")
+    let begin' = pstring Consts.beginExp .>> notFollowedBy (pstring "{")
     let tmplExp =
         let endExp = pstring Consts.endExp
         let ident = many1Chars2 letter (letter <|> digit)
@@ -97,36 +97,36 @@ module Parsing =
             |>> fun segments -> MemberToken.createFromSegments segments
 
         let body =
-            let forExp = 
+            let for' = 
                 withPos (
                     pstring Keywords.for' >>. blanks1 >>. withPos ident .>> blanks1 .>> 
                     pstring Keywords.in' .>> blanks1 .>>. propAccess
                 )
                 |>> fun x -> PVal.create x.range (Token.For x.value)
-            let ifExp = 
+            let if' = 
                 withPos (pstring Keywords.if' >>. blanks1 >>. propAccess)
                 |>> fun x -> PVal.create x.range (Token.If x.value)
             //let elseIfExp = pstring Keywords.elseIf' >>. blanks1 >>. propAccess |>> ElseIf
-            //let elseExp = pstring Keywords.else' |>> fun _ -> Else
-            let endExp = 
+            let elseExp = pstring Keywords.else' |>> fun _ -> Token.Else
+            let end' = 
                 withPos (pstring Keywords.end')
                 |>> fun x -> PVal.create x.range (Token.End)
-            let holeExp = 
+            let hole = 
                 withPos propAccess
                 |>> fun x -> PVal.create x.range (Token.Hole x.value)
             choice [
-                forExp
-                ifExp
+                for'
+                if'
                 ////elseIfExp
                 ////elseExp
-                endExp
-                holeExp
+                end'
+                hole
                 ]
-        beginExp .>> blanks >>. body .>> blanks .>> endExp
+        begin' .>> blanks >>. body .>> blanks .>> endExp
     let expOrText =
         choice [
             tmplExp
-            withPos (chars1Until beginExp) |>> fun x -> PVal.create x.range (Token.Text x.value)
+            withPos (chars1Until begin') |>> fun x -> PVal.create x.range (Token.Text x.value)
             withPos (many1Chars anyChar) |>> fun x -> PVal.create x.range (Token.Text x.value)
             ]
     let ptemplate = many expOrText .>> eof
