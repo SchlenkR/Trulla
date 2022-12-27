@@ -1,4 +1,4 @@
-﻿module TypedTemplateProvider.Misc
+﻿module TypedTemplateProvider.DemoCases
 
 open FsUnit
 open NUnit.Framework
