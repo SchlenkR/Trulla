@@ -38,7 +38,7 @@ let solveParseResult (parserResult: ParseResult) =
             {
                 id = tvar
                 name = getRecordName tvar
-                fields = fields |> List.map snd
+                fields = fields |> List.map snd |> List.sortBy (fun f -> f.name) 
             }
         let records =
             solution

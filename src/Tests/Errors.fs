@@ -15,7 +15,7 @@ let [<TestCase>] ``End without opened scope``() =
     test template model
 
 
-let [<TestCase>] ``Unfinished if``() =
+let [<TestCase>] ``Unfinished opened scope``() =
     let template = "{{if x}}X"
     let model = 
         {|
