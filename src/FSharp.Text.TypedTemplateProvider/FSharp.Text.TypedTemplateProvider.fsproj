@@ -15,7 +15,7 @@
   <PropertyGroup>
     <Description>A .Net HTTP client library for F#, C#, and friends</Description>
     <PackageId>FSharp.Text.TypedTemplateProvider</PackageId>
-    <Version>1.0.0</Version>
+    <Version>1.0.1</Version>
   </PropertyGroup>
   
   <PropertyGroup>
@@ -32,6 +32,10 @@
     <PackageReleaseNotes>
       1.0.0
       - initial
+
+      1.0.1
+      - #5: Don't ref FSharp.Core 7
+      - #6: Stable ordering of ctor params
     </PackageReleaseNotes>
   </PropertyGroup>
 
