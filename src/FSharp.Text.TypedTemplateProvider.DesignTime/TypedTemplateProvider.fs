@@ -36,18 +36,19 @@ module private ModelCompiler =
                             | Mono KnownTypes.bool -> typeof<bool>
                             | Poly (KnownTypes.sequence, pt) ->
                                 typedefof<List<_>>.MakeGenericType([| toDotnetType pt |])
-                            | Record tvar -> providedRecords[tvar]
+                            | Record tvar -> providedRecords.[tvar] :> System.Type
                             // TODO: See comments in ModelInference / FinalTyp: This gap has to be eliminated
                             //| Var _ -> "obj"
-                            | _ -> failwith $"Unsupported reference for type '{typ}'."
+                            | _ -> failwithf "Unsupported reference for type '%A'." typ
                         toDotnetType field.typ
                     let fieldName = "_" + field.name
                     let provField = ProvidedField(fieldName, fieldType)
-                    let provProperty = ProvidedProperty(
-                        field.name, 
-                        fieldType,
-                        getterCode = fun args -> Expr.FieldGet(args[0], provField)
-                    )
+                    let provProperty = 
+                        ProvidedProperty(
+                            field.name, 
+                            fieldType,
+                            getterCode = fun args -> Expr.FieldGet(args.[0], provField)
+                        )
 
                     do
                         providedRecord.AddMember(provField)
@@ -64,7 +65,7 @@ module private ModelCompiler =
                             List.zip args fields
                             |> List.map (fun (arg, (f,_,_)) -> Expr.FieldSetUnchecked(this, f, arg))
                             |> Expr.allSequential
-                        | args -> failwith $"Invalid ctor params: {args}"
+                        | args -> failwithf "Invalid ctor params: %A" args
                 )
             do
                 providedRecord.AddMember(ctor)
@@ -179,7 +180,7 @@ module private RenderCompiler =
             typeof<string>,
             isStatic = true,
             invokeCode = fun args ->
-                let boxedRoot = Expr.Coerce(args[0], typeof<obj>)
+                let boxedRoot = Expr.Coerce(args.[0], typeof<obj>)
                 <@@ Rendering.reflectionRender (%%boxedRoot) template @@>
         )
     
@@ -202,15 +203,21 @@ type TemplateProviderImplementation(config : TypeProviderConfig) as this =
     do assert (typeof<TpRuntime>.Assembly.GetName().Name = asm.GetName().Name)  
 
     let templateProviderForStringLiteral =
-        let providerType = ProvidedTypeDefinition(
-            asm, Consts.providerNamespaceName, providerName, Some typeof<obj>, isErased = false)
+        let providerType = 
+            ProvidedTypeDefinition(
+                asm, 
+                Consts.providerNamespaceName, 
+                providerName, 
+                Some typeof<obj>, 
+                isErased = false
+            )
         do providerType.DefineStaticParameters(
             [ProvidedStaticParameter(templateParameterName, typeof<string>)],
             fun typeName args ->
                 let template = unbox<string> args.[0]
                 let solveResult = Solver.solve template
                 match solveResult with
-                | Error errors -> failwith $"Template error: {errors}"
+                | Error errors -> failwithf "Template error: %A" errors
                 | Ok solveResult ->
                     let providedRecords = ModelCompiler.addRecords solveResult.records
                     let providedRootRecord =
@@ -227,8 +234,15 @@ type TemplateProviderImplementation(config : TypeProviderConfig) as this =
                         //RenderCompiler.createRenderMethod providedRootRecord recordsAndFields solveResult.tree
                         RenderCompiler.createRenderMethod providedRootRecord template modelArgName
                     let asm = ProvidedAssembly()
-                    let modelType = ProvidedTypeDefinition(
-                        asm, Consts.providerNamespaceName, typeName, Some typeof<obj>, isErased = false, hideObjectMethods = true)
+                    let modelType = 
+                        ProvidedTypeDefinition(
+                            asm,
+                            Consts.providerNamespaceName,
+                            typeName,
+                            Some typeof<obj>,
+                            isErased = false,
+                            hideObjectMethods = true
+                        )
                     do 
                         modelType.AddMembers (providedRecords |> List.map (fun (_,provRec,_) -> provRec))
                         modelType.AddMembers [renderFunction]

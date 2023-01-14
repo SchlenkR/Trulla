@@ -22,7 +22,7 @@ let reflectionRender (model: obj) (template: string) =
     let tree = 
         let solveResult = Solver.solve template
         match solveResult with
-        | Error errors -> failwith $"Template error: {errors}"
+        | Error errors -> failwithf "Template error: %A" errors
         | Ok solveResult -> solveResult.tree
 
     let sb = StringBuilder()
@@ -32,7 +32,7 @@ let reflectionRender (model: obj) (template: string) =
         let rec getIdentBoundValue (exp: TVal<MemberExp>) : obj =
             match exp.value with
             | IdentExp ident -> 
-                bindingContext[ident]
+                bindingContext.[ident]
             | AccessExp acc ->
                 let instance = getIdentBoundValue acc.instanceExp
                 let prop = instance.GetType().GetProperty(acc.memberName)

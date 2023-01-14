@@ -16,7 +16,7 @@ type TVal<'a> =
         bindingContext: BindingContext
         value: 'a 
     }
-    override this.ToString() = $"({this.range}){this.value}"
+    override this.ToString() = sprintf "(%A)%A" this.range this.value
 
 type TExp =
     | Text of string
@@ -95,7 +95,7 @@ module Ast =
             let addToken x = revTree <- x :: revTree
 
             do while not scopeClosed && currTokIdx < tokens.Length do
-                let token = tokens[currTokIdx]
+                let token = tokens.[currTokIdx]
                 currTokIdx <- currTokIdx + 1
 
                 let raiseTrullaEx message =
@@ -117,17 +117,19 @@ module Ast =
                     let accExp = buildMemberExp bindingContext acc
                     let tvarIdent = newTVar()
                     do openScopeStack <- Scope.Other :: openScopeStack
-                    let x = For (
-                        TVal.create ident.range tvarIdent bindingContext ident.value,
-                        accExp,
-                        toTree (Map.add ident.value tvarIdent bindingContext))
+                    let x = 
+                        For (
+                            TVal.create ident.range tvarIdent bindingContext ident.value,
+                            accExp,
+                            toTree (Map.add ident.value tvarIdent bindingContext))
                     do addToken x
                 | Token.If acc ->
                     let cond = buildMemberExp bindingContext acc
                     do openScopeStack <- (Scope.IfOrElseScope cond) :: openScopeStack
-                    let x = If (
-                        cond,
-                        toTree bindingContext)
+                    let x = 
+                        If (
+                            cond,
+                            toTree bindingContext)
                     do addToken x
                 | Token.Else ->
                     if elseBlockOpen then
@@ -136,9 +138,10 @@ module Ast =
                             match openScopeStack with
                             | (Scope.IfOrElseScope cond) :: _ -> cond
                             | _ -> raiseTrullaEx "An else needs an if."
-                        let x = Else (
-                            matchingIfCond,
-                            toTree bindingContext)
+                        let x = 
+                            Else (
+                                matchingIfCond,
+                                toTree bindingContext)
                         do addToken x
                     else
                         do currTokIdx <- currTokIdx - 1
