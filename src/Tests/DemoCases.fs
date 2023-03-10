@@ -53,4 +53,3 @@ let [<TestCase>] ``Simple if else``() =
         |}
     let expected = "Else-Branch"
     test template model expected
-
