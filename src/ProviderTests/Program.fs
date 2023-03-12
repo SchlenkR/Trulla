@@ -42,15 +42,27 @@ module ForLoop =
             Tmpl.user("Hans"))
     let output = Tmpl.Render(root)
 
+module Issue_7_Var =
+    let [<Literal>] TestTemplate =
+        """
+            {{for a in as}} {{end}}
+            {{for b in bs}} {{end}}
+        """
+
+    type Tmpl = Template<TestTemplate>
+
+    let root =
+        Tmpl.Root([], [])
+    let output = Tmpl.Render(root)
 
 module Issue8 =
     let [<Literal>] TestTemplate =
         """
-            {{for l in labels}}
-                {{l.name}}
+            {{for x in as}}
+                {{x.name}}
             {{end}}
-            {{for l in labels1}}
-                {{l.name}}
+            {{for x in bs}}
+                {{x.name}}
             {{end}}
         """
 
@@ -65,26 +77,12 @@ module Issue8 =
             Tmpl.user("Hans"))
     let output = Tmpl.Render(root)
 
-
-module Issue_7_Var =
-    let [<Literal>] TestTemplate =
-        """
-            {{for a in as}} {{end}}
-            {{for b in bs}} {{end}}
-        """
-
-    type Tmpl = Template<TestTemplate>
-
-    let root =
-        Tmpl.Root([], [])
-    let output = Tmpl.Render(root)
-
-
-
-
+    
 [<EntryPoint>]
 let main _ =
     printfn "%s" TextOnly.output
     printfn "%s" ScalarHole.output
     printfn "%s" ForLoop.output
     0
+    
+    

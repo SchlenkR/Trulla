@@ -62,23 +62,20 @@ module ``Simple if else`` =
 module ``Free vars and Issue 7 Var(n)`` =
     let template = 
         """{{for a in as}}{{end}}{{for b in bs}}{{end}}"""
-    let res = Trulla.Solver.solve template
-    do
-        match res with
-        | Ok _ -> ()
-        | Error err -> Assert.Fail $"Unexpected error while solving template: {err}"
     let model = {| ``as`` = ([] : obj list); bs = ([] : obj list) |}
     let extecped = ""
     let [<TestCase>] test() = test template model extecped
 
 
 module ``Issue 8`` =
-    let template = """{{for a in as}}{{a.nameA}}{{end}}{{for b in bs}}{{b.nameB}}{{end}}"""
-    let res = Trulla.Solver.solve template
-    do
-        match res with
-        | Ok _ -> ()
-        | Error err -> Assert.Fail $"Unexpected error while solving template: {err}"
-    let model = {| ``as`` = [ {| nameA = "A" |} ]; bs = [ {| nameB = "B" |} ] |}
+    let template = """{{for x in as}}{{x.name}}{{end}}{{for x in bs}}{{x.name}}{{end}}"""
+    let model = {| ``as`` = [ {| name = "A" |} ]; bs = [ {| name = "B" |} ] |}
     let expected = "AB"
+    let [<TestCase>] test() = test template model expected
+
+
+module ``Issue 8_1`` =
+    let template = """{{for x in as}}{{x.name}}{{end}}{{for x in bs}}{{x.name}}{{x.name1}}{{end}}"""
+    let model = {| ``as`` = [ {| name = "A" |} ]; bs = [ {| name = "B1"; name1 = "B1'" |} ] |}
+    let expected = "AB1B1'"
     let [<TestCase>] test() = test template model expected
