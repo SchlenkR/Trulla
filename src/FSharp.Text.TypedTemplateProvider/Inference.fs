@@ -26,13 +26,6 @@ and Field =
         typ: Typ
     }
 
-type RecordDef =
-    {
-        id: TVar
-        fields: Field list
-        name: string
-    }
-
 type ProblemItem = TVar * Typ
 type SolutionItem = TVar * Typ // should be FinalTyp?
 type Problem =

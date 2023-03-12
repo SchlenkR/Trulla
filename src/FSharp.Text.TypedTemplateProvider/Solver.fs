@@ -6,6 +6,13 @@ open Trulla.Core.Parsing
 open Trulla.Core.Ast
 open Trulla.Core.Inference
 
+type RecordDef =
+    {
+        id: TVar
+        fields: Field list
+        name: string
+    }
+
 type SolveResult =
     {
         solution: Map<TVar, Typ>
