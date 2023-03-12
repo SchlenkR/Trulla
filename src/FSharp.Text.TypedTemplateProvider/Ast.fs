@@ -31,8 +31,6 @@ and MemberExp =
     | AccessExp of {| instanceExp: TVal<MemberExp>; memberName: string |}
     | IdentExp of string
 
-type AstResult = Result<TExp list, TrullaError list>
-
 [<RequireQualifiedAccess>]
 type private Scope =
     | IfOrElseScope of cond: TVal<MemberExp>
@@ -46,23 +44,27 @@ module TVal =
 module Ast =
     // TODO: meaningful error messages + location
     // TODO: Don't throw; return TemplateError results
-    let buildTree (tokens: PVal<Token> list) : AstResult =
+    let buildTree (tokens: PVal<Token> list) =
+        let mutable tvarToMemberExp = Map.empty
+
         let newTVar =
             let mutable x = -1
             fun () ->
                 x <- x + 1
-                ////printfn $"TVAR {x} %s{name}"
                 TVar x
 
         let buildMemberExp bindingContext pexp =
             let rec ofPExpZero (pexp: PVal<MemberToken>) =
-                let newTVal value = TVal.create pexp.range (newTVar()) bindingContext value
+                let newTVal tvar value = TVal.create pexp.range tvar bindingContext value
                 match pexp.value with
                 | IdentToken ident ->
-                    newTVal (IdentExp ident)
+                    newTVal (newTVar()) (IdentExp ident)
                 | AccessToken accExp ->
                     let accExp = {| instanceExp = ofPExpZero accExp.instanceExp; memberName = accExp.memberName |}
-                    newTVal (AccessExp accExp)
+                    let tvar = newTVar()
+                    let exp = AccessExp accExp
+                    do tvarToMemberExp <- tvarToMemberExp |> Map.add tvar exp
+                    newTVal tvar exp
             ofPExpZero pexp
 
         let mutable currTokIdx = 0
@@ -144,6 +146,6 @@ module Ast =
                 |> List.singleton
                 |> Error
             else
-                Ok tree
+                Ok {| tree = tree; tvarToMemberExp = tvarToMemberExp |}
         with TrullaException err ->
             Error [err]

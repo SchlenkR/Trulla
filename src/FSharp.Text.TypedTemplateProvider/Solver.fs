@@ -1,5 +1,4 @@
-﻿[<RequireQualifiedAccess>]
-module Trulla.Solver
+﻿namespace Trulla.Core.Solver
 
 open Trulla.Core.Utils
 open Trulla.Core.Parsing
@@ -20,51 +19,57 @@ type SolveResult =
         records: RecordDef list
     }
 
-let [<Literal>] RootRecordName = "Root"
+[<RequireQualifiedAccess>]
+module Solver =
+    let [<Literal>] RootRecordName = "Root"
 
-let solveParseResult (parserResult: ParseResult) =
-    result {
-        let! tokens = parserResult 
-        let! tree = Ast.buildTree tokens
-        let problems = Inference.buildProblems tree
-        let! solution = Inference.solveProblems problems.problems
-        let getRecordName recId =
-            // TODO: How we know that we have at least one?
-            // TODO: Pascal case names / general: name checks all over the place
-            let map =
-                problems.potentialRecordNames
+    let solveParseResult (parserResult: ParseResult) =
+        result {
+            let! tokens = parserResult 
+            let! ast = Ast.buildTree tokens
+            let problems = Inference.buildProblems ast.tree
+            let! solution = Inference.solveProblems problems
+            let makeRecord tvar fields =
+                let inferRecordName recId =
+                    match recId with
+                    | Root -> RootRecordName
+                    | TVar tvar ->
+                        let lastSegmentOfMemberExp =
+                            let memberExp = ast.tvarToMemberExp |> Map.find (TVar tvar) fields
+                            match memberExp with
+                            | IdentExp ident -> ident
+                            | AccessExp accExp -> accExp.memberName
+                        lastSegmentOfMemberExp
+                {
+                    id = tvar
+                    name = inferRecordName tvar
+                    fields = fields
+                }
+            let records =
+                solution
+                |> List.choose (fun (tvar,t) ->
+                    match t with
+                    | Field f -> Some (tvar,f)
+                    | _ -> None)
                 |> List.groupBy fst
-                |> Map.ofList
-                |> Map.map (fun _ v -> v |> List.map snd)
-            // why match? Should be indifferent
-            match recId with
-            | Root -> RootRecordName
-            | TVar _ -> map |> Map.find recId |> List.head
-        let makeRecord tvar fields =
-            {
-                id = tvar
-                name = getRecordName tvar
-                fields = fields |> List.map snd |> List.sortBy (fun f -> f.name) 
-            }
-        let records =
-            solution
-            |> List.choose (fun (tvar,t) ->
-                match t with
-                | Field f -> Some (tvar,f)
-                | _ -> None)
-            |> List.groupBy fst
-            |> List.map (fun (tvar, fields) -> makeRecord tvar fields)
-            |>
-                function
-                | [] -> [ makeRecord Root [] ]
-                | records -> records
+                |> List.map (fun (tvar, fields) -> 
+                    fields
+                    |> List.map snd 
+                    |> List.sortBy (fun f -> f.name)
+                    |> makeRecord tvar
+                )
+                |>
+                    function
+                    | [] -> [ makeRecord Root [] ]
+                    | records -> records
 
-        return { 
-            solution = solution |> Map.ofList
-            tree = tree
-            records = records 
+            return
+                {
+                    solution = solution |> Map.ofList
+                    tree = ast.tree
+                    records = records 
+                }
         }
-    }
 
-let solve template =
-    Parsing.parseTemplate template |> solveParseResult
+    let solve template =
+        Parsing.parseTemplate template |> solveParseResult

@@ -77,6 +77,30 @@ module Issue8 =
             Tmpl.user("Hans"))
     let output = Tmpl.Render(root)
 
+
+module Issue8_1 =
+    let [<Literal>] TestTemplate =
+        """
+            {{for x in as}}
+                {{x.name}}
+            {{end}}
+            {{for x in bs}}
+                {{x.name}}
+                {{x.name1}}
+            {{end}}
+        """
+
+    type Tmpl = Template<TestTemplate>
+
+    let root =
+        Tmpl.Root(
+            [
+                Tmpl.order(false, "Order 1")
+                Tmpl.order(true, "Order 2")
+            ],
+            Tmpl.user("Hans"))
+    let output = Tmpl.Render(root)
+
     
 [<EntryPoint>]
 let main _ =

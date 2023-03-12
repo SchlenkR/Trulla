@@ -47,8 +47,6 @@ type private Unification =
 module Inference =
     // TODO: Prevent shadowing
     let buildProblems (tree: TExp list) =
-        let mutable potentialRecordNames = []
-
         let rec constrainMemberExp (membExp: TVal<MemberExp>) =
             match membExp.value with
             | IdentExp ident ->
@@ -64,13 +62,6 @@ module Inference =
                             accExp.instanceExp.tvar,
                             Field { name = accExp.memberName; typ = Var membExp.tvar }
                         )
-                    let lastSegment =
-                        match accExp.instanceExp.value with
-                        | IdentExp ident -> ident
-                        | AccessExp accExp -> accExp.memberName
-                    do potentialRecordNames <-
-                        (accExp.instanceExp.tvar, lastSegment) 
-                        :: potentialRecordNames
                 ]
     
         let rec constrainTree (tree: TExp list) =
@@ -97,10 +88,7 @@ module Inference =
                 | Else _ -> ()
             ]
 
-        {|
-            problems = constrainTree tree
-            potentialRecordNames = potentialRecordNames
-        |}
+        constrainTree tree
 
     let solveProblems (problems: Problem list) =
         let rec subst tvarToReplace withTyp inTyp =
@@ -164,7 +152,7 @@ module Inference =
         let rec solve (problems: Problem list) =
             ////printfn "---------------------- SOLVE"
             let solutions,problems =
-                problems |> partitionMap (
+                problems |> List.partitionMap (
                     function 
                     | Solved x -> Choice1Of2 x
                     | Unsolved x -> Choice2Of2 x)

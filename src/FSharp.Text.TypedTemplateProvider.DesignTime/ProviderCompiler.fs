@@ -3,6 +3,7 @@
 open Trulla
 open Trulla.Core.Ast
 open Trulla.Core.Inference
+open Trulla.Core.Solver
 
 open ProviderImplementation.ProvidedTypes
 open ProviderImplementation.ProvidedTypes.UncheckedQuotations

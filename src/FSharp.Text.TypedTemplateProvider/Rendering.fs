@@ -6,6 +6,7 @@ open System.Collections
 open System.Linq
 
 open Trulla.Core.Ast
+open Trulla.Core.Solver
     
 // - Why falling back to reflection?
 //   1) Staying open for Fable
