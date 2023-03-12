@@ -24,8 +24,8 @@ module MemberExp =
         | AccessExp accExp -> accExp.memberName
         | IdentExp ident -> ident
 
-let makeTypeName (possibleRecordNames: RecordDef list) tvar =
-    possibleRecordNames
+let makeTypeName (potentialRecordNames: RecordDef list) tvar =
+    potentialRecordNames
     |> List.find (fun x -> x.id = tvar)
     |> fun x ->
         match x.name.ToCharArray() |> Array.toList with
@@ -35,12 +35,12 @@ let makeTypeName (possibleRecordNames: RecordDef list) tvar =
         |> String
 
 // TODO: Make that configurable
-let rec toTypeName possibleRecordNames typ =
+let rec toTypeName potentialRecordNames typ =
     match typ with
     | Mono KnownTypes.string -> "string"
     | Mono KnownTypes.bool -> "bool"
-    | Poly (KnownTypes.sequence, pt) -> $"list<{toTypeName possibleRecordNames pt}>"
-    | Record tvar -> makeTypeName possibleRecordNames tvar
+    | Poly (KnownTypes.sequence, pt) -> $"list<{toTypeName potentialRecordNames pt}>"
+    | Record tvar -> makeTypeName potentialRecordNames tvar
     // TODO: See comments in ModelInference / FinalTyp
     //| Var _ -> "obj"
     | _ -> failwith $"Unsupported reference for type '{typ}'."

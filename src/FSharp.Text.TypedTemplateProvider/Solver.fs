@@ -21,19 +21,18 @@ let solveParseResult (parserResult: ParseResult) =
         let! tree = Ast.buildTree tokens
         let problems = Inference.buildProblems tree
         let! solution = Inference.solveProblems problems.problems
-        let getRecordName =
+        let getRecordName recId =
             // TODO: How we know that we have at least one?
             // TODO: Pascal case names / general: name checks all over the place
-            let map = 
-                problems.possibleRecordNames
+            let map =
+                problems.potentialRecordNames
                 |> List.groupBy fst
                 |> Map.ofList
                 |> Map.map (fun _ v -> v |> List.map snd)
-            fun recId ->
-                // why match? Should be indifferent
-                match recId with
-                | Root -> RootRecordName
-                | TVar _ -> map |> Map.find recId |> List.head
+            // why match? Should be indifferent
+            match recId with
+            | Root -> RootRecordName
+            | TVar _ -> map |> Map.find recId |> List.head
         let makeRecord tvar fields =
             {
                 id = tvar

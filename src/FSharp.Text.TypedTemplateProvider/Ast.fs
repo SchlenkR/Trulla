@@ -31,28 +31,6 @@ and MemberExp =
     | AccessExp of {| instanceExp: TVal<MemberExp>; memberName: string |}
     | IdentExp of string
 
-type Typ =
-    | Mono of string
-    | Poly of name: string * typParam: Typ
-    | Field of Field
-    | Record of TVar
-    | Var of TVar
-
-// TODO: After solving, a transition should happen from Type to FinalTyp.
-// The FinalTyp also needs "real" poly types to support free vars 
-// (see TODO in TypedTemplateProvider.fs / finalizeProvidedRecord)
-//type FinalTyp =
-//    | FMono of string
-//    | FPoly of name: string * typParam: FinalTyp
-//    | FField of Field
-//    | FRecord of TVar
-
-and Field = 
-    { 
-        name: string
-        typ: Typ
-    }
-
 type AstResult = Result<TExp list, TrullaError list>
 
 [<RequireQualifiedAccess>]
