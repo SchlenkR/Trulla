@@ -9,5 +9,5 @@ let [<TestCase>] ``Constant``() =
     let template = "T"
     let res =
         let typeName = "Tmpl"
-        ProviderCompiler.createTemplateProviderTypeDefForStringLiteral typeName template
+        ProviderCompiler.createTypeDefForStringLiteral typeName template
     ()

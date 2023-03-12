@@ -26,20 +26,20 @@ type TemplateProviderImplementation(config : TypeProviderConfig) as this =
     // check we contain a copy of runtime files, and are not referencing the runtime DLL
     do assert (typeof<TpRuntime>.Assembly.GetName().Name = asm.GetName().Name)
 
-    let templateProviderForStringLiteral = 
-        let providerType = 
+    let templateProviderForStringLiteral =
+        let providerType =
             ProvidedTypeDefinition(
-                asm, 
-                ProviderCompiler.Consts.providerNamespaceName, 
-                Consts.providerName, 
-                Some typeof<obj>, 
+                asm,
+                ProviderCompiler.Consts.providerNamespaceName,
+                Consts.providerName,
+                Some typeof<obj>,
                 isErased = false
             )
         do providerType.DefineStaticParameters(
             [ProvidedStaticParameter(Consts.templateParameterName, typeof<string>)],
             fun typeName args -> 
                 let template = unbox<string> args.[0]
-                ProviderCompiler.createTemplateProviderTypeDefForStringLiteral typeName template
+                ProviderCompiler.createTypeDefForStringLiteral typeName template
         )
 
         providerType

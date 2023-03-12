@@ -101,7 +101,7 @@ let createRenderMethod
             <@@ Rendering.reflectionRender (%%boxedRoot) template @@>
     )
 
-let createTemplateProviderTypeDefForStringLiteral typeName (template: string) =
+let createTypeDefForStringLiteral typeName (template: string) =
     let solveResult = Solver.solve template
     match solveResult with
     | Error errors -> failwithf "Template error: %A" errors
