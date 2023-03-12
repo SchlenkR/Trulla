@@ -20,6 +20,7 @@
     <Compile Include="..\FSharp.Text.TypedTemplateProvider\TpRuntime.fs" Link="Core\TpRuntime.fs" />
     <Compile Include="TpSdk\ProvidedTypes.fsi" />
     <Compile Include="TpSdk\ProvidedTypes.fs" />
+    <Compile Include="ProviderCompiler.fs" />
     <Compile Include="TypedTemplateProvider.fs" />
   </ItemGroup>
 

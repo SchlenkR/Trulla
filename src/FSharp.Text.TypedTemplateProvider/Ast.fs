@@ -38,7 +38,9 @@ type Typ =
     | Record of TVar
     | Var of TVar
 
-//// TODO: After solving, a transition should happen from Type to FinalTyp
+// TODO: After solving, a transition should happen from Type to FinalTyp.
+// The FinalTyp also needs "real" poly types to support free vars 
+// (see TODO in TypedTemplateProvider.fs / finalizeProvidedRecord)
 //type FinalTyp =
 //    | FMono of string
 //    | FPoly of name: string * typParam: FinalTyp

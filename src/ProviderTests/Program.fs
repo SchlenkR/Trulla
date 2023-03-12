@@ -36,11 +36,50 @@ module ForLoop =
     let root =
         Tmpl.Root(
             [
+                Tmpl.order("Order 1", false)
+                Tmpl.order("Order 2", true)
+            ],
+            Tmpl.user("Hans"))
+    let output = Tmpl.Render(root)
+
+
+module Issue8 =
+    let [<Literal>] TestTemplate =
+        """
+            {{for l in labels}}
+                {{l.name}}
+            {{end}}
+            {{for l in labels1}}
+                {{l.name}}
+            {{end}}
+        """
+
+    type Tmpl = Template<TestTemplate>
+
+    let root =
+        Tmpl.Root(
+            [
                 Tmpl.order(false, "Order 1")
                 Tmpl.order(true, "Order 2")
             ],
             Tmpl.user("Hans"))
     let output = Tmpl.Render(root)
+
+
+module Issue_7_Var =
+    let [<Literal>] TestTemplate =
+        """
+            {{for a in as}} {{end}}
+            {{for b in bs}} {{end}}
+        """
+
+    type Tmpl = Template<TestTemplate>
+
+    let root =
+        Tmpl.Root([], [])
+    let output = Tmpl.Render(root)
+
+
 
 
 [<EntryPoint>]

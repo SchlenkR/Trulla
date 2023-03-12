@@ -1,4 +1,4 @@
-﻿module TypedTemplateProvider.DemoCases
+﻿module TypedTemplateProvider.RenderExamples
 
 open FsUnit
 open NUnit.Framework
@@ -6,6 +6,10 @@ open NUnit.Framework
 let private test template model expected =
     let result = Trulla.Rendering.reflectionRender model template
     result |> should equal expected
+
+
+// -----------------------------------
+// -----------------------------------
 
 
 let [<TestCase>] ``Constant``() =
@@ -53,3 +57,22 @@ let [<TestCase>] ``Simple if else``() =
         |}
     let expected = "Else-Branch"
     test template model expected
+
+let [<TestCase>] ``Free vars and Issue 7 Var(n)``() =
+    let template = 
+        """{{for a in as}}{{end}}{{for b in bs}}{{end}}"""
+    let res = Trulla.Solver.solve template
+    match res with
+    | Ok _ -> ()
+    | Error err -> Assert.Fail $"Unexpected error while solving template: {err}"
+
+    test template {| ``as`` = []; bs = [] |} ""
+
+let [<TestCase>] ``Issue 8``() =
+    let template = """{{for a in as}}{{a.nameA}}{{end}}{{for b in bs}}{{b.nameB}}{{end}}"""
+    let res = Trulla.Solver.solve template
+    match res with
+    | Ok _ -> ()
+    | Error err -> Assert.Fail $"Unexpected error while solving template: {err}"
+
+    test template {| ``as`` = [ {| nameA = "A" |} ]; bs = [ {| nameB = "B" |} ] |} "AB"
