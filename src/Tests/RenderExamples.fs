@@ -79,3 +79,10 @@ module ``Issue 8_1`` =
     let model = {| ``as`` = [ {| name = "A" |} ]; bs = [ {| name = "B1"; name1 = "B1'" |} ] |}
     let expected = "AB1B1'"
     let [<TestCase>] test() = test template model expected
+
+
+module ``Issue 8_2`` =
+    let template = """{{for x in a}}{{x.name1}}{{end}}{{for x in a}}{{x.name2}}{{end}}"""
+    let model = {| ``a`` = [ {| name1 = "1"; name2 = "2" |} ] |}
+    let expected = "12"
+    let [<TestCase>] test() = test template model expected

@@ -7,7 +7,7 @@ type TVar =
     | Root
     | TVar of int
 
-type private BindingContext = Map<string, TVar>
+type BindingContext = Map<string, TVar>
 
 type TVal<'a> =
     { 
@@ -36,6 +36,12 @@ type private Scope =
     | IfOrElseScope of cond: TVal<MemberExp>
     | Other
 
+type Ast =
+    {
+        tree: TExp list
+        tvarToMemberExp: Map<TVar, MemberExp>
+    }
+
 module TVal =
     let create range tvar bindingContext value =
         { range = range; tvar = tvar; bindingContext = bindingContext; value = value }
@@ -44,7 +50,7 @@ module TVal =
 module Ast =
     // TODO: meaningful error messages + location
     // TODO: Don't throw; return TemplateError results
-    let buildTree (tokens: PVal<Token> list) =
+    let buildTree (tokens: PVal<Token> list) : Result<Ast, TrullaError list> =
         let mutable tvarToMemberExp = Map.empty
 
         let newTVar =
@@ -56,15 +62,16 @@ module Ast =
         let buildMemberExp bindingContext pexp =
             let rec ofPExpZero (pexp: PVal<MemberToken>) =
                 let newTVal tvar value = TVal.create pexp.range tvar bindingContext value
-                match pexp.value with
-                | IdentToken ident ->
-                    newTVal (newTVar()) (IdentExp ident)
-                | AccessToken accExp ->
-                    let accExp = {| instanceExp = ofPExpZero accExp.instanceExp; memberName = accExp.memberName |}
-                    let tvar = newTVar()
-                    let exp = AccessExp accExp
+                let newTValAndAdd exp =
+                    let tvar = newTVar ()
                     do tvarToMemberExp <- tvarToMemberExp |> Map.add tvar exp
                     newTVal tvar exp
+                match pexp.value with
+                | IdentToken ident ->
+                    newTValAndAdd (IdentExp ident)
+                | AccessToken accExp ->
+                    let accExp = {| instanceExp = ofPExpZero accExp.instanceExp; memberName = accExp.memberName |}
+                    newTValAndAdd (AccessExp accExp)
             ofPExpZero pexp
 
         let mutable currTokIdx = 0
@@ -100,10 +107,12 @@ module Ast =
                     let tvarIdent = newTVar()
                     do openScopeStack <- Scope.Other :: openScopeStack
                     let x = 
-                        For (
+                        (
                             TVal.create ident.range tvarIdent bindingContext ident.value,
                             accExp,
-                            toTree (Map.add ident.value tvarIdent bindingContext))
+                            toTree (Map.add ident.value tvarIdent bindingContext)
+                        )
+                        |> For
                     do addToken x
                 | Token.If acc ->
                     let cond = buildMemberExp bindingContext acc
@@ -146,6 +155,6 @@ module Ast =
                 |> List.singleton
                 |> Error
             else
-                Ok {| tree = tree; tvarToMemberExp = tvarToMemberExp |}
+                Ok { tree = tree; tvarToMemberExp = tvarToMemberExp }
         with TrullaException err ->
             Error [err]

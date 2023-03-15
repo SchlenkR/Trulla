@@ -27,7 +27,7 @@ and Field =
     }
 
 type ProblemItem = TVar * Typ
-type SolutionItem = TVar * Typ // should be FinalTyp?
+type SolutionItem = TVar * Typ // TODO: should be FinalTyp?
 type Problem =
     | Unsolved of ProblemItem
     | Solved of SolutionItem
@@ -45,7 +45,7 @@ type private Unification =
 
 [<RequireQualifiedAccess>]
 module Inference =
-    // TODO: Prevent shadowing
+    // TODO: Prevent shadowing (why? maybe allow it...)
     let buildProblems (tree: TExp list) =
         let rec constrainMemberExp (membExp: TVal<MemberExp>) =
             match membExp.value with
@@ -90,7 +90,9 @@ module Inference =
 
         constrainTree tree
 
-    let solveProblems (problems: Problem list) =
+    let solveProblems (problems: Problem list) (tvarToMemberExp: Map<TVar, MemberExp>) =
+        let mutable x = Map.empty
+
         let rec subst tvarToReplace withTyp inTyp =
             ////printfn $"Substing: {tvarToReplace} in {inTyp}"
             let withTyp =
@@ -130,8 +132,10 @@ module Inference =
                     else KeepOriginal
             | _ ->
                 // TODO: Don't raise
-                { ranges = [] // TODO
-                  message = sprintf "TODO: Can't unitfy types %A and %A" t1 t2 }
+                { 
+                    ranges = [] // TODO
+                    message = sprintf "TODO: Can't unitfy types %A and %A" t1 t2 
+                }
                 |> TrullaException
                 |> raise
         

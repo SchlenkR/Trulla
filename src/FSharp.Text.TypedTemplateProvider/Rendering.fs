@@ -5,6 +5,7 @@ open System.Text
 open System.Collections
 open System.Linq
 
+open Trulla.Core.Utils
 open Trulla.Core.Ast
 open Trulla.Core.Solver
     
@@ -33,7 +34,7 @@ let reflectionRender (model: obj) (template: string) =
         let rec getIdentBoundValue (exp: TVal<MemberExp>) : obj =
             match exp.value with
             | IdentExp ident -> 
-                bindingContext.[ident]
+                bindingContext |> Map.find ident "find ident in bindingContext"
             | AccessExp acc ->
                 let instance = getIdentBoundValue acc.instanceExp
                 let prop = instance.GetType().GetProperty(acc.memberName)

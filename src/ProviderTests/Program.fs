@@ -58,12 +58,8 @@ module Issue_7_Var =
 module Issue8 =
     let [<Literal>] TestTemplate =
         """
-            {{for x in as}}
-                {{x.name}}
-            {{end}}
-            {{for x in bs}}
-                {{x.name}}
-            {{end}}
+            {{for x in as}}{{x.name}}{{end}}
+            {{for x in bs}}{{x.name}}{{end}}
         """
 
     type Tmpl = Template<TestTemplate>
@@ -71,23 +67,19 @@ module Issue8 =
     let root =
         Tmpl.Root(
             [
-                Tmpl.order(false, "Order 1")
-                Tmpl.order(true, "Order 2")
+                Tmpl.x1("a-name")
             ],
-            Tmpl.user("Hans"))
+            [
+                Tmpl.x("b-name")
+            ])
     let output = Tmpl.Render(root)
 
 
 module Issue8_1 =
     let [<Literal>] TestTemplate =
         """
-            {{for x in as}}
-                {{x.name}}
-            {{end}}
-            {{for x in bs}}
-                {{x.name}}
-                {{x.name1}}
-            {{end}}
+            {{for x in as}}{{x.name}}{{end}}
+            {{for x in bs}}{{x.name}}; {{x.name1}}{{end}}
         """
 
     type Tmpl = Template<TestTemplate>
@@ -95,10 +87,11 @@ module Issue8_1 =
     let root =
         Tmpl.Root(
             [
-                Tmpl.order(false, "Order 1")
-                Tmpl.order(true, "Order 2")
+                Tmpl.x1("a-name")
             ],
-            Tmpl.user("Hans"))
+            [
+                Tmpl.x("b-name", "b-name1")
+            ])
     let output = Tmpl.Render(root)
 
     

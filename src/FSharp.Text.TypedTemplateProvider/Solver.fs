@@ -25,13 +25,15 @@ module Solver =
 
     let solveParseResult (parserResult: ParseResult) =
         result {
+            let mutable usedRecordNames = []
+
             let! tokens = parserResult 
             let! ast = Ast.buildTree tokens
             let problems = Inference.buildProblems ast.tree
-            let! solution = Inference.solveProblems problems
+            let! solution = Inference.solveProblems problems ast.tvarToMemberExp
             let makeRecord tvar fields =
-                let inferRecordName recId =
-                    match recId with
+                let inferedRecordName =
+                    match tvar with
                     | Root -> RootRecordName
                     | TVar tvar ->
                         let lastSegmentOfMemberExp =
@@ -39,10 +41,17 @@ module Solver =
                             match memberExp with
                             | IdentExp ident -> ident
                             | AccessExp accExp -> accExp.memberName
-                        lastSegmentOfMemberExp
+                        let count = 
+                            usedRecordNames 
+                            |> List.filter (fun x -> x = lastSegmentOfMemberExp)
+                            |> List.length
+                        do usedRecordNames <- lastSegmentOfMemberExp :: usedRecordNames
+                        match count with
+                        | 0 -> lastSegmentOfMemberExp
+                        | n -> lastSegmentOfMemberExp + (n.ToString())
                 {
                     id = tvar
-                    name = inferRecordName tvar
+                    name = inferedRecordName
                     fields = fields
                 }
             let records =
