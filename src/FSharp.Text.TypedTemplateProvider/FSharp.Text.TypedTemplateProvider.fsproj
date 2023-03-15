@@ -15,7 +15,7 @@
   <PropertyGroup>
     <Description>A .Net HTTP client library for F#, C#, and friends</Description>
     <PackageId>FSharp.Text.TypedTemplateProvider</PackageId>
-    <Version>1.0.1</Version>
+    <Version>1.1.0</Version>
   </PropertyGroup>
   
   <PropertyGroup>

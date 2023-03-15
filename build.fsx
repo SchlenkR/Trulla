@@ -86,7 +86,7 @@ let format = "format", fun () ->
 
 // TODO: git tag + release
 let publish = "publish", fun () ->
-    let nugetApiKey = Environment.environVar Properties.nugetPushEnvVarName
+    let nugetApiKey = Environment.environVarOrFail Properties.nugetPushEnvVarName
     !! $"{Paths.packFolderName}/*.nupkg"
     |> Seq.iter (fun p ->
         Shell.ExecSuccess ("dotnet", $"nuget push {p} -k {nugetApiKey} -s {Properties.nugetServer} --skip-duplicate")

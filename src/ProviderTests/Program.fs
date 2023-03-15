@@ -94,7 +94,24 @@ module Issue8_1 =
             ])
     let output = Tmpl.Render(root)
 
+
+module Issue8_2 =
+    let [<Literal>] TestTemplate =
+        """
+            {{for t in enumTypes}}
+            type {{t.name}} = {{for l in t.labels}}
+            | {{l.name}} {{end}}
+            with override this.ToString() =
+                match this with {{for l in t.labels}}
+                | {{l.name}} -> "{{l.value}}" {{end}}
+            {{end}}
+        """
     
+    type Tmpl = Template<TestTemplate>
+    
+
+
+        
 [<EntryPoint>]
 let main _ =
     printfn "%s" TextOnly.output
