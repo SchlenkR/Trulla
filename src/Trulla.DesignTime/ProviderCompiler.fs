@@ -1,4 +1,4 @@
-﻿module FSharp.Text.TypedTemplateProvider.DesignTime.Internal.ProviderCompiler
+﻿module Trulla.DesignTime.Internal.ProviderCompiler
 
 open Trulla
 open Trulla.Core.Ast
@@ -10,7 +10,7 @@ open ProviderImplementation.ProvidedTypes.UncheckedQuotations
 open Microsoft.FSharp.Quotations
 
 module Consts =
-    let providerNamespaceName = "FSharp.Text.TypedTemplateProvider"
+    let providerNamespaceName = "Trulla"
     let modelArgName = "model"
 
 module private Expr =

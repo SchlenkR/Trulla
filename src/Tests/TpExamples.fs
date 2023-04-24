@@ -1,8 +1,8 @@
-﻿module TypedTemplateProvider.TpExamples
+﻿module Trulla.Tests.TpExamples
 
 open System
 open System.Reflection
-open FSharp.Text.TypedTemplateProvider.DesignTime.Internal
+open Trulla.DesignTime.Internal
 open NUnit.Framework
 
 module Helper =

@@ -11,17 +11,17 @@
 
   <ItemGroup>
     <Compile Include="..\Common\AssemblyInfo.fs" Link="AssemblyInfo.fs" />
-    <Compile Include="..\FSharp.Text.TypedTemplateProvider\Utils.fs" Link="Core\Utils.fs" />
-    <Compile Include="..\FSharp.Text.TypedTemplateProvider\Parsing.fs" Link="Core\Parsing.fs" />
-    <Compile Include="..\FSharp.Text.TypedTemplateProvider\Ast.fs" Link="Core\Ast.fs" />
-    <Compile Include="..\FSharp.Text.TypedTemplateProvider\Inference.fs" Link="Core\Inference.fs" />
-    <Compile Include="..\FSharp.Text.TypedTemplateProvider\Solver.fs" Link="Core\Solver.fs" />
-    <Compile Include="..\FSharp.Text.TypedTemplateProvider\Rendering.fs" Link="Core\Rendering.fs" />
-    <Compile Include="..\FSharp.Text.TypedTemplateProvider\TpRuntime.fs" Link="Core\TpRuntime.fs" />
+    <Compile Include="..\Trulla\Utils.fs" Link="Core\Utils.fs" />
+    <Compile Include="..\Trulla\Parsing.fs" Link="Core\Parsing.fs" />
+    <Compile Include="..\Trulla\Ast.fs" Link="Core\Ast.fs" />
+    <Compile Include="..\Trulla\Inference.fs" Link="Core\Inference.fs" />
+    <Compile Include="..\Trulla\Solver.fs" Link="Core\Solver.fs" />
+    <Compile Include="..\Trulla\Rendering.fs" Link="Core\Rendering.fs" />
+    <Compile Include="..\Trulla\TpRuntime.fs" Link="Core\TpRuntime.fs" />
     <Compile Include="TpSdk\ProvidedTypes.fsi" />
     <Compile Include="TpSdk\ProvidedTypes.fs" />
     <Compile Include="ProviderCompiler.fs" />
-    <Compile Include="TypedTemplateProvider.fs" />
+    <Compile Include="TrullaProvider.fs" />
   </ItemGroup>
 
   <ItemGroup>

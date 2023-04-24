@@ -1,10 +1,10 @@
-﻿namespace FSharp.Text.TypedTemplateProvider.DesignTime
+﻿namespace Trulla.DesignTime
 
 open System.Reflection
 open ProviderImplementation.ProvidedTypes
 open FSharp.Core.CompilerServices
 open Trulla
-open FSharp.Text.TypedTemplateProvider.DesignTime.Internal
+open Trulla.DesignTime.Internal
 
 module Consts =
     let providerName = "Template"
@@ -16,7 +16,7 @@ type TemplateProviderImplementation(config : TypeProviderConfig) as this =
         config,
         assemblyReplacementMap = 
             [
-                "FSharp.Text.TypedTemplateProvider.DesignTime", "FSharp.Text.TypedTemplateProvider"
+                "Trulla.DesignTime", "Trulla"
             ],
         addDefaultProbingLocation = true
     )

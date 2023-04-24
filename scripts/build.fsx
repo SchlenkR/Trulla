@@ -17,7 +17,7 @@ module Properties =
     let nugetPushEnvVarName = "nuget_push"
 
 module Paths =
-    let slnPath = "./src/FSharp.Text.TypedTemplateProvider.sln"
+    let slnPath = "../src/Trulla.sln"
     let packFolderName = ".pack"
     let packPath = Path.combine __SOURCE_DIRECTORY__ packFolderName
     
@@ -63,8 +63,8 @@ let shallFormat = args.hasArg "format"
 do args.assertArgs()
 
 let clean = "clean", fun () ->
-    !! "src/**/bin"
-    ++ "src/**/obj"
+    !! "../src/**/bin"
+    ++ "../src/**/obj"
     ++ Paths.packFolderName
     |> Shell.cleanDirs 
 
@@ -75,14 +75,14 @@ let test = "test", fun () ->
     Shell.ExecSuccess ("dotnet", $"test {Paths.slnPath}")
 
 let pack = "pack", fun () ->
-    !! "src/FSharp.Text.TypedTemplateProvider/FSharp.Text.TypedTemplateProvider.fsproj"
+    !! "../src/Trulla/Trulla.fsproj"
     |> Seq.iter (fun p ->
         Trace.trace $"SourceDir is: {__SOURCE_DIRECTORY__}"
         Shell.ExecSuccess ("dotnet", sprintf "pack %s -o %s -c Release" p Paths.packPath)
     )
 
 let format = "format", fun () ->
-    Shell.ExecSuccess ("dotnet", $"fantomas .\src\FSharp.Text.TypedTemplateProvider\ .\src\FSharp.Text.TypedTemplateProvider.DesignTime\ --recurse")
+    Shell.ExecSuccess ("dotnet", $"fantomas ..\src\Trulla\ ..\src\Trulla.DesignTime\ --recurse")
 
 // TODO: git tag + release
 let publish = "publish", fun () ->

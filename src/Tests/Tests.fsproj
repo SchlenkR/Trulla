@@ -23,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\FSharp.Text.TypedTemplateProvider.DesignTime\FSharp.Text.TypedTemplateProvider.DesignTime.fsproj" />
+    <ProjectReference Include="..\Trulla.DesignTime\Trulla.DesignTime.fsproj" />
   </ItemGroup>
 
 </Project>

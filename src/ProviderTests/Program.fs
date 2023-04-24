@@ -1,6 +1,6 @@
 ﻿module Program
 
-open FSharp.Text.TypedTemplateProvider
+open Trulla
 
 module TextOnly =
     let [<Literal>] TestTemplate = """Hello, how are you?"""

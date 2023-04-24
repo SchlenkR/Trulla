@@ -1,15 +1,15 @@
-# TypedTemplateProvider (aka "Trulla")
+# Trulla Templates
 
 ...an F# strongly typed text template provider!
 
-> Status: Still experimental
+> Status: Stable
 
-[![NuGet Badge](http://img.shields.io/nuget/v/FSharp.Text.TypedTemplateProvider.svg?style=flat)](https://www.nuget.org/packages/FSharp.Text.TypedTemplateProvider)
+[![NuGet Badge](http://img.shields.io/nuget/v/Trulla.svg?style=flat)](https://www.nuget.org/packages/Trulla)
 
 ```fsharp
-#r "nuget: FSharp.Text.TypedTemplateProvider, 0.0.0-alpha01"
+#r "nuget: Trulla, 0.0.0-alpha01"
 
-open FSharp.Text.TypedTemplateProvider
+open Trulla
 
 let [<Literal>] TestTemplate = """
     Hello {{user.name}}, how are you?
@@ -56,7 +56,7 @@ This will print:
     ---
 ```
 
-The approach of FSharp.Text.TypedTemplateProvider is:
+The approach of Trulla is:
 * Provide a text template with:
   * template parameters
   * iterations
@@ -76,7 +76,7 @@ The approach of FSharp.Text.TypedTemplateProvider is:
 
 The implementation of the tempalte provider might be interesting, because it contains (in a simple form) the building blocks that are required for a programming language. It has:
 
-**A parser** [Parsing.fs](src/FSharp.Text.TypedTemplateProvider/Parsing.fs) implemented with FParsec. The parser output is a sequence of tokens:
+**A parser** [Parsing.fs](src/Trulla/Parsing.fs) implemented with FParsec. The parser output is a sequence of tokens:
 
 ```fsharp
 type Token =
@@ -92,7 +92,7 @@ and MemberToken =
     | IdentToken of string
 ```
 
-**An untyped AST** [Ast.fs](src/FSharp.Text.TypedTemplateProvider/Ast.fs) that gets constructed from the parsed token sequence:
+**An untyped AST** [Ast.fs](src/Trulla/Ast.fs) that gets constructed from the parsed token sequence:
 
 ```fsharp
 
@@ -138,7 +138,7 @@ and Field =
     }
 ```
 
-**A solver** [Solver.fs](src/FSharp.Text.TypedTemplateProvider/Solver.fs) that types records and identifiers of the AST
+**A solver** [Solver.fs](src/Trulla/Solver.fs) that types records and identifiers of the AST
 
 ```fsharp
 type RecordDef =
@@ -149,7 +149,7 @@ type RecordDef =
     }
 ```
 
-**A generator (renderer)** [Rendering.fs](src/FSharp.Text.TypedTemplateProvider/Rendering.fs) that transforms all the previous into the final string.
+**A generator (renderer)** [Rendering.fs](src/Trulla/Rendering.fs) that transforms all the previous into the final string.
 
 ## TODOs
 

@@ -1,7 +1,7 @@
 
-#r "nuget: FSharp.Text.TypedTemplateProvider, 0.0.0-alpha05"
+#r "nuget: Trulla, 0.0.0-alpha05"
 
-open FSharp.Text.TypedTemplateProvider
+open Trulla
 
 let [<Literal>] TestTemplate =
     """Hello {{user.name}}, how are you?
