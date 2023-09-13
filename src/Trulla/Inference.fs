@@ -72,7 +72,7 @@ module Inference =
                     let holeProblems = constrainMemberExp hole
                     yield! holeProblems
                     yield Unsolved (hole.tvar, Mono KnownTypes.string)
-                | For (ident,source,children) ->
+                | For (ident,source,sep,children) ->
                     let tvarIdent = ident.tvar
                     let sourceProblems = constrainMemberExp source
                     yield! sourceProblems

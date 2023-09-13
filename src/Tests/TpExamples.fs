@@ -1,7 +1,6 @@
 ﻿module Trulla.Tests.TpExamples
 
 open System
-open System.Reflection
 open Trulla.DesignTime.Internal
 open NUnit.Framework
 

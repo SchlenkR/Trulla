@@ -7,7 +7,7 @@
 [![NuGet Badge](http://img.shields.io/nuget/v/Trulla.svg?style=flat)](https://www.nuget.org/packages/Trulla)
 
 ```fsharp
-#r "nuget: Trulla, 0.0.0-alpha01"
+#r "nuget: Trulla"
 
 open Trulla
 
@@ -57,6 +57,7 @@ This will print:
 ```
 
 The approach of Trulla is:
+
 * Provide a text template with:
   * template parameters
   * iterations
@@ -64,13 +65,43 @@ The approach of Trulla is:
 * A model type is infered from a given template.
 * An instance of the model is provided by the user for rendering the final template.
 
-## Limitations (current)
+
+**Limitations (current)**
 
 * The model will only contain  fields of type
   * list
   * string (for template holes)
   * bool 
 * There are currently no partials supported
+
+
+## Template Syntax
+
+> Have a look at the [tests](./src/Tests/RenderExamples.fs) for more samples!
+
+**for loops (with separator)**
+
+* This will render 'abc' for given chars = ["a"; "b"; "c"]:
+
+```
+{{for c in chars}}{{c}}{{end}}
+```
+
+* With a given separator between items, this will render 'a;b;c' for given chars = ["a"; "b"; "c"]:
+
+```
+{{for x in numbers|;}}{{x.id}}{{end}}
+```
+
+**if/else**
+
+* This will print "Order is active." or "Order is closed." depending on the value of order.isActive:
+* The `else` part is optional.
+
+```
+Order is {{if order.isActive}}active{{else}}closed{{end}}.
+```
+
 
 ## Implementation Notes
 

@@ -21,7 +21,7 @@ type TVal<'a> =
 type TExp =
     | Text of string
     | Hole of TVal<MemberExp>
-    | For of ident: TVal<string> * exp: TVal<MemberExp> * body: TExp list
+    | For of ident: TVal<string> * exp: TVal<MemberExp> * sep: PVal<string option> * body: TExp list
     | If of cond: TVal<MemberExp> * body: TExp list
     | Else of cond: TVal<MemberExp> * body: TExp list
 
@@ -102,7 +102,7 @@ module Ast =
                 | Token.Hole x -> 
                     let x = Hole (buildMemberExp bindingContext x)
                     do addToken x
-                | Token.For (ident, acc) ->
+                | Token.For (ident, acc, sep) ->
                     let accExp = buildMemberExp bindingContext acc
                     let tvarIdent = newTVar()
                     do openScopeStack <- Scope.Other :: openScopeStack
@@ -110,6 +110,7 @@ module Ast =
                         (
                             TVal.create ident.range tvarIdent bindingContext ident.value,
                             accExp,
+                            sep,
                             toTree (Map.add ident.value tvarIdent bindingContext)
                         )
                         |> For

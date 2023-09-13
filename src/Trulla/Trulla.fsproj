@@ -13,20 +13,23 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <Version>1.1.1</Version>
+    <Version>1.2.1</Version>
     <PackageReleaseNotes>
-      - 1.0.0
-        Initial publish.
-      
-      - 1.0.1
-        #5: Don't ref FSharp.Core 7
-        #6: Stable ordering of ctor params
-      
-      - 1.1.0
-        Revisiting / renaming to "Trulla"
+      1.2.1
+      - Added optional separator to `for` loop
 
-      - 1.1.1
-        Removed "experimental" notice
+      1.1.1
+      - Removed "experimental" notice
+
+      1.1.0
+      - Revisiting / renaming to "Trulla"
+
+      1.0.1
+      #5: Don't ref FSharp.Core 7
+      #6: Stable ordering of ctor params
+
+      1.0.0
+      Initial publish.
     </PackageReleaseNotes>
     <Description>A strongly typed text template provider written in F#.</Description>
     <PackageId>Trulla</PackageId>

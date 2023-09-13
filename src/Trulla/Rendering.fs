@@ -43,22 +43,28 @@ let reflectionRender (model: obj) (template: string) =
         for texp in tree do
             match texp with
             | Text txt ->
-                append txt
+                do append txt
             | Hole hole ->
-                getIdentBoundValue hole :?> string |> append
-            | For (ident,exp,body) ->
-                let objSeq = (getIdentBoundValue exp :?> IEnumerable).Cast<obj>()
-                for x in objSeq do
+                do getIdentBoundValue hole :?> string |> append
+            | For (ident,exp,sep,body) ->
+                let objList =
+                    (getIdentBoundValue exp :?> IEnumerable).Cast<obj>()
+                    |> Seq.indexed
+                    |> Seq.toList
+                let sep = sep.value |> Option.defaultValue ""
+                for i,x in objList do
                     let bindingContext = bindingContext |> Map.add ident.value x
-                    render bindingContext body
+                    do render bindingContext body
+                    if i < objList.Length - 1 then
+                        do append sep
             | If (cond,body) ->
                 let cond = getIdentBoundValue cond :?> bool
                 if cond then
-                    render bindingContext body
+                    do render bindingContext body
             | Else (cond, body) ->
                 let cond = getIdentBoundValue cond :?> bool
                 if not cond then
-                    render bindingContext body
+                    do render bindingContext body
 
     let rootBindingContext =
         [ for p in model.GetType().GetProperties() do

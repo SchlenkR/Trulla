@@ -38,6 +38,26 @@ module ``Simple for`` =
     let [<TestCase>] test() = test template model expected
 
 
+module ``For with separator`` =
+    let template = "{{for x in numbers| , }}{{x}}{{end}}"
+    let model = 
+        {|
+            numbers = [1;2;3] |> List.map string
+        |}
+    let expected = "1 , 2 , 3"
+    let [<TestCase>] test() = test template model expected
+
+
+module ``For with empty separator`` =
+    let template = "{{for x in numbers|}}{{x}}{{end}}"
+    let model = 
+        {|
+            numbers = [1;2;3] |> List.map string
+        |}
+    let expected = "123"
+    let [<TestCase>] test() = test template model expected
+
+
 module ``Simple if`` =
     let template = "{{if x}}X{{end}}{{if y}}Y{{end}}"
     let model = 
