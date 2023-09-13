@@ -2,6 +2,10 @@
 
 open Trulla
 
+
+
+
+
 let [<Literal>] ForTmpl = """
 {{for x in numbers}}{{x}}{{end}}
 """
@@ -46,3 +50,29 @@ printfn $"{IfTmplType.Render(templateModel)}"
 
 
 
+
+
+let [<Literal>] WholeTemplate = """
+Hello {{user.name}}, how are you?
+
+Your Orders
+===
+
+{{for order in orders|---}}
+ID: {{order.id}}
+({{if order.isActive}}active{{else}}inactive{{end}})
+{{end}}
+"""
+
+type WholeTmpl = Template<WholeTemplate>
+
+let templateModel =
+    WholeTmpl.Root(
+        [
+            WholeTmpl.order("Order 1", false)
+            WholeTmpl.order("Order 2", true)
+            WholeTmpl.order("Order 3", false)
+        ],
+        WholeTmpl.user("Hans"))
+
+printfn $"{WholeTmpl.Render(templateModel)}"

@@ -17,9 +17,9 @@ let [<Literal>] TestTemplate = """
     Your Orders
     ===
 
-    {{for order in orders}}ID: {{order.id}}
+    {{for order in orders|---}}
+    ID: {{order.id}}
     ({{if order.isActive}}active{{else}}inactive{{end}})
-    ---
     {{end}}
     """
 
@@ -31,8 +31,9 @@ type Tmpl = Template<TestTemplate>
 let templateModel =
     Tmpl.Root(
         [
-            Tmpl.order(false, "Order 1")
-            Tmpl.order(true, "Order 2")
+            Tmpl.order("Order 1", false)
+            Tmpl.order("Order 2", true)
+            Tmpl.order("Order 3", false)
         ],
         Tmpl.user("Hans"))
 
@@ -48,12 +49,15 @@ This will print:
     Your Orders
     ===
 
+
     ID: Order 1
     (inactive)
     ---
     ID: Order 2
     (active)
     ---
+    ID: Order 3
+    (inactive)
 ```
 
 The approach of Trulla is:
