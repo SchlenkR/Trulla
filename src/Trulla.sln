@@ -13,8 +13,6 @@ Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Tests", "Tests\Tests.fsproj
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SourceGenerator", "SourceGenerator", "{C64C16B5-A513-4DF7-80D7-0D97BD121D54}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Trulla.SourceGenerator", "SourceGenerator\Trulla.SourceGenerator\Trulla.SourceGenerator.csproj", "{8CF25147-4C04-427A-A57B-044A5A21184A}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,17 +31,12 @@ Global
 		{92B09160-C038-44FD-B6F6-3139836B696A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{92B09160-C038-44FD-B6F6-3139836B696A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{92B09160-C038-44FD-B6F6-3139836B696A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{8CF25147-4C04-427A-A57B-044A5A21184A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8CF25147-4C04-427A-A57B-044A5A21184A}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8CF25147-4C04-427A-A57B-044A5A21184A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8CF25147-4C04-427A-A57B-044A5A21184A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{92B09160-C038-44FD-B6F6-3139836B696A} = {438026BD-EE9B-4478-ADC5-7110FB3CFB0D}
-		{8CF25147-4C04-427A-A57B-044A5A21184A} = {C64C16B5-A513-4DF7-80D7-0D97BD121D54}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {31B03B52-7B87-4BEA-957A-9CFD25936243}
