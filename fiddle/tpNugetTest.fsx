@@ -9,7 +9,7 @@ let [<Literal>] TestTemplate =
 Your Orders
 ---
 {{for order in orders}}ID: {{order.id}}
-{{if order.isActive}}ORDER IS ACTIVE{{end}}
+{{if order.isActive}}ORDER IS ACTIVE{{end}} 
 {{end}}
 """
 
