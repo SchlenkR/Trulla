@@ -1,0 +1,57 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFrameworks>netstandard2.0</TargetFrameworks>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
+    <FSharpToolsDirectory>typeproviders</FSharpToolsDirectory>
+    <PackagePath>typeproviders</PackagePath>
+    <!-- always have tailcalls on for design time compiler add-in to allow repo to compile in DEBUG, see https://github.com/fsprojects/FSharp.Data/issues/1410 -->
+    <Tailcalls>true</Tailcalls>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <Description>A strongly typed text template provider written.</Description>
+    <PackageId>Trulla</PackageId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\Core\AssemblyInfo.fs" Link="AssemblyInfo.fs" />
+    <Compile Include="..\..\Core\Utils.fs" Link="Core\Utils.fs" />
+    <Compile Include="..\..\Core\Core.fs" Link="Core\Core.fs" />
+    <Compile Include="..\..\Core\Parsing.fs" Link="Core\Parsing.fs" />
+    <Compile Include="..\..\Core\Ast.fs" Link="Core\Ast.fs" />
+    <Compile Include="..\..\Core\Inference.fs" Link="Core\Inference.fs" />
+    <Compile Include="..\..\Core\Solver.fs" Link="Core\Solver.fs" />
+    <Compile Include="..\..\Core\ReflectionRenderer.fs" Link="Core\ReflectionRenderer.fs" />
+    <Compile Include="TpRuntime.fs" />
+    <Compile Include="TpRegistration.fs" />
+    <None Include="Fiddle\CodeGen\codeGenFSharp.fsx" />
+    <None Include="Fiddle\CodeGen\codeGenTests.fsx" />
+    <None Include="Fiddle\CodeGen\output.fsx" />
+    <None Include="Fiddle\Parsing\parserTest.fsx" />
+    <None Include="Fiddle\Parsing\fiddle.fsx" />
+    <None Include="Fiddle\Typing\typingTestsBase.fsx" />
+    <None Include="Fiddle\Typing\treeTests.fsx" />
+    <None Include="Fiddle\Typing\inferenceTests.fsx" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\..\README.md" Pack="true" PackagePath="\" />
+    <None Include="TpDesignTimeDeps\FParsec.dll" Pack="true" PackagePath="\typeproviders\fsharp41\netstandard2.0" />
+    <None Include="TpDesignTimeDeps\FParsecCS.dll" Pack="true" PackagePath="\typeproviders\fsharp41\netstandard2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FParsec" Version="1.1.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Trulla.DesignTime\Trulla.DesignTime.fsproj">
+      <IsFSharpDesignTimeProvider>true</IsFSharpDesignTimeProvider>
+      <PrivateAssets>all</PrivateAssets>
+    </ProjectReference>
+  </ItemGroup>
+
+</Project>

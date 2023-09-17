@@ -81,7 +81,7 @@ The approach of Trulla is:
 
 ## Template Syntax
 
-> Have a look at the [tests](./src/Tests/RenderExamples.fs) for more samples!
+> Have a look at the [tests](./src/TypeProvider/Tests/RenderExamples.fs) for more samples!
 
 **for loops (with separator)**
 
@@ -111,7 +111,7 @@ Order is {{if order.isActive}}active{{else}}closed{{end}}.
 
 The implementation of the tempalte provider might be interesting, because it contains (in a simple form) the building blocks that are required for a programming language. It has:
 
-**A parser** [Parsing.fs](src/Trulla/Parsing.fs) implemented with FParsec. The parser output is a sequence of tokens:
+**A parser** [Parsing.fs](src/TypeProvider/Trulla/Parsing.fs) implemented with FParsec. The parser output is a sequence of tokens:
 
 ```fsharp
 type Token =
@@ -127,7 +127,7 @@ and MemberToken =
     | IdentToken of string
 ```
 
-**An untyped AST** [Ast.fs](src/Trulla/Ast.fs) that gets constructed from the parsed token sequence:
+**An untyped AST** [Ast.fs](src/TypeProvider/Trulla/Ast.fs) that gets constructed from the parsed token sequence:
 
 ```fsharp
 
@@ -173,7 +173,7 @@ and Field =
     }
 ```
 
-**A solver** [Solver.fs](src/Trulla/Solver.fs) that types records and identifiers of the AST
+**A solver** [Solver.fs](src/TypeProvider/Trulla/Solver.fs) that types records and identifiers of the AST
 
 ```fsharp
 type RecordDef =
@@ -184,7 +184,7 @@ type RecordDef =
     }
 ```
 
-**A generator (renderer)** [Rendering.fs](src/Trulla/Rendering.fs) that transforms all the previous into the final string.
+**A generator (renderer)** [ReflectionRenderer.fs](src/TypeProvider/Trulla/ReflectionRenderer.fs) that transforms all the previous into the final string.
 
 ## TODOs
 
