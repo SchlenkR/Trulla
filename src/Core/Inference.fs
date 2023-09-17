@@ -134,7 +134,7 @@ module Inference =
                 // TODO: Don't raise
                 { 
                     ranges = [] // TODO
-                    message = sprintf "TODO: Can't unitfy types %A and %A" t1 t2
+                    message = $"TODO: Can't unitfy types {t1} and {t2}"
                 }
                 |> TrullaException
                 |> raise

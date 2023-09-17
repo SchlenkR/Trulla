@@ -30,7 +30,7 @@ let rec toTypeName potentialRecordNames typ =
     match typ with
     | Mono KnownTypes.string -> "string"
     | Mono KnownTypes.bool -> "bool"
-    | Poly (KnownTypes.sequence, pt) -> sprintf "list<%s>" (toTypeName potentialRecordNames pt)
+    | Poly (KnownTypes.sequence, pt) -> $"list<{toTypeName potentialRecordNames pt}>"
     | Record tvar -> makeTypeName potentialRecordNames tvar
     // TODO: See comments in ModelInference / FinalTyp
     //| Var _ -> "obj"
@@ -48,14 +48,7 @@ let renderTemplate (solveResult: SolveResult) =
     let prozS = "%s"
     
     text {
-        ln "#if INTERACTIVE"
-        ln "#else"
-        ln "namespace TODO" // TODO
-        ln "#endif"
-        br
-
-        ln "[<AutoOpen>]"
-        ln "module rec ModelTypes ="
+        ln "namespace TODO;" // TODO
         br
 
         // render records
@@ -66,9 +59,9 @@ let renderTemplate (solveResult: SolveResult) =
                 //then solveResult.records
                 //else solveResult.records |> Map.add Root []
             for r in records do
-                lni 1 (sprintf "type %s = {" (makeTypeName records r.id))
+                lni 1 $"public record {makeTypeName records r.id} = {{"
                 for field in r.fields do
-                    lni 2 (sprintf "%s: %s" field.name (toTypeName records field.typ))
+                    lni 2 $"{field.name}: {toTypeName records field.typ}"
                 lni 1 "}"
                 br
         }
@@ -80,9 +73,9 @@ let renderTemplate (solveResult: SolveResult) =
         lni 1 "open ModelTypes"
         br
 
-        lni 1 (sprintf "let render (%s: %s) =" rootIdentifier (makeTypeName solveResult.records Root))
+        lni 1 $"let render ({rootIdentifier}: {makeTypeName solveResult.records Root}) ="
         let sbAppend indent txt = text {
-                ind indent (sprintf """("%s%s" """ prozS txt)
+                ind indent $"""("{prozS}{txt}" """
                 ln "|> __sb.Append |> ignore)"
                 br
             }
@@ -95,10 +88,10 @@ let renderTemplate (solveResult: SolveResult) =
                 | Hole hole ->
                     sbAppend indent (memberExpToIdent hole)
                 | For (ident,exp,sep,body) ->
-                    lni indent (sprintf "for %s%s in %s do" prozS (ident.value) (memberExpToIdent exp))
+                    lni indent $"for {prozS}{ident.value} in {memberExpToIdent exp} do"
                     render (indent + 1) body
                 | If (cond,body) ->
-                    lni indent (sprintf "if %s then" (memberExpToIdent cond))
+                    lni indent $"if {memberExpToIdent cond} then"
                     render (indent + 1) body
                 | Else (cond,body) ->
                     lni indent "else"

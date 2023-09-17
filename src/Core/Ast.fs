@@ -17,7 +17,7 @@ type TVal<'a> =
         bindingContext: BindingContext
         value: 'a 
     }
-    override this.ToString() = sprintf "(%A)%A" this.range this.value
+    override this.ToString() = $"({this.range}){this.value}"
 
 type TExp =
     | Text of string
