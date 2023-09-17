@@ -1,0 +1,59 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>10</LangVersion>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>Trulla.SourceGenerator</PackageId>
+    <Description>A strongly typed text template source generator.</Description>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+    
+    <!--<IsRoslynComponent>true</IsRoslynComponent>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <CompilerGeneratedFilesOutputPath>Generated</CompilerGeneratedFilesOutputPath>-->
+
+    <!-- Generates a package at build -->
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+
+    <!-- Do not include the generator as a lib dependency -->
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis" Version="4.7.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 
+      Take a private dependency on a library (PrivateAssets=all).
+      Consumers of this generator will not reference it.
+      Set GeneratePathProperty=true so we can reference the binaries via the PkgFSharp_Core property 
+      -->
+
+    <!-- Package the FSharp.Core dependency alongside the generator assembly -->
+    <PackageReference Include="FSharp.Core" Version="5.0.1" PrivateAssets="all" GeneratePathProperty="true" />
+    <None Include="$(PkgFSharp_Core)\lib\netstandard2.0\*.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+
+    <PackageReference Include="FParsec" Version="1.1.1" PrivateAssets="all" GeneratePathProperty="true" />
+    <None Include="$(PkgFParsec)\lib\netstandard2.0\*.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+
+    <!-- Package the Trulla dependency alongside the generator assembly -->
+    <ProjectReference Include="..\Trulla.SourceGenerator.Core\Trulla.SourceGenerator.Core.fsproj" />
+    <None Include="..\Trulla.SourceGenerator.Core\bin\$(Configuration)\netstandard2.0\*.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+
+    <!-- Package the generator in the analyzer directory of the nuget package -->
+    <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>

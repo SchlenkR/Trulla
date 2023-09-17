@@ -1,0 +1,34 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>Trulla.SourceGenerator.Core</PackageId>
+    <Description>Core functionalitites for parsing, solving, and rendering Trulla templates.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\Core\AssemblyInfo.fs" Link="AssemblyInfo.fs" />
+    <Compile Include="..\..\Core\Utils.fs" Link="Core\Utils.fs" />
+    <Compile Include="..\..\Core\Core.fs" Link="Core\Core.fs" />
+    <Compile Include="..\..\Core\Parsing.fs" Link="Core\Parsing.fs" />
+    <Compile Include="..\..\Core\Ast.fs" Link="Core\Ast.fs" />
+    <Compile Include="..\..\Core\Inference.fs" Link="Core\Inference.fs" />
+    <Compile Include="..\..\Core\Solver.fs" Link="Core\Solver.fs" />
+    <Compile Include="CodeGen\Text.fs" />
+    <Compile Include="CodeGen\Renderer.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FParsec" Version="1.1.1" />
+    <PackageReference Include="FSharp.Core" Version="5.0.1" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <None Include="..\..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>

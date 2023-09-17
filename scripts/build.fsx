@@ -12,14 +12,16 @@ open Fake.IO.Globbing.Operators
 
 Trace.trace $"Starting script..."
 
+let ( </> ) = Path.combine
+
 module Properties =
     let nugetServer = "https://api.nuget.org/v3/index.json"
     let nugetPushEnvVarName = "nuget_push"
 
 module Paths =
-    let slnPath = "../src/Trulla.sln"
-    let packFolderName = ".pack"
-    let packPath = Path.combine __SOURCE_DIRECTORY__ packFolderName
+    //let slnRoot = "../src/TypeProvider"
+    //let slnPath = "../src/TypeProvider/Trulla.sln"
+    let packPath = __SOURCE_DIRECTORY__ </> "../.pack"
     
 [<AutoOpen>]
 module Helper =
@@ -55,7 +57,7 @@ module Helper =
 
 let args = Args()
 let shallBuild = args.hasArg "build"
-let shallTest = args.hasArg "test"
+//let shallTest = args.hasArg "test"
 let shallPublish = args.hasArg "publish"
 let shallPack = args.hasArg "pack"
 let shallFormat = args.hasArg "format"
@@ -65,30 +67,38 @@ do args.assertArgs()
 let clean = "clean", fun () ->
     !! "../src/**/bin"
     ++ "../src/**/obj"
-    ++ Paths.packFolderName
+    ++ Paths.packPath
     |> Shell.cleanDirs 
 
 let build = "build", fun () ->
-    Shell.ExecSuccess ("dotnet", $"build {Paths.slnPath}")
+    !! "../src/TypeProvider/Trulla/Trulla.fsproj"
+    ++ "../src/SourceGenerator/Trulla.SourceGenerator.Core/Trulla.SourceGenerator.Core.fsproj"
+    ++ "../src/SourceGenerator/Trulla.SourceGenerator/Trulla.SourceGenerator.csproj"
+    |> Seq.iter (fun p ->
+        let buildCommand = $"build {p} -c Release"
+        Trace.trace $"SHELL> dotnet {buildCommand}"
+        Shell.ExecSuccess ("dotnet", buildCommand))
 
-let test = "test", fun () ->
-    Shell.ExecSuccess ("dotnet", $"test {Paths.slnPath}")
+//let test = "test", fun () ->
+//    Shell.ExecSuccess ("dotnet", $"test {Paths.slnPath}")
 
 let pack = "pack", fun () ->
-    !! "../src/Trulla/Trulla.fsproj"
+    !! "../src/TypeProvider/Trulla/Trulla.fsproj"
+    ++ "../src/SourceGenerator/Trulla.SourceGenerator.Core/Trulla.SourceGenerator.Core.fsproj"
+    ++ "../src/SourceGenerator/Trulla.SourceGenerator/Trulla.SourceGenerator.csproj"
     |> Seq.iter (fun p ->
-        Trace.trace $"SourceDir is: {__SOURCE_DIRECTORY__}"
-        Shell.ExecSuccess ("dotnet", sprintf "pack %s -o %s -c Release" p Paths.packPath)
+        let packCommand = sprintf "pack %s -o %s -c Release" p Paths.packPath
+        Trace.trace $"SHELL> dotnet {packCommand}"
+        Shell.ExecSuccess ("dotnet", packCommand)
     )
 
 let format = "format", fun () ->
-    Shell.ExecSuccess ("dotnet", $"fantomas ..\src\Trulla\ ..\src\Trulla.DesignTime\ --recurse")
+    Shell.ExecSuccess ("dotnet", $"fantomas ../src/TrullaProvider/Trulla/ ../src/TrullaProvider/Trulla.DesignTime/ --recurse")
 
 // TODO: git tag + release
 let publish = "publish", fun () ->
     let nugetApiKey = Environment.environVarOrFail Properties.nugetPushEnvVarName
-    !! $"{Paths.packFolderName}/*.nupkg"
-    |> Seq.iter (fun p ->
+    do !! $"{Paths.packPath}/*.nupkg" |> Seq.iter (fun p ->
         Shell.ExecSuccess ("dotnet", $"nuget push {p} -k {nugetApiKey} -s {Properties.nugetServer} --skip-duplicate")
     )
 
@@ -97,9 +107,10 @@ run [
 
     if shallBuild then
         build
-    if shallTest then
-        test
+    //if shallTest then
+    //    test
     if shallPack then
+        build
         pack
     if shallPublish then
         build
