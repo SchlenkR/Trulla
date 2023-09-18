@@ -9,11 +9,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <AdditionalFiles Include="TestTemplate.trulla" />
+    <AdditionalFiles Include="*.trulla" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Trulla.SourceGenerator" Version="1.3.0-preview13" />
+    <PackageReference Include="Trulla.SourceGenerator" Version="1.3.0-preview18" />
   </ItemGroup>
 
 </Project>

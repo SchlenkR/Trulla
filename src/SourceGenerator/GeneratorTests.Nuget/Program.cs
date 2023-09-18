@@ -1,10 +1,17 @@
-﻿// See https://aka.ms/new-console-template for more information
-Console.WriteLine("Hello, World!");
+﻿using TestTemplate;
 
-var x = new[] { 1, 2, 3 };
+var model =
+    new Root
+    {
+        user = new User { name = "Hans" },
+        orders = new List<Order>
+        {
+            new() { id = "0", isActive = true },
+            new() { id = "1", isActive = false },
+            new() { id = "2", isActive = true }
+        }
+    };
 
-foreach (var (item, index) in x.Select((__x, i) => (__x, i)))
-{
-    Console.WriteLine($"{item} {index}");
-}
+Console.WriteLine(model.Render());
 
+Console.ReadLine();

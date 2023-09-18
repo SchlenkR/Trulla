@@ -1,66 +1,16 @@
 # Trulla Templates
 
-...an F# strongly typed text template provider!
+...it's like Handlebars or Mustache templates, but statically typed!
 
 > Status: Stable
 
-[![NuGet Badge](http://img.shields.io/nuget/v/Trulla.svg?style=flat)](https://www.nuget.org/packages/Trulla)
+C# Source Generator: [![NuGet Badge](http://img.shields.io/nuget/v/Trulla.svg?style=flat)](https://www.nuget.org/packages/Trulla)
 
-```fsharp
-#r "nuget: Trulla"
-
-open Trulla
-
-let [<Literal>] TestTemplate = """
-    Hello {{user.name}}, how are you?
-
-    Your Orders
-    ===
-
-    {{for order in orders|---}}
-    ID: {{order.id}}
-    ({{if order.isActive}}active{{else}}inactive{{end}})
-    {{end}}
-    """
-
-// All types required by the given template
-// are infered and provided:
-type Tmpl = Template<TestTemplate>
-
-// Instanciate a typed model for the tempalte.
-let templateModel =
-    Tmpl.Root(
-        [
-            Tmpl.order("Order 1", false)
-            Tmpl.order("Order 2", true)
-            Tmpl.order("Order 3", false)
-        ],
-        Tmpl.user("Hans"))
-
-// Render and print it:
-Tmpl.Render(templateModel) |> printfn "%s"
-```
-
-This will print:
-
-```
-    Hello Hans, how are you?
-
-    Your Orders
-    ===
+F# Type Provider: [![NuGet Badge](http://img.shields.io/nuget/v/Trulla.SourceGenerator.svg?style=flat)](https://www.nuget.org/packages/Trulla.SourceGenerator)
 
 
-    ID: Order 1
-    (inactive)
-    ---
-    ID: Order 2
-    (active)
-    ---
-    ID: Order 3
-    (inactive)
-```
-
-The approach of Trulla is:
+The Trulla Approcah
+---
 
 * Provide a text template with:
   * template parameters
@@ -70,16 +20,15 @@ The approach of Trulla is:
 * An instance of the model is provided by the user for rendering the final template.
 
 
-**Limitations (current)**
+Examples and Usage
+---
 
-* The model will only contain  fields of type
-  * list
-  * string (for template holes)
-  * bool 
-* There are currently no partials supported
+* C# usage via Source Generators: Go to the [C# Documentation](./src/docs/SourceGenerator.md)
+* F# usage via Type Providers: Go to the [F# Documentation](./src/docs/TypeProvider.md)
 
 
-## Template Syntax
+General Template Syntax
+---
 
 > Have a look at the [tests](./src/TypeProvider/Tests/RenderExamples.fs) for more samples!
 
@@ -107,87 +56,14 @@ Order is {{if order.isActive}}active{{else}}closed{{end}}.
 ```
 
 
-## Implementation Notes
+## How it works internals
 
-The implementation of the tempalte provider might be interesting, because it contains (in a simple form) the building blocks that are required for a programming language. It has:
+Trulla is implemented in F#. It basically contains everything a "real" language has, like 
 
-**A parser** [Parsing.fs](src/TypeProvider/Trulla/Parsing.fs) implemented with FParsec. The parser output is a sequence of tokens:
+* a parser
+* an untyped AST
+* type inference with a solver
+* a typed AST
+* code generation
 
-```fsharp
-type Token =
-    | Text of string
-    | Hole of PVal<MemberToken>
-    | For of ident: PVal<string> * exp: PVal<MemberToken>
-    | If of PVal<MemberToken>
-    | Else
-    | End
-    
-and MemberToken =
-    | AccessToken of {| instanceExp: PVal<MemberToken>; memberName: string |}
-    | IdentToken of string
-```
-
-**An untyped AST** [Ast.fs](src/TypeProvider/Trulla/Ast.fs) that gets constructed from the parsed token sequence:
-
-```fsharp
-
-type TVar =
-    | Root
-    | TVar of int
-
-type private BindingContext = Map<string, TVar>
-
-type TVal<'a> =
-    { 
-        range: Range
-        tvar: TVar
-        bindingContext: BindingContext
-        value: 'a 
-    }
-    override this.ToString() = sprintf "(%A)%A" this.range this.value
-
-type TExp =
-    | Text of string
-    | Hole of TVal<MemberExp>
-    | For of ident: TVal<string> * exp: TVal<MemberExp> * body: TExp list
-    | If of cond: TVal<MemberExp> * body: TExp list
-    | Else of cond: TVal<MemberExp> * body: TExp list
-
-and Body = BindingContext * TExp list
-
-and MemberExp =
-    | AccessExp of {| instanceExp: TVal<MemberExp>; memberName: string |}
-    | IdentExp of string
-
-type Typ =
-    | Mono of string
-    | Poly of name: string * typParam: Typ
-    | Field of Field
-    | Record of TVar
-    | Var of TVar
-
-and Field = 
-    { 
-        name: string
-        typ: Typ
-    }
-```
-
-**A solver** [Solver.fs](src/TypeProvider/Trulla/Solver.fs) that types records and identifiers of the AST
-
-```fsharp
-type RecordDef =
-    {
-        id: TVar
-        fields: Field list
-        name: string
-    }
-```
-
-**A generator (renderer)** [ReflectionRenderer.fs](src/TypeProvider/Trulla/ReflectionRenderer.fs) that transforms all the previous into the final string.
-
-## TODOs
-
-* Shadowing (Explanation)
-* Wildcards in bindings
-* The begin and end character sequence for template expressions are configurable, and there is no way escaping them. Choose an appropriate sequence of characters that won't occur in your template.
+If you want to know more, have a look at the (Internals)[./src/docs/Internals.md].

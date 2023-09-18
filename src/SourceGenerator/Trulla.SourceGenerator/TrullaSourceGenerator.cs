@@ -1,4 +1,6 @@
-﻿using Microsoft.CodeAnalysis;
+﻿namespace Trulla.SourceGenerator;
+
+using Microsoft.CodeAnalysis;
 using Trulla.Core;
 
 [Generator]
@@ -7,11 +9,11 @@ public sealed class TrullaSourceGenerator : IIncrementalGenerator
     public void Initialize(IncrementalGeneratorInitializationContext initContext)
     {
         var trullaTemplateFiles = initContext.AdditionalTextsProvider
-            .Where(static file => file.Path.EndsWith(".trulla"));
+            .Where(file => file.Path.EndsWith(".trulla"));
 
         var solvedTemplates = trullaTemplateFiles.Select(
             (text, cancellationToken) => (
-                name: Path.GetFileNameWithoutExtension(text.Path),
+                fileNameWithoutExt: Path.GetFileNameWithoutExtension(text.Path),
                 solution: Solver.solve(text.GetText(cancellationToken)!.ToString())
             ));
 
@@ -28,7 +30,7 @@ public sealed class TrullaSourceGenerator : IIncrementalGenerator
                             .Replace("\n", " - ")
                             .Replace("\r", "")
                             .Replace("\t", "    "));
-                    
+
                     return $@"""
 #error Error in Trulla template {string.Join(";; ", singleLineErrors)}
 
@@ -43,15 +45,15 @@ Errors in template:
                     """;
                 }
 
-                static string RenderContent(Trulla.Core.Solution solution) =>
-                    Trulla.SourceGenerator.Renderer.renderTemplate(solution);
+                string RenderContent(Core.Solution solution) =>
+                    Renderer.renderTemplate(solution, solvedTemplate.fileNameWithoutExt);
 
                 var finalContent = solvedTemplate.solution.IsOk
                     ? RenderContent(solvedTemplate.solution.ResultValue)
                     : RenderErrors(solvedTemplate.solution.ErrorValue);
 
                 spc.AddSource(
-                    $"TrullaTemplates.{solvedTemplate.name}",
+                    $"TrullaTemplates.{solvedTemplate.fileNameWithoutExt}",
                     finalContent);
             });
     }

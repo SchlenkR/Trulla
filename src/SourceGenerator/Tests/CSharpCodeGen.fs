@@ -23,6 +23,6 @@ ID: {{order.id}}
         match solution with
         | Error errors -> failwithf "Template error: %A" errors
         | Ok solution -> 
-            let csharpCode = Trulla.SourceGenerator.Renderer.renderTemplate solution
+            let csharpCode = Trulla.SourceGenerator.Renderer.renderTemplate solution "TestNamespace"
             do printfn "%s" csharpCode
             ()
