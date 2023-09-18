@@ -93,7 +93,7 @@ let pack = "pack", fun () ->
     )
 
 let format = "format", fun () ->
-    Shell.ExecSuccess ("dotnet", $"fantomas ../src/TrullaProvider/Trulla/ ../src/TrullaProvider/Trulla.DesignTime/ --recurse")
+    Shell.ExecSuccess ("dotnet", $"fantomas ../src/TypeProvider/Trulla/ ../src/TypeProvider/Trulla.DesignTime/ --recurse")
 
 // TODO: git tag + release
 let publish = "publish", fun () ->

@@ -2,17 +2,18 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net7.0</TargetFramework>
+    <LangVersion>11</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
-    <AdditionalFiles Include="DemoTemplate.txt" />
+    <AdditionalFiles Include="TestTemplate.trulla" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Trulla.SourceGenerator" Version="1.3.0-preview11" />
+    <PackageReference Include="Trulla.SourceGenerator" Version="1.3.0-preview13" />
   </ItemGroup>
 
 </Project>

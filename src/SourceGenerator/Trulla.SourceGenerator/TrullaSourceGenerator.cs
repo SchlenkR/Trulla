@@ -7,7 +7,7 @@ public sealed class TrullaSourceGenerator : IIncrementalGenerator
     public void Initialize(IncrementalGeneratorInitializationContext initContext)
     {
         var trullaTemplateFiles = initContext.AdditionalTextsProvider
-            .Where(static file => file.Path.EndsWith(".txt"));
+            .Where(static file => file.Path.EndsWith(".trulla"));
 
         var solvedTemplates = trullaTemplateFiles.Select(
             (text, cancellationToken) => (
@@ -15,25 +15,44 @@ public sealed class TrullaSourceGenerator : IIncrementalGenerator
                 solution: Solver.solve(text.GetText(cancellationToken)!.ToString())
             ));
 
-        initContext.RegisterSourceOutput(solvedTemplates, (spc, solvedTemplate) =>
-        {
-            // TODO: Better source gen error handling
-            static string RenderErrors(IEnumerable<TrullaError> errors)
+        initContext.RegisterSourceOutput(
+            solvedTemplates,
+            (spc, solvedTemplate) =>
             {
-                var errorsText = string.Join("\n",  errors.Select(it => it.ToString()));
-                return $@"Error in template: {errorsText}";
-            }
+                // TODO: Better source gen error handling
+                static string RenderErrors(IEnumerable<TrullaError> errors)
+                {
+                    var errorList = errors.Select(it => it.ToString()).ToList();
+                    var singleLineErrors = errorList.Select(
+                        it => it
+                            .Replace("\n", " - ")
+                            .Replace("\r", "")
+                            .Replace("\t", "    "));
+                    
+                    return $@"""
+#error Error in Trulla template {string.Join(";; ", singleLineErrors)}
 
-            static string RenderContent(Trulla.Core.Solution solution) =>
-                Trulla.SourceGenerator.Renderer.renderTemplate(solution);
+/*
 
-            var finalContent = solvedTemplate.solution.IsOk
-                ? RenderContent(solvedTemplate.solution.ResultValue)
-                : RenderErrors(solvedTemplate.solution.ErrorValue);
+Errors in template:
+------------------
 
-            spc.AddSource(
-                $"TrullaTemplates.{solvedTemplate.name}",
-                finalContent);
-        });
+{string.Join("\n\n", errorList)};
+
+*/
+                    """;
+                }
+
+                static string RenderContent(Trulla.Core.Solution solution) =>
+                    Trulla.SourceGenerator.Renderer.renderTemplate(solution);
+
+                var finalContent = solvedTemplate.solution.IsOk
+                    ? RenderContent(solvedTemplate.solution.ResultValue)
+                    : RenderErrors(solvedTemplate.solution.ErrorValue);
+
+                spc.AddSource(
+                    $"TrullaTemplates.{solvedTemplate.name}",
+                    finalContent);
+            });
     }
 }

@@ -1,8 +1,11 @@
 <Project>
 
   <PropertyGroup>
-    <Version>1.3.0-preview11</Version>
+    <Version>1.3.0-preview14</Version>
     <PackageReleaseNotes>
+      1.3.0
+      - Added C# source generator
+
       1.2.1
       - Added optional separator to `for` loop
 

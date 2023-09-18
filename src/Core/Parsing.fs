@@ -21,7 +21,6 @@ type ParseResult = Result<PVal<Token> list, TrullaError list>
 [<RequireQualifiedAccess>]
 module Parsing =
     open FParsec
-    open Trulla.Core
 
     module internal Consts =
         let beginExp = "{{"
@@ -37,9 +36,9 @@ module Parsing =
         let end' = "end"
 
     module internal Position =
-        let ofFParsec offset (p: FParsec.Position) =
+        let ofFParsec offset (p: Position) =
             { index = p.Index - offset; line = p.Line; column = p.Column - offset }
-        let toRange (pos: Position) = { start = pos; finish = pos }
+        let toRange (pos: Trulla.Core.Position) = { start = pos; finish = pos }
     
     module internal Range =
         let merge ranges =

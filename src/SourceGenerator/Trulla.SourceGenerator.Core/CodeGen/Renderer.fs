@@ -66,7 +66,7 @@ let renderTemplate (solution: Solution) =text {
         br
 
     lni 0 $"public static class Rendering {{"
-    lni 1 $"public static string Render(this {rootIdentifier}: {makeTypeName solution.records Root}) {{"
+    lni 1 $"public static string Render(this {makeTypeName solution.records Root} {rootIdentifier}) {{"
 
     let sbAppend indent (txt: string) = text {
         lni indent $"""__sb.Append({txt});"""
@@ -100,10 +100,10 @@ let renderTemplate (solution: Solution) =text {
     //lni (indent + 2) "}"
         
     render 2 solution.tree
+    br
+    lni 2 "return __sb.ToString();"
         
     lni 1 "}"
-    br
-    lni 1 "return __sb.ToString();"
 
     lni 0 "}"
 }

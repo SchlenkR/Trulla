@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Props", "Props", "{4A41BF97-3076-4176-B0CC-EB94F4350432}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "BuildPRops", "BuildPRops", "{4A41BF97-3076-4176-B0CC-EB94F4350432}"
 	ProjectSection(SolutionItems) = preProject
-		..\Directory.Build.props = ..\Directory.Build.props
+		Directory.Build.props = Directory.Build.props
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SourceGenerator", "SourceGenerator", "{03C12FF0-34BA-449C-AD7A-D69683AC3CD1}"
