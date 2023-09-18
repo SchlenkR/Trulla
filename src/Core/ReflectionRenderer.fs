@@ -6,9 +6,7 @@ open System.Collections
 open System.Linq
 
 open Trulla.Core.Utils
-open Trulla.Core.Ast
-open Trulla.Core.Solver
-    
+
 // - Why falling back to reflection?
 //   1) Staying open for Fable
 //   2) I want to get this thing done.
@@ -22,10 +20,10 @@ open Trulla.Core.Solver
 //   generative TP.
 let renderTemplate (model: obj) (template: string) =
     let tree = 
-        let solveResult = Solver.solve template
-        match solveResult with
+        let solution = Solver.solve template
+        match solution with
         | Error errors -> failwithf "Template error: %A" errors
-        | Ok solveResult -> solveResult.tree
+        | Ok solution -> solution.tree
 
     let sb = StringBuilder()
     let inline append (value: string) = sb.Append(value) |> ignore

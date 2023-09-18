@@ -1,9 +1,6 @@
-﻿namespace Trulla.Core.Solver
+﻿namespace Trulla.Core
 
 open Trulla.Core.Utils
-open Trulla.Core.Parsing
-open Trulla.Core.Ast
-open Trulla.Core.Inference
 
 type RecordDef =
     {
@@ -12,7 +9,7 @@ type RecordDef =
         name: string
     }
 
-type SolveResult =
+type Solution =
     {
         solution: Map<TVar, Typ>
         tree: TExp list

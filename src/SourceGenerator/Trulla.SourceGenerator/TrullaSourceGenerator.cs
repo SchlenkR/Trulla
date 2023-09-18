@@ -1,8 +1,5 @@
 ﻿using Microsoft.CodeAnalysis;
-using Microsoft.FSharp.Collections;
-using Microsoft.FSharp.Core;
 using Trulla.Core;
-using Trulla.Core.Solver;
 
 [Generator]
 public sealed class TrullaSourceGenerator : IIncrementalGenerator
@@ -15,7 +12,7 @@ public sealed class TrullaSourceGenerator : IIncrementalGenerator
         var solvedTemplates = trullaTemplateFiles.Select(
             (text, cancellationToken) => (
                 name: Path.GetFileNameWithoutExtension(text.Path),
-                solveResult: Solver.solve(text.GetText(cancellationToken)!.ToString())
+                solution: Solver.solve(text.GetText(cancellationToken)!.ToString())
             ));
 
         initContext.RegisterSourceOutput(solvedTemplates, (spc, solvedTemplate) =>
@@ -27,12 +24,12 @@ public sealed class TrullaSourceGenerator : IIncrementalGenerator
                 return $@"Error in template: {errorsText}";
             }
 
-            static string RenderContent(SolveResult solveResult) =>
-                Trulla.SourceGenerator.Renderer.renderTemplate(solveResult);
+            static string RenderContent(Trulla.Core.Solution solution) =>
+                Trulla.SourceGenerator.Renderer.renderTemplate(solution);
 
-            var finalContent = solvedTemplate.solveResult.IsOk
-                ? RenderContent(solvedTemplate.solveResult.ResultValue)
-                : RenderErrors(solvedTemplate.solveResult.ErrorValue);
+            var finalContent = solvedTemplate.solution.IsOk
+                ? RenderContent(solvedTemplate.solution.ResultValue)
+                : RenderErrors(solvedTemplate.solution.ErrorValue);
 
             spc.AddSource(
                 $"TrullaTemplates.{solvedTemplate.name}",

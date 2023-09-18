@@ -1,8 +1,7 @@
-﻿namespace Trulla.Core.Ast
+﻿namespace Trulla.Core
 
 open Trulla.Core
 open Trulla.Core.Utils
-open Trulla.Core.Parsing
 
 type TVar =
     | Root
@@ -17,7 +16,7 @@ type TVal<'a> =
         bindingContext: BindingContext
         value: 'a 
     }
-    override this.ToString() = $"({this.range}){this.value}"
+    override this.ToString() = sprintf "(%s)%s" (this.range.ToString()) (this.value.ToString())
 
 type TExp =
     | Text of string
@@ -32,23 +31,22 @@ and MemberExp =
     | AccessExp of {| instanceExp: TVal<MemberExp>; memberName: string |}
     | IdentExp of string
 
-[<RequireQualifiedAccess>]
-type private Scope =
-    | IfOrElseScope of cond: TVal<MemberExp>
-    | Other
-
 type Ast =
     {
         tree: TExp list
         tvarToMemberExp: Map<TVar, MemberExp>
     }
 
-module TVal =
-    let create range tvar bindingContext value =
-        { range = range; tvar = tvar; bindingContext = bindingContext; value = value }
-
 [<RequireQualifiedAccess>]
 module Ast =
+
+    type Scope =
+        | IfOrElseScope of cond: TVal<MemberExp>
+        | Other
+    
+    let createTVal range tvar bindingContext value =
+        { range = range; tvar = tvar; bindingContext = bindingContext; value = value }
+    
     // TODO: meaningful error messages + location
     // TODO: Don't throw; return TemplateError results
     let buildTree (tokens: PVal<Token> list) : Result<Ast, TrullaError list> =
@@ -62,7 +60,7 @@ module Ast =
 
         let buildMemberExp bindingContext pexp =
             let rec ofPExpZero (pexp: PVal<MemberToken>) =
-                let newTVal tvar value = TVal.create pexp.range tvar bindingContext value
+                let newTVal tvar value = createTVal pexp.range tvar bindingContext value
                 let newTValAndAdd exp =
                     let tvar = newTVar ()
                     do tvarToMemberExp <- tvarToMemberExp |> Map.add tvar exp
@@ -109,7 +107,7 @@ module Ast =
                     do openScopeStack <- Scope.Other :: openScopeStack
                     let x = 
                         (
-                            TVal.create ident.range tvarIdent bindingContext ident.value,
+                            createTVal ident.range tvarIdent bindingContext ident.value,
                             accExp,
                             sep,
                             toTree (Map.add ident.value tvarIdent bindingContext)
@@ -153,7 +151,7 @@ module Ast =
             let tree = toTree Map.empty
             if openScopeStack.Length > 0 then
                 // TODO: Range.zero is wrong
-                { ranges = [Range.zero]; message = "TODO: Unclosed scope detected." }
+                { ranges = [Range.Zero]; message = "TODO: Unclosed scope detected." }
                 |> List.singleton
                 |> Error
             else

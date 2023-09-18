@@ -14,6 +14,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Props", "Props", "{4A41BF97
 		..\Directory.Build.props = ..\Directory.Build.props
 	EndProjectSection
 EndProject
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Tests", "Tests\Tests.fsproj", "{FDDF8150-18F8-42B2-B658-56A2FE1EE2D6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -32,6 +34,10 @@ Global
 		{547DF6AB-F1AC-4E97-B5F9-1F160A3171F0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{547DF6AB-F1AC-4E97-B5F9-1F160A3171F0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{547DF6AB-F1AC-4E97-B5F9-1F160A3171F0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FDDF8150-18F8-42B2-B658-56A2FE1EE2D6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FDDF8150-18F8-42B2-B658-56A2FE1EE2D6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FDDF8150-18F8-42B2-B658-56A2FE1EE2D6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FDDF8150-18F8-42B2-B658-56A2FE1EE2D6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>5.0</LangVersion>
     <DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
   </PropertyGroup>
 
@@ -25,6 +26,7 @@
   <ItemGroup>
     <PackageReference Include="FParsec" Version="1.1.1" />
     <PackageReference Include="FSharp.Core" Version="5.0.1" />
+    <PackageReference Include="Microsoft.CodeAnalysis" Version="4.7.0" />
   </ItemGroup>
   
   <ItemGroup>

@@ -1,8 +1,7 @@
-﻿namespace Trulla.Core.Inference
+﻿namespace Trulla.Core
 
 open Trulla.Core
 open Trulla.Core.Utils
-open Trulla.Core.Ast
 
 type Typ =
     | Mono of string
@@ -20,14 +19,12 @@ type Typ =
 //    | FField of Field
 //    | FRecord of TVar
 
-and Field = 
-    { 
-        name: string
-        typ: Typ
-    }
+and Field = { name: string; typ: Typ }
 
 type ProblemItem = TVar * Typ
+
 type SolutionItem = TVar * Typ // TODO: should be FinalTyp?
+
 type Problem =
     | Unsolved of ProblemItem
     | Solved of SolutionItem
@@ -39,12 +36,13 @@ module KnownTypes =
     let [<Literal>] sequence = "sequence"
     let sequenceOf elemTypId = sequence, elemTypId
 
-type private Unification =
-    | Unified of Problem list
-    | KeepOriginal
-
 [<RequireQualifiedAccess>]
 module Inference =
+    
+    type Unification =
+        | Unified of Problem list
+        | KeepOriginal
+    
     // TODO: Prevent shadowing (why? maybe allow it...)
     let buildProblems (tree: TExp list) =
         let rec constrainMemberExp (membExp: TVal<MemberExp>) =
@@ -134,7 +132,7 @@ module Inference =
                 // TODO: Don't raise
                 { 
                     ranges = [] // TODO
-                    message = $"TODO: Can't unitfy types {t1} and {t2}"
+                    message = sprintf "TODO: Can't unitfy types %s and %s" (t1.ToString()) (t2.ToString())
                 }
                 |> TrullaException
                 |> raise

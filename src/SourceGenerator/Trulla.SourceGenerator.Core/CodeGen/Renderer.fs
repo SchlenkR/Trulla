@@ -1,10 +1,8 @@
 ﻿module Trulla.SourceGenerator.Renderer
 
 open System
+open Trulla.Core
 open Trulla.Core.Utils
-open Trulla.Core.Ast
-open Trulla.Core.Inference
-open Trulla.Core.Solver
 open Trulla.SourceGenerator.Text
 
 let [<Literal>] rootIdentifier = "model"
@@ -30,7 +28,7 @@ let rec toTypeName potentialRecordNames typ =
     match typ with
     | Mono KnownTypes.string -> "string"
     | Mono KnownTypes.bool -> "bool"
-    | Poly (KnownTypes.sequence, pt) -> $"list<{toTypeName potentialRecordNames pt}>"
+    | Poly (KnownTypes.sequence, pt) -> $"List<{toTypeName potentialRecordNames pt}>"
     | Record tvar -> makeTypeName potentialRecordNames tvar
     // TODO: See comments in ModelInference / FinalTyp
     //| Var _ -> "obj"
@@ -44,7 +42,7 @@ let rec memberExpToIdent (exp: TVal<MemberExp>) =
         rootPrefix + ident
     | AccessExp acc -> (memberExpToIdent acc.instanceExp) + dotIntoMember + acc.memberName
 
-let renderTemplate (solveResult: SolveResult) =
+let renderTemplate (solution: Solution) =
     let prozS = "%s"
     
     text {
@@ -53,33 +51,33 @@ let renderTemplate (solveResult: SolveResult) =
 
         // render records
         text {
-            let records = solveResult.records
+            let records = solution.records
                 // TODO: Why this?
-                //if solveResult.records |> Map.containsKey Root
-                //then solveResult.records
-                //else solveResult.records |> Map.add Root []
+                //if solution.records |> Map.containsKey Root
+                //then solution.records
+                //else solution.records |> Map.add Root []
             for r in records do
-                lni 1 $"public record {makeTypeName records r.id} = {{"
+                lni 1 $"public record {makeTypeName records r.id} {{"
                 for field in r.fields do
-                    lni 2 $"{field.name}: {toTypeName records field.typ}"
+                    lni 2 $"public required {toTypeName records field.typ} {field.name} {{ get; init; }}"
                 lni 1 "}"
                 br
         }
         br
                     
         // TODO: Escape Quotes in strings
-        ln "module Template ="
-        lni 1 "open System"
-        lni 1 "open ModelTypes"
+        lni 1 "using System;"
+        lni 1 "using System.Collections.Generic;"
+        lni 1 "using System.Linq;"
         br
 
-        lni 1 $"let render ({rootIdentifier}: {makeTypeName solveResult.records Root}) ="
-        let sbAppend indent txt = text {
-                ind indent $"""("{prozS}{txt}" """
-                ln "|> __sb.Append |> ignore)"
-                br
-            }
-        lni 2 "let __sb = System.Text.StringBuilder()"
+        lni 1 $"public static class Rendering {{"
+        lni 2 $"public static string Render({rootIdentifier}: {makeTypeName solution.records Root}) {{"
+        let sbAppend indent (txt: string) = text {
+            let txt = Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(txt, false)
+            lni indent $"""__sb.Append(@"{txt}");"""
+        }
+        lni 3 "var __sb = new System.Text.StringBuilder();"
         let rec render indent tree = text {
             for texp in tree do
                 match texp with
@@ -88,15 +86,21 @@ let renderTemplate (solveResult: SolveResult) =
                 | Hole hole ->
                     sbAppend indent (memberExpToIdent hole)
                 | For (ident,exp,sep,body) ->
-                    lni indent $"for {prozS}{ident.value} in {memberExpToIdent exp} do"
+                    lni indent $"foreach (var {ident.value} in {memberExpToIdent exp}) {{"
                     render (indent + 1) body
+                    lni indent "}"
                 | If (cond,body) ->
-                    lni indent $"if {memberExpToIdent cond} then"
+                    lni indent $"if ({memberExpToIdent cond}) {{"
                     render (indent + 1) body
+                    lni indent "}"
                 | Else (cond,body) ->
-                    lni indent "else"
+                    lni indent "else {"
                     render (indent + 1) body
+                    lni indent "}"
         }
 
-        render 2 solveResult.tree
+        lni 2 "}"
+        lni 1 "}"
+        
+        render 2 solution.tree
     }

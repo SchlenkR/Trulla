@@ -3,6 +3,7 @@
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <TargetFrameworks>netstandard2.0</TargetFrameworks>
+    <LangVersion>5.0</LangVersion>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
     <FSharpToolsDirectory>typeproviders</FSharpToolsDirectory>
@@ -27,14 +28,6 @@
     <Compile Include="..\..\Core\ReflectionRenderer.fs" Link="Core\ReflectionRenderer.fs" />
     <Compile Include="TpRuntime.fs" />
     <Compile Include="TpRegistration.fs" />
-    <None Include="Fiddle\CodeGen\codeGenFSharp.fsx" />
-    <None Include="Fiddle\CodeGen\codeGenTests.fsx" />
-    <None Include="Fiddle\CodeGen\output.fsx" />
-    <None Include="Fiddle\Parsing\parserTest.fsx" />
-    <None Include="Fiddle\Parsing\fiddle.fsx" />
-    <None Include="Fiddle\Typing\typingTestsBase.fsx" />
-    <None Include="Fiddle\Typing\treeTests.fsx" />
-    <None Include="Fiddle\Typing\inferenceTests.fsx" />
   </ItemGroup>
 
   <ItemGroup>

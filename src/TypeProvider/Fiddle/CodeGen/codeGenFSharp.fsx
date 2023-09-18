@@ -54,7 +54,7 @@ let rec memberExpToIdent (exp: TVal<MemberExp>) =
     | AccessExp acc -> (memberExpToIdent acc.instanceExp) + dotIntoMember + acc.memberName
 
 let render (template: string) =
-    let renderRecords (solveResult: Solver.SolveResult) = text {
+    let renderRecords (solution: Solver.SolveResult) = text {
         let records = solveResult.records
             // TODO: Why this?
             //if solveResult.records |> Map.containsKey Root

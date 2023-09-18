@@ -1,9 +1,6 @@
 ﻿module Trulla.DesignTime.Internal.ProviderCompiler
 
-open Trulla
-open Trulla.Core.Ast
-open Trulla.Core.Inference
-open Trulla.Core.Solver
+open Trulla.Core
 
 open ProviderImplementation.ProvidedTypes
 open ProviderImplementation.ProvidedTypes.UncheckedQuotations
@@ -103,11 +100,11 @@ let createRenderMethod
     )
 
 let createTypeDefForStringLiteral typeName (template: string) =
-    let solveResult = Solver.solve template
-    match solveResult with
+    let solution = Solver.solve template
+    match solution with
     | Error errors -> failwithf "Template error: %A" errors
-    | Ok solveResult ->
-        let providedRecords = createRecords solveResult.records
+    | Ok solution ->
+        let providedRecords = createRecords solution.records
         let providedRootRecord =
             providedRecords
             |> List.find (fun (r,_,_) ->
@@ -119,7 +116,7 @@ let createTypeDefForStringLiteral typeName (template: string) =
             //    providedRecords
             //    |> List.map (fun (recDef,provRec,props) -> recDef.id, (provRec,props))
             //    |> Map.ofList
-            //RenderCompiler.createRenderMethod providedRootRecord recordsAndFields solveResult.tree
+            //RenderCompiler.createRenderMethod providedRootRecord recordsAndFields solution.tree
             createRenderMethod providedRootRecord template Consts.modelArgName
         let asm = ProvidedAssembly()
         let modelType = 
