@@ -10,9 +10,9 @@ Add a package reference to `Trulla.SourceGenerator`
 In your project, add an item group for trulla template files:
 
 ```xml
-    <ItemGroup>
+<ItemGroup>
     <AdditionalFiles Include="*.trulla" />
-    </ItemGroup>
+</ItemGroup>
 ```
 
 Add a trulla file (e.g. `TestTemplate.trulla`) with the following content:
