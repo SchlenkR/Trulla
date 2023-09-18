@@ -1,4 +1,4 @@
-﻿module Trulla.Tests.Errors
+﻿module Trulla.TypeProvider.Tests.Errors
 
 open NUnit.Framework
 

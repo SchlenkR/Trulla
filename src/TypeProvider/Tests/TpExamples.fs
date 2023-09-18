@@ -1,4 +1,4 @@
-﻿module Trulla.Tests.TpExamples
+﻿module Trulla.TypeProvider.Tests.TpExamples
 
 open System
 open Trulla.DesignTime.Internal

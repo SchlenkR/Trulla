@@ -1,4 +1,4 @@
-﻿module Trulla.Tests.RenderExamples
+﻿module Trulla.TypeProvider.Tests.RenderExamples
 
 open FsUnit
 open NUnit.Framework

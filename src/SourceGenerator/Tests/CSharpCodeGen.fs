@@ -1,4 +1,4 @@
-﻿module Trulla.Tests.CSharpCodeGen
+﻿module Trulla.SourceGenerator.Tests.CSharpCodeGen
 
 open FsUnit
 open NUnit.Framework
