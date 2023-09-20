@@ -10,7 +10,7 @@ and [<Struct>] PVal<'value> =
 and ParserInput = PVal<string>
 and ParseResult<'out> = 
     | POk of PVal<'out>
-    | PError of ParseError list
+    | PError of ParseError
 and [<Struct>] ParseError =
     { 
         index: int
@@ -48,10 +48,6 @@ module DocPos =
 
     let ofInput (pi: ParserInput) = create pi.index pi.value
 
-module PError =
-    let create inp message =
-        PError [ { index = inp; message = message } ]
-
 let inline mkParser parser = Parser parser
 let inline getParser (Parser parser) = parser
 
@@ -84,43 +80,62 @@ type [<Struct>] WhileState<'a> =
     { 
         index: int
         results: 'a list
-        errors: ParseError list
+        error: ParseError option
     }
 
-let while' mkRes (guard: WhileState<_> -> bool) body =
+// General problem: Should it be disallowed having a value, but not consuming?
+
+let while' mkRes guard body =
     mkParser <| fun inp ->
-        let mutable currResults = []
-        let mutable currIdx = inp.index
-        let mutable currErrors =  []
-        let mutable wasConsuming = true
-        let pack () = { index = currIdx; results = currResults; errors = currErrors }
-        while wasConsuming && guard (pack ()) do
-            let pBody = getParser (body ())
-            match pBody { inp with index = currIdx } with
-            | PError errors ->
-                do currErrors <- [ yield! currErrors; yield! errors ]
-            | POk res ->
-                do currResults <- res.value :: currResults
-                do wasConsuming <- res.index > currIdx
-                do currIdx <- res.index
-        mkRes (pack ())
+        let rec iter currResults currIdx =
+            let result = guard { index = currIdx; results = currResults; error = None }
+            match result with
+            | None ->
+                let pBody = getParser (body ())
+                match pBody { inp with index = currIdx } with
+                | PError error ->
+                    mkRes { index = currIdx; results = currResults; error = Some error }
+                | POk res ->
+                    if res.index > currIdx then
+                        mkRes { index = currIdx; results = currResults; error = None }
+                    else
+                        iter (res.value :: currResults) res.index
+            | Some result -> result
+        iter [] inp.index
 
 let whileCond (guard: unit -> bool) body =
-    let mkRes res =
-        match res.errors with
-        | [] -> POk { index = res.index; value = res.results }
-        | errors -> PError errors
-    while' mkRes (fun _ -> guard ()) body
+    mkParser <| fun inp ->
+        let rec iter currResults currIdx =
+            match guard () with
+            | true ->
+                let pBody = getParser (body ())
+                match pBody { inp with index = currIdx } with
+                | PError errors -> PError errors
+                | POk res ->
+                    let hasConsumed = res.index > currIdx
+                    if hasConsumed then
+                        POk { index = currIdx; value = currResults }
+                    else
+                        iter (res.value :: currResults) res.index
+            | false -> POk { index = currIdx; value = currResults }
+        iter [] inp.index
 
 type CanParse = CanParse
 
-let whileCanParse (guard: unit -> CanParse) body =
-    let mkRes res =
-        match res.errors with
-        | [] -> POk { index = res.index; value = res.results }
-        | errors -> PError errors
-    let guard = fun whileState -> whileState.errors.Length = 0
-    while' mkRes guard body
+let whileCanParse (_: unit -> CanParse) body =
+    mkParser <| fun inp ->
+        let rec iter currResults currIdx =
+            let pBody = getParser (body ())
+            match pBody { inp with index = currIdx } with
+            | PError _ ->
+                POk { index = currIdx; value = currResults }
+            | POk res ->
+                let hasConsumed = res.index > currIdx
+                if not hasConsumed then
+                    POk { index = currIdx; value = currResults }
+                else
+                    iter (res.value :: currResults) res.index
+        iter [] inp.index
 
 let inline run (value: string) (parser: Parser<_>) =
     let inp = { index = 0; value = value }
@@ -139,7 +154,7 @@ let pstr (s: string) =
             && inp.value.Substring(inp.index, s.Length) = s 
         match res with
         | true -> POk { index = inp.index + s.Length; value = s }
-        | false -> PError.create inp.index $"Expected: '{s}'"
+        | false -> PError { index = inp.index; message = $"Expected: '{s}'" }
 
 let ( ~+ ) value = pstr value
 let ( ~- ) value = pmaybe (pstr value)
@@ -235,17 +250,14 @@ let shouldParse (input: string) expected (parser: Parser<_>) =
         res.value
     | PError errors -> failwithf "ERROR: %A" errors
 
-parse {
-    while CanParse do
-        let! x = pstr " "
-        yield x
-}
+parse { while CanParse do pstr " " }
 |> run "         XX"
-|> shouldParse "      XX" "    "
 
-parse {
-    while CanParse do
-        let x = pstr ""
-        yield x
-}
+//|> shouldParse "      XX" "    "
+
+//parse {
+//    while CanParse do
+//        let x = pstr ""
+//        yield x
+//}
     
