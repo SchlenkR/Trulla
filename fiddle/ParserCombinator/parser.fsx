@@ -1,3 +1,4 @@
+
 open System
 
 type Parser<'value> = Parser of (ParserInput -> ParseResult<'value>)
@@ -79,24 +80,47 @@ let combine (p1: Parser<_>) (p2: Parser<_>) =
         | POk p1Res -> (getParser p2) { inp with index = p1Res.index }
         | _ -> p1Res
 
-type [<Struct>] WhileGuard = { currIdx: int; errors: ParseError list }
+type [<Struct>] WhileState<'a> = 
+    { 
+        index: int
+        results: 'a list
+        errors: ParseError list
+    }
 
-let while' (guard: WhileGuard -> bool) body =
+let while' mkRes (guard: WhileState<_> -> bool) body =
     mkParser <| fun inp ->
         let mutable currResults = []
         let mutable currIdx = inp.index
         let mutable currErrors =  []
-        while guard { currIdx = currIdx; errors = currErrors } do
+        let mutable wasConsuming = true
+        let pack () = { index = currIdx; results = currResults; errors = currErrors }
+        while wasConsuming && guard (pack ()) do
             let pBody = getParser (body ())
-            match pBody inp with
+            match pBody { inp with index = currIdx } with
             | PError errors ->
                 do currErrors <- [ yield! currErrors; yield! errors ]
             | POk res ->
                 do currResults <- res.value :: currResults
+                do wasConsuming <- res.index > currIdx
                 do currIdx <- res.index
-        match currErrors with
-        | [] -> POk { index = inp.index; value = currResults }
+        mkRes (pack ())
+
+let whileCond (guard: unit -> bool) body =
+    let mkRes res =
+        match res.errors with
+        | [] -> POk { index = res.index; value = res.results }
         | errors -> PError errors
+    while' mkRes (fun _ -> guard ()) body
+
+type CanParse = CanParse
+
+let whileCanParse (guard: unit -> CanParse) body =
+    let mkRes res =
+        match res.errors with
+        | [] -> POk { index = res.index; value = res.results }
+        | errors -> PError errors
+    let guard = fun whileState -> whileState.errors.Length = 0
+    while' mkRes guard body
 
 let inline run (value: string) (parser: Parser<_>) =
     let inp = { index = 0; value = value }
@@ -115,15 +139,12 @@ let pstr (s: string) =
             && inp.value.Substring(inp.index, s.Length) = s 
         match res with
         | true -> POk { index = inp.index + s.Length; value = s }
-        | false -> PError.create inp.index $"Expected '{s}'."
+        | false -> PError.create inp.index $"Expected: '{s}'"
 
 let ( ~+ ) value = pstr value
 let ( ~- ) value = pmaybe (pstr value)
 
-//type All<'a> = All of 'a seq
-type CanParse = CanParse
-
-type ParserBuilder() =
+type ParserBuilderBase() =
     member inline _.Bind(p, [<InlineIfLambda>] f) = bind f p
     member _.Return(value) = return' value
     member _.ReturnFrom(value) = value
@@ -131,33 +152,28 @@ type ParserBuilder() =
     member _.YieldFrom(value) = value
     member _.Zero() = zero
     member _.Combine(p1, fp2) = combine p1 (fp2 ())
-    member _.While(guard: unit -> bool, body) = while' (fun _ -> guard ()) body
     member _.Delay(f) = f
-    member _.Run(f) = f ()
-    member this.For(sequence: _ seq, body) =
+    member _.While(guard: unit -> bool, body) = whileCond guard body
+    member _.While(guard: unit -> CanParse, body) = whileCanParse guard body
+    member _.For(sequence: _ seq, body) =
         let enum = sequence.GetEnumerator()
-        while' (fun _ -> enum.MoveNext()) (fun () -> body enum.Current)
+        whileCond (fun _ -> enum.MoveNext()) (fun () -> body enum.Current)
+
+type ParserBuilder() =
+    inherit ParserBuilderBase()
+    member _.Run(f) = f ()
 
 let parse = ParserBuilder()
 
-// Test while
+type ParserConcatBuilder() =
+    inherit ParserBuilderBase()
+    member _.Run(f) =
+        parse {
+            let! res = f ()
+            return res |> String.concat ""
+        }
 
-parse {
-    while true do
-        yield ""
-        //let x = pstr ""
-        //let! x = x
-        //yield x
-}
-
-//parse {
-//    let x = WhileGuardWithState (fun x -> x.currIdx = 0)
-//    while x do
-//        let x = pstr ""
-//        yield x
-//}
-
-// Test while
+let concat = ParserConcatBuilder()
 
 let map f (p: Parser<_>) =
     parse {
@@ -200,3 +216,36 @@ parse {
     return "YES: start"
 }
 |> run " {{xxx"
+
+// TODO: SepBy
+
+
+
+// --------------------------------------------------------------------
+// EXAMPLES
+// --------------------------------------------------------------------
+
+let shouldParse (input: string) expected (parser: Parser<_>) =
+    match run input parser with
+    | POk res ->
+        if res.value <> expected then
+            failwithf "Input was parsed, but result value was not as expected: '%A' but got '%A'." 
+                expected
+                res.value
+        res.value
+    | PError errors -> failwithf "ERROR: %A" errors
+
+parse {
+    while CanParse do
+        let! x = pstr " "
+        yield x
+}
+|> run "         XX"
+|> shouldParse "      XX" "    "
+
+parse {
+    while CanParse do
+        let x = pstr ""
+        yield x
+}
+    
