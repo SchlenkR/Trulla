@@ -20,6 +20,7 @@
   <ItemGroup>
     <Compile Include="..\..\Core\AssemblyInfo.fs" Link="AssemblyInfo.fs" />
     
+    <Compile Include="..\..\Core\TheBlunt.fs" Link="Core\TheBlunt.fs" />
     <Compile Include="..\..\Core\Utils.fs" Link="Core\Utils.fs" />
     <Compile Include="..\..\Core\Core.fs" Link="Core\Core.fs" />
     <Compile Include="..\..\Core\Parsing.fs" Link="Core\Parsing.fs" />

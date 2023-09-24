@@ -38,6 +38,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Core", "Core", "{C2216056-6
 		Core\ReflectionRenderer.fs = Core\ReflectionRenderer.fs
 		Core\Solver.fs = Core\Solver.fs
 		Core\Utils.fs = Core\Utils.fs
+		Core\TheBlunt.fs = Core\TheBlunt.fs
 	EndProjectSection
 EndProject
 Global

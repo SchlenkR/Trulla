@@ -7,7 +7,7 @@ open System
 open System.Runtime.CompilerServices
 
 type Str =
-    #if !FABLE_COMPILER
+    #if !FABLE_COMPILER && NETSTANDARD2_1_OR_GREATER
     System.ReadOnlySpan<char>
     #else
     System.String
@@ -16,7 +16,7 @@ type Str =
 [<Extension>]
 type StringExtensions =
 
-    #if !FABLE_COMPILER
+    #if !FABLE_COMPILER && NETSTANDARD2_1_OR_GREATER
     [<Extension>] 
     static member inline StringEquals(s: Str, compareWith: string) = 
         s.SequenceEqual(compareWith.AsSpan())
@@ -31,7 +31,7 @@ type StringExtensions =
     static member inline StringEquals(s: string, compareWith: string) = 
         String.Equals(s, compareWith)
 
-    #if !FABLE_COMPILER
+    #if !FABLE_COMPILER && NETSTANDARD2_1_OR_GREATER
     [<Extension>]
     static member StringStartsWithAt(this: Str, other: Str, idx: int) =
         idx + other.Length <= this.Length
@@ -48,7 +48,7 @@ type StringExtensions =
         this.Substring(idx).StartsWith(other)
     #endif
 
-    #if !FABLE_COMPILER
+    #if !FABLE_COMPILER && NETSTANDARD2_1_OR_GREATER
     [<Extension>]
     static member Slice(this: string, start: int) =
         this.AsSpan().Slice(start)
@@ -85,17 +85,7 @@ and [<Struct>] ParseError =
 
 [<AutoOpen>]
 module ParserHandling =
-    #if USE_SINGLE_CASE_DU
-
-    type Parser<'value, 'state> = Parser of ParserFunction<'value, 'state>
-
-    let inline mkParser parserFunction = Parser parserFunction
-    let inline getParser (parser: Parser<_,_>) = let (Parser p) = parser in p
-
-    module Inline =
-        type IfLambdaAttribute() = inherit System.Attribute()
-
-    #else
+    #if INLINE_IF_LAMBDA
 
     type Parser<'value, 'state> = ParserFunction<'value, 'state>
     
@@ -104,6 +94,16 @@ module ParserHandling =
 
     module Inline =
         type IfLambdaAttribute = FSharp.Core.InlineIfLambdaAttribute
+
+    #else
+
+    type Parser<'value, 'state> = Parser of ParserFunction<'value, 'state>
+
+    let inline mkParser parserFunction = Parser parserFunction
+    let inline getParser (parser: Parser<_,_>) = let (Parser p) = parser in p
+
+    module Inline =
+        type IfLambdaAttribute() = inherit System.Attribute()
 
     #endif
 
@@ -162,7 +162,7 @@ module DocPos =
 let hasConsumed lastIdx currIdx = lastIdx > currIdx
 let standsStill lastIdx currIdx = lastIdx = currIdx
 
-let inline bind ([<InlineIfLambda>] f: 'a -> Parser<_,_>) (parser: Parser<_,_>) =
+let inline bind (f: 'a -> Parser<_,_>) (parser: Parser<_,_>) =
     mkParser <| fun inp state ->
         match getParser parser inp state with
         | PError error -> PError error
@@ -192,7 +192,7 @@ let inline run (text: string) (parser: Parser<_,_>) =
 type Break = Break
 
 type ParserBuilder() =
-    member inline _.Bind(p, [<InlineIfLambda>] f) = bind f p
+    member inline _.Bind(p, f) = bind f p
     member _.Return(x) = preturn x
     member _.ReturnFrom(p: Parser<_,_>) = p
     member _.Yield(x) =
@@ -280,7 +280,7 @@ let goto (idx: int) =
             POk { idx = idx; result = () }
         else
             // TODO: this propably would be a fatal, most propably an unexpected error
-            let msg = $"Index {idx} is out of range of string of length {inp.Original.Length}."
+            let msg = sprintf "Index %d is out of range of string of length %d." idx inp.Original.Length
             PError { idx = idx; message = msg }
 
 let orThen a b =
@@ -313,7 +313,7 @@ let anyChar<'s> =
     mkParser <| fun inp (state: 's) ->
         if inp.IsAtEnd
         then PError { idx = inp.Idx; message = "End of input." }
-        else POk { idx = inp.Idx + 1; result = inp.Rest[0].ToString() }
+        else POk { idx = inp.Idx + 1; result = inp.Rest.[0].ToString() }
 
 let eoi<'s> =
     mkParser <| fun inp (state: 's) ->
