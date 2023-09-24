@@ -28,9 +28,8 @@ module String =
         index + compareWith.Length <= value.Length
         && value.Substring(index, compareWith.Length) = compareWith
 
+// TODO: Perf: The parser combinators could track that, instead of computing it from scratch.
 module DocPos =
-    
-    // TODO: Perf: The parser combinators could track that, instead of computing it from scratch.
     let create (index: int) (input: string) =
         if index < 0 || index > input.Length then
             failwithf "Index %d is out of range of input string of length %d." index input.Length
@@ -45,15 +44,14 @@ module DocPos =
                     else line, column + 1
                 findLineAndColumn (currIdx + 1) line column
         findLineAndColumn 0 lineStart columnStart
-
     let ofInput (pi: ParserInput) = create pi.index pi.value
 
 let inline mkParser parser = Parser parser
 let inline getParser (Parser parser) = parser
 
 let inline bind
-    ([<InlineIfLambda>] f: 'a -> Parser<_>)
-    (parser: Parser<_>) 
+    ([<InlineIfLambda>] f: 'a -> _ Parser)
+    (parser: _ Parser) 
     =
     mkParser <| fun inp ->
         match (getParser parser) inp with
@@ -69,39 +67,12 @@ let return' value =
 
 let zero = return' ()
 
-let combine (p1: Parser<_>) (p2: Parser<_>) =
+let combine (p1: _ Parser) (p2: _ Parser) =
     mkParser <| fun inp ->
         let p1Res = (getParser p1) inp
         match p1Res with
         | POk p1Res -> (getParser p2) { inp with index = p1Res.index }
         | _ -> p1Res
-
-type [<Struct>] WhileState<'a> = 
-    { 
-        index: int
-        results: 'a list
-        error: ParseError option
-    }
-
-// General problem: Should it be disallowed having a value, but not consuming?
-
-let while' mkRes guard body =
-    mkParser <| fun inp ->
-        let rec iter currResults currIdx =
-            let result = guard { index = currIdx; results = currResults; error = None }
-            match result with
-            | None ->
-                let pBody = getParser (body ())
-                match pBody { inp with index = currIdx } with
-                | PError error ->
-                    mkRes { index = currIdx; results = currResults; error = Some error }
-                | POk res ->
-                    if res.index > currIdx then
-                        mkRes { index = currIdx; results = currResults; error = None }
-                    else
-                        iter (res.value :: currResults) res.index
-            | Some result -> result
-        iter [] inp.index
 
 let whileCond (guard: unit -> bool) body =
     mkParser <| fun inp ->
@@ -131,33 +102,22 @@ let whileCanParse (_: unit -> CanParse) body =
                 POk { index = currIdx; value = currResults }
             | POk res ->
                 let hasConsumed = res.index > currIdx
-                if not hasConsumed then
-                    POk { index = currIdx; value = currResults }
-                else
-                    iter (res.value :: currResults) res.index
+                match hasConsumed with
+                | false -> POk { index = currIdx; value = currResults }
+                | true -> iter (res.value :: currResults) res.index
         iter [] inp.index
 
-let inline run (value: string) (parser: Parser<_>) =
+let inline run (value: string) (parser: _ Parser) =
     let inp = { index = 0; value = value }
     (getParser parser) inp
 
-let pmaybe defaultValue (p: Parser<_>) =
-    mkParser <| fun inp ->
-        match (getParser p) inp with
-        | POk pRes -> POk pRes
-        | PError _ -> POk { index = inp.index; value = defaultValue }
-
 let pstr (s: string) =
     mkParser <| fun inp ->
-        let res =
-            inp.index + s.Length <= inp.value.Length 
-            && inp.value.Substring(inp.index, s.Length) = s 
-        match res with
-        | true -> POk { index = inp.index + s.Length; value = s }
-        | false -> PError { index = inp.index; message = $"Expected: '{s}'" }
+        if inp.value |> String.equalsAt inp.index s
+        then POk { index = inp.index + s.Length; value = s }
+        else PError { index = inp.index; message = $"Expected: '{s}'" }
 
-let ( ~+ ) value = pstr value
-let ( ~- ) value = pmaybe (pstr value)
+let ( ~% ) value = pstr value
 
 type ParserBuilderBase() =
     member inline _.Bind(p, [<InlineIfLambda>] f) = bind f p
@@ -173,41 +133,41 @@ type ParserBuilderBase() =
     member _.For(sequence: _ seq, body) =
         let enum = sequence.GetEnumerator()
         whileCond (fun _ -> enum.MoveNext()) (fun () -> body enum.Current)
+    // TODO - for what?
+    //member _.For(p: _ Parser, body) =
 
 type ParserBuilder() =
     inherit ParserBuilderBase()
     member _.Run(f) = f ()
 
-let parse = ParserBuilder()
+let parser = ParserBuilder()
 
 type ParserConcatBuilder() =
     inherit ParserBuilderBase()
     member _.Run(f) =
-        parse {
+        parser {
             let! res = f ()
             return res |> String.concat ""
         }
 
-let concat = ParserConcatBuilder()
+let parseStr = ParserConcatBuilder()
 
-let map f (p: Parser<_>) =
-    parse {
+let map f (p: _ Parser) =
+    parser {
         let! x = p
         return f x
     }
 
-let pignore (p: Parser<_>) =
-    parse {
+let pignore (p: _ Parser) =
+    parser {
         let! _ = p
         return ()
     }
 
 let pblank = pstr " "
 
-//let puntil (untilParser: Parser<_>) =
+//let puntil (until: _ Parser) =
 //    parse {
-//        let x = parse {
-//        }
 //    }
 
 let pblanks =
@@ -217,11 +177,11 @@ let pblanks =
             do currIdx <- currIdx + 1
         POk { index = currIdx; value = () }
 
-parse {
-    let! start = +"["
-    let! a = parse {
+parser {
+    let! start = %"["
+    let! a = parser {
         for x in 1..10 do
-            let! x = +"x"
+            let! x = %"x"
             yield x
         //while true do
         //    let! x = % "x"
@@ -240,7 +200,7 @@ parse {
 // EXAMPLES
 // --------------------------------------------------------------------
 
-let shouldParse (input: string) expected (parser: Parser<_>) =
+let shouldParse (input: string) expected (parser: _ Parser) =
     match run input parser with
     | POk res ->
         if res.value <> expected then
@@ -250,10 +210,9 @@ let shouldParse (input: string) expected (parser: Parser<_>) =
         res.value
     | PError errors -> failwithf "ERROR: %A" errors
 
-parse { while CanParse do pstr " " }
-|> run "         XX"
+parseStr { while CanParse do pstr " " }
+|> shouldParse "      XX" "    "
 
-//|> shouldParse "      XX" "    "
 
 //parse {
 //    while CanParse do
