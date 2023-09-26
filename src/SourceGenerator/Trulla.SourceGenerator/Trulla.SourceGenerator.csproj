@@ -41,9 +41,6 @@
     <PackageReference Include="FSharp.Core" Version="5.0.1" PrivateAssets="all" GeneratePathProperty="true" />
     <None Include="$(PkgFSharp_Core)\lib\netstandard2.0\*.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
 
-    <PackageReference Include="FParsec" Version="1.1.1" PrivateAssets="all" GeneratePathProperty="true" />
-    <None Include="$(PkgFParsec)\lib\netstandard2.0\*.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
-
     <!-- Package the Trulla dependency alongside the generator assembly -->
     <ProjectReference Include="..\Trulla.SourceGenerator.Core\Trulla.SourceGenerator.Core.fsproj" />
     <None Include="..\Trulla.SourceGenerator.Core\bin\$(Configuration)\netstandard2.0\*.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />

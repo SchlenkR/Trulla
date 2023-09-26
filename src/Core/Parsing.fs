@@ -20,7 +20,7 @@ type ParseResult = Result<PVal<Token> list, TrullaError list>
 
 [<RequireQualifiedAccess>]
 module Parsing =
-    open FParsec
+    open TheBlunt
 
     module internal Consts =
         let beginExp = "{{"
@@ -36,8 +36,6 @@ module Parsing =
         let end' = "end"
 
     module internal Position =
-        let ofFParsec offset (p: Position) =
-            { index = p.Index - offset; line = p.Line; column = p.Column - offset }
         let toRange (pos: Trulla.Core.Position) = { start = pos; finish = pos }
     
     module internal Range =
@@ -45,7 +43,7 @@ module Parsing =
             let pick mapping weighter =
                 ranges
                 |> List.map mapping
-                |> weighter (fun x -> x.index)
+                |> weighter (fun (x: Position) -> x.index)
                 |> List.head
             {
                 start = pick (fun x -> x.start) List.sortBy
@@ -69,45 +67,29 @@ module Parsing =
 
     [<AutoOpen>]
     module internal Internal =
-        /// Wrap a token parser to include the position.
-        let withPos parser =
-            let leftOf (p: FParsec.Position) =
-                p |> Position.ofFParsec (if p.Column > 1L then 1L else 0L)
-            pipe3 getPosition parser getPosition <| fun start value finish ->
-                { value = value
-                  range = {
-                      start = Position.ofFParsec 0L start
-                      finish = leftOf finish 
-                  }
-                }
-        ////let (<!>) (p: Parser<_,_>) label : Parser<_,_> =
-        ////    fun stream ->
-        ////        printfn "%A: Entering %s" stream.Position label
-        ////        let reply = p stream
-        ////        printfn "%A: Leaving %s (%A)" stream.Position label reply.Status
-        ////        reply
+        // let withPos parser =
+        //     pipe3 getPosition parser getPosition <| fun start value finish ->
+        //         { value = value
+        //           range = {
+        //               start = Position.ofFParsec 0L start
+        //               finish = leftOf finish 
+        //           }
+        //         }
 
-        /// This does NOT consume endp, but only tests for it.
-        let manyCharsUntil endp = manyChars (notFollowedBy endp >>. anyChar)
-        let manyChars1Until endp = many1Chars (notFollowedBy endp >>. anyChar)
-
-        let blanks : Parser<_, unit> = skipMany (skipChar ' ')
-        let blanks1 : Parser<_, unit> = skipMany1 (skipChar ' ')
-
-        let begin' = pstring Consts.beginExp .>> notFollowedBy (pstring "{")
+        let begin' = pstr Consts.beginExp .>> pnot (pstr "{")
         let tmplExp =
-            let endExp = pstring Consts.endExp |>> ignore
+            let endExp = pstr Consts.endExp
             let ident = many1Chars2 letter (letter <|> digit)
             let propAccess =
                 sepBy1 (withPos  ident) (pchar '.')
                 |>> fun segments -> MemberToken.createFromSegments segments
             let body =
                 let for' = parse {
-                    let! identExp = pstring Keywords.for' >>. blanks1 >>. withPos ident .>> blanks1
-                    let! memberExp = pstring Keywords.in' >>. blanks1 >>. propAccess
+                    let! identExp = pstr Keywords.for' >>. blanks 1 >>. withPos ident .>> blanks 1
+                    let! memberExp = pstr Keywords.in' >>. blanks 1 >>. propAccess
                     let! sepExp = 
                         withPos(
-                            (blanks >>. pstring Keywords.sep >>. manyCharsUntil endExp |>> Some)
+                            (blanks >>. pstr Keywords.sep >>. manyCharsUntil endExp |>> Some)
                             <|>
                             (blanks |>> fun _ -> None)
                         )
@@ -116,14 +98,14 @@ module Parsing =
                         |> PVal.create [ identExp.range; memberExp.range; sepExp.range ]
                 }
                 let if' = 
-                    withPos (pstring Keywords.if' >>. blanks1 >>. propAccess)
+                    withPos (pstr Keywords.if' >>. blanks1 >>. propAccess)
                     |>> fun x -> PVal.create [x.range] (Token.If x.value)
-                //let elseIfExp = pstring Keywords.elseIf' >>. blanks1 >>. propAccess |>> ElseIf
+                //let elseIfExp = pstr Keywords.elseIf' >>. blanks1 >>. propAccess |>> ElseIf
                 let elseExp = 
-                    withPos (pstring Keywords.else')
+                    withPos (pstr Keywords.else')
                     |>> fun x -> PVal.create [x.range] (Token.Else)
                 let end' = 
-                    withPos (pstring Keywords.end')
+                    withPos (pstr Keywords.end')
                     |>> fun x -> PVal.create [x.range] (Token.End)
                 let hole = 
                     withPos propAccess

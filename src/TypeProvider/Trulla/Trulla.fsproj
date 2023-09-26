@@ -35,12 +35,9 @@
 
   <ItemGroup>
     <None Include="..\..\..\README.md" Pack="true" PackagePath="\" />
-    <None Include="TpDesignTimeDeps\FParsec.dll" Pack="true" PackagePath="\typeproviders\fsharp41\netstandard2.0" />
-    <None Include="TpDesignTimeDeps\FParsecCS.dll" Pack="true" PackagePath="\typeproviders\fsharp41\netstandard2.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="FParsec" Version="1.1.1" />
     <PackageReference Include="FSharp.Core" Version="5.0.1" />
   </ItemGroup>
 

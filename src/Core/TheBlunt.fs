@@ -272,7 +272,7 @@ let pstr<'s> (s: string) =
     mkParser <| fun inp (state: 's) ->
         if inp.StartsWith(s)
         then POk { idx = inp.Idx + s.Length; result = s }
-        else PError { idx = inp.Idx; message = $"Expected: '{s}'" }
+        else PError { idx = inp.Idx; message = sprintf "Expected: '%s'" s }
 
 let goto (idx: int) =
     mkParser <| fun inp state ->
@@ -290,7 +290,7 @@ let orThen a b =
         | PError _ -> getParser b inp state
 let ( <|> ) a b = orThen a b
 
-let andThen a b =
+let inline andThen a b =
     mkParser <| fun inp state ->
         match getParser a inp state with
         | POk ares ->
@@ -298,7 +298,14 @@ let andThen a b =
             | POk bres -> POk { idx = bres.idx; result = (ares.result, bres.result) } 
             | PError error -> PError error
         | PError error -> PError error
-let ( <&> ) a b = andThen a b
+// type AndThen = AndThen with
+//     static member inline ($) (AndThen, x: (Parser<_,_> * Parser<_,_>)) =
+//         let a,b = x
+//         andThen a b
+// let inline ( <&> ) a b = (($) AndThen) (a, b)
+let ( .>. ) a b = andThen a b
+let ( .>> ) a b = andThen a b |> map fst
+let ( >>. ) a b = andThen a b |> map snd
 
 let firstOf parsers = parsers |> List.reduce orThen
 
@@ -350,6 +357,12 @@ let strUntil untilP p =
                 else iter (currIdx + 1)
         iter inp.Idx
 
+let pnot p =
+    mkParser <| fun inp state ->
+        match getParser (attempt p) inp state with
+        | POk _ -> PError { idx = inp.Idx; message = "Unexpected." }
+        | PError _ -> POk { idx = inp.Idx; result = () }
+
 // let pSepByStr (p: Parser<_,_>) (sep: Parser<_,_>) =
 //     parse {
 //         for x
@@ -384,6 +397,22 @@ let TEST () =
     blanks 1 |> run " xxx"     |> Expect.ok " "
     blanks 1 |> run "xxx"      |> Expect.error
     blanks 0 |> run "xxx"      |> Expect.ok ""
+
+    // parse ab, only when not followed by c
+    let pstrNotFollowedBy s suffix =
+        parse {
+            let! x = pstr s
+            do! pnot (pstr suffix)
+            return x
+        }
+
+    pstrNotFollowedBy "ab" "c"
+    |> run "abc"
+    |> Expect.error
+
+    pstrNotFollowedBy "ab" "d"
+    |> run "abc"
+    |> Expect.ok "ab"
 
     parse {
         for x in anyChar do
