@@ -79,10 +79,9 @@ module Parsing =
         let begin' = pstr Consts.beginExp .>> pnot (pstr "{")
         let tmplExp =
             let endExp = pstr Consts.endExp
-            let ident = many1Chars2 letter (letter <|> digit)
+            let ident = many1Str2 letter (letter <|> digit)
             let propAccess =
-                sepBy1 (withPos  ident) (pchar '.')
-                |>> fun segments -> MemberToken.createFromSegments segments
+                ident |> sepBy1 %"." |> map MemberToken.createFromSegments
             let body =
                 let for' = parse {
                     let! identExp = pstr Keywords.for' >>. blanks 1 >>. withPos ident .>> blanks 1
