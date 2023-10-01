@@ -456,3 +456,18 @@ let pstrNotFollowedBy s suffix =
         return x
     }
 
+let psepBy psep (pelem: Parser<_,_>) =
+    parseItems {
+        for x in pelem do
+            yield x
+            let! sepOk = pisOk psep
+            if not sepOk then
+                yield! Break
+    }
+
+let psepBy1 psep (pelem: Parser<_,_>) =
+    parseItems {
+        yield! pelem
+        for x in psep >>. pelem do
+            yield x
+    }

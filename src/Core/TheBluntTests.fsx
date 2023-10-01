@@ -57,51 +57,35 @@ many1Str (%"ab")
 |> run "abababX"
 |> Expect.ok "ababab"
 
-let sepBy psep (pelem: Parser<_,_>) =
-    parseItems {
-        for x in pelem do
-            yield x
-            let! sepOk = pisOk psep
-            if not sepOk then
-                yield! Break
-    }
-
-%"ab" |> sepBy %";"
+%"ab" |> psepBy %";"
 |> run "ab;ab;ab"
 |> Expect.ok ["ab"; "ab"; "ab" ]
 
-%"ab" |> sepBy %";"
+%"ab" |> psepBy %";"
 |> run "ab;ab;abX"
 |> Expect.ok ["ab"; "ab"; "ab" ]
 
-%"ab" |> sepBy %";"
+%"ab" |> psepBy %";"
 |> run "ab;ab;ab;"
 |> Expect.ok ["ab"; "ab"; "ab" ]
 
-%"ab" |> sepBy %";"
+%"ab" |> psepBy %";"
 |> run "ab;ab;ab;"
 |> Expect.ok ["ab"; "ab"; "ab" ]
 
-let sepBy1 psep (pelem: Parser<_,_>) =
-    parseItems {
-        yield! pelem
-        for x in psep >>. pelem do
-            yield x
-    }
-
-%"ab" |> sepBy1 %";"
+%"ab" |> psepBy1 %";"
 |> run "ab;ab;ab"
 |> Expect.ok ["ab"; "ab"; "ab" ]
 
-%"ab" |> sepBy1 %";"
+%"ab" |> psepBy1 %";"
 |> run "ab;ab;abX"
 |> Expect.ok ["ab"; "ab"; "ab" ]
 
-%"ab" |> sepBy1 %";"
+%"ab" |> psepBy1 %";"
 |> run "ab;ab;ab;"
 |> Expect.ok ["ab"; "ab"; "ab" ]
 
-%"ab" |> sepBy1 %";"
+%"ab" |> psepBy1 %";"
 |> run "ab;ab;ab;"
 |> Expect.ok ["ab"; "ab"; "ab" ]
 

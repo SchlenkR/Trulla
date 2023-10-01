@@ -75,13 +75,18 @@ module Parsing =
         //               finish = leftOf finish 
         //           }
         //         }
+        let withPos p =
+            mkParser <| fun inp state ->
+                match getParser p inp state with
+                | POk res -> POk { res with result = PVal.create [res.result.range] res.result.value }
+                | PError err -> PError err
 
         let begin' = pstr Consts.beginExp .>> pnot (pstr "{")
         let tmplExp =
             let endExp = pstr Consts.endExp
             let ident = many1Str2 letter (letter <|> digit)
             let propAccess =
-                ident |> sepBy1 %"." |> map MemberToken.createFromSegments
+                ident |> psepBy1 %"." |> withPos |> map MemberToken.createFromSegments
             let body =
                 let for' = parse {
                     let! identExp = pstr Keywords.for' >>. blanks 1 >>. withPos ident .>> blanks 1
