@@ -132,6 +132,21 @@ type Cursor with
     member c.WalkFwd(steps: int) = c.Goto(c.idx + steps)
     member c.MoveNext() = c.WalkFwd(1)
 
+module Range =
+    let inline create startIdx endIdx = { startIdx = startIdx; endIdx = endIdx }
+    let zero = { startIdx = 0; endIdx = 0 }
+    let inline merge r1 r2 = { startIdx = r1.startIdx; endIdx = r2.endIdx }
+
+module POk =
+    let inline createFromRange range (result: 'a) : ParserResult<'a> =
+        POk { range = range; result = result }
+    let inline create startIdx endIdx (result: 'a) : ParserResult<'a> =
+        createFromRange (Range.create startIdx endIdx) result
+
+module PError =
+    let inline create (idx: int) (message: string) : ParserResult<'a> =
+        PError { idx = idx; message = message }
+
 // TODO: Perf: The parser combinators could track that, instead of computing it from scratch.
 module DocPos =
     let create (index: int) (input: string) =
@@ -165,16 +180,6 @@ module Expect =
         match res with
         | Ok res -> failwithf "Expected to fail, but got: %A" res
         | Error _ -> ()
-
-module POk =
-    let inline createFromRange range (result: 'a) : ParserResult<'a> =
-        POk { range = range; result = result }
-    let inline create startIdx endIdx (result: 'a) : ParserResult<'a> =
-        createFromRange { startIdx = startIdx; endIdx = endIdx } result
-
-module PError =
-    let inline create (idx: int) (message: string) : ParserResult<'a> =
-        PError { idx = idx; message = message }
 
 let inline bind (f: 'a -> Parser<_,_>) (parser: Parser<_,_>) =
     mkParser <| fun inp state ->
@@ -224,6 +229,7 @@ let inline run (text: string) (parser: Parser<_,_>) =
 
 type Break = Break
 
+[<AbstractClass>]
 type ParserBuilderBase() =
     member inline _.Bind(p, f) = bind f p
     member _.Return(x) = preturn x
@@ -243,7 +249,7 @@ type ParserBuilderBase() =
                 match getParser p2 (inp.Goto p1Res.range.endIdx) state with
                 | POk p2Res ->
                     let res = state.AppendItem p1Res.result p2Res.result
-                    POk.create p1Res.range.startIdx p2Res.range.endIdx res
+                    POk.createFromRange (Range.merge p1Res.range p2Res.range) res
                 | PError error -> PError error
             | PError error -> PError error
     member _.For(loopParser, body) =
@@ -268,6 +274,7 @@ type ParserBuilderBase() =
         this.For(pseq sequence, body)
     member _.Delay(f) = f
 
+[<Sealed>]
 type ParserBuilderForStringAppend() =
     inherit ParserBuilderBase()
     member _.Yield(x) =
@@ -279,6 +286,7 @@ type ParserBuilderForStringAppend() =
             let state = ForState.createForStringAppend()
             getParser (f ()) inp state
 
+[<Sealed>]
 type ParserBuilderForListAppend() =
     inherit ParserBuilderBase()
     member _.Yield(x) =
@@ -305,6 +313,12 @@ let map proj p =
         match getParser p inp state with
         | PError error -> PError error
         | POk pRes -> POk.createFromRange pRes.range (proj pRes.result)
+
+let mapRes proj p =
+    mkParser <| fun inp state ->
+        match getParser p inp state with
+        | PError error -> PError error
+        | POk pRes -> POk.createFromRange pRes.range (proj pRes)
 
 let pignore p =
     p |> map (fun _ -> ())

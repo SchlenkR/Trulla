@@ -1,6 +1,8 @@
 ﻿namespace Trulla.Core
 
-type PVal<'a> = { range: Range; value: 'a }
+type PVal<'a> =
+    { range: Range
+      value: 'a }
 
 [<RequireQualifiedAccess>]
 type Token =
@@ -20,8 +22,6 @@ type ParseResult = Result<PVal<Token> list, TrullaError list>
 
 [<RequireQualifiedAccess>]
 module Parsing =
-    open TheBlunt
-
     module internal Consts =
         let beginExp = "{{"
         let endExp = "}}"
@@ -35,24 +35,23 @@ module Parsing =
         let else' = "else"
         let end' = "end"
 
-    module internal Position =
-        let toRange (pos: Trulla.Core.Position) = { start = pos; finish = pos }
-    
     module internal Range =
-        let merge ranges =
-            let pick mapping weighter =
-                ranges
-                |> List.map mapping
-                |> weighter (fun (x: Position) -> x.index)
-                |> List.head
-            {
-                start = pick (fun x -> x.start) List.sortBy
-                finish = pick (fun x -> x.finish) List.sortByDescending
-            }
+        let ofBlunt (r: TheBlunt.Range) =
+            { startIdx = r.startIdx; endIdx = r.endIdx }
 
     module internal PVal =
-        let create ranges value =
-            { PVal.value = value; range = Range.merge ranges }
+        let ofBlunt (v: TheBlunt.ParserResultValue<_>) =
+            { range = Range.ofBlunt v.range; value = v.result }
+        let create range value =
+            { range = range; value = value }
+    
+    open TheBlunt
+
+    let withRange (p: Parser<_,_>) =
+        mkParser <| fun inp state ->
+            match getParser p inp state with
+            | PError error -> PError error
+            | POk pRes -> POk { range = pRes.range; result = PVal.create (Range.ofBlunt pRes.range) pRes.result }
 
     module internal MemberToken =
         let createFromSegments (segments: PVal<string> list) =
@@ -67,29 +66,18 @@ module Parsing =
 
     [<AutoOpen>]
     module internal Internal =
-        // let withPos parser =
-        //     pipe3 getPosition parser getPosition <| fun start value finish ->
-        //         { value = value
-        //           range = {
-        //               start = Position.ofFParsec 0L start
-        //               finish = leftOf finish 
-        //           }
-        //         }
-        let withPos p =
-            mkParser <| fun inp state ->
-                match getParser p inp state with
-                | POk res -> POk { res with result = PVal.create [res.result.range] res.result.value }
-                | PError err -> PError err
 
         let begin' = pstr Consts.beginExp .>> pnot (pstr "{")
         let tmplExp =
             let endExp = pstr Consts.endExp
-            let ident = many1Str2 letter (letter <|> digit)
-            let propAccess =
-                ident |> psepBy1 %"." |> withPos |> map MemberToken.createFromSegments
+            let ident = many1Str2 letter (letter <|> digit) |> withRange
+            let propAccess = parse {
+                let! segments = ident |> psepBy1 %"."
+                return MemberToken.createFromSegments segments
+            }
             let body =
                 let for' = parse {
-                    let! identExp = pstr Keywords.for' >>. blanks 1 >>. withPos ident .>> blanks 1
+                    let! identExp = pstr Keywords.for' >>. blanks 1 >>. ident .>> blanks 1
                     let! memberExp = pstr Keywords.in' >>. blanks 1 >>. propAccess
                     let! sepExp = 
                         withPos(
