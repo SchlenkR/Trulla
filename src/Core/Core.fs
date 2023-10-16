@@ -1,6 +1,6 @@
 namespace Trulla.Core
 
-open TheBlunt
+type Range = TheBlunt.Range
 
 type TrullaError =
     { ranges: Range list

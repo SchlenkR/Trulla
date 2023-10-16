@@ -53,7 +53,7 @@ pstrNotFollowedBy "ab" "d"
 |> run "abc"
 |> Expect.ok "ab"
 
-manyStr (%"ab")
+many (%"ab") |> concat
 |> run "abababX"
 |> Expect.ok "ababab"
 

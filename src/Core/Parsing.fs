@@ -1,9 +1,5 @@
 ﻿namespace Trulla.Core
 
-type PVal<'a> =
-    { range: Range
-      value: 'a }
-
 [<RequireQualifiedAccess>]
 type Token =
     | Text of string
@@ -35,29 +31,24 @@ module Parsing =
         let else' = "else"
         let end' = "end"
 
-    module internal PVal =
-        let ofBlunt (v: TheBlunt.ParserResultValue<_>) =
-            { range = v.range; value = v.result }
-        let create range value =
-            { range = range; value = value }
-    
     open TheBlunt
 
-    let withRange (p: Parser<_,_>) =
-        mkParser <| fun inp state ->
-            match getParser p inp state with
-            | PError error -> PError error
-            | POk pRes -> POk { range = pRes.range; result = PVal.create pRes.range pRes.result }
+    module PVal =
+        let map proj (p: PVal<'a>) = { range = p.range; result = proj p.result }
 
     module internal MemberToken =
         let createFromSegments (segments: PVal<string> list) =
             match segments with
-            | x::xs ->
-                ({ range = x.range; value = IdentToken x.value }, xs)
-                ||> List.fold (fun state x ->
-                    let accExp = AccessToken {| instanceExp = state; memberName = x.value |}
-                    { range = x.range; value = accExp }
-                )
+            | seg1 :: segs ->
+                let identTok = seg1 |> PVal.map IdentToken
+                let rec mkAccToks curr segs =
+                    match segs with
+                    | seg :: segs ->
+                        let accTok = AccessToken {| instanceExp = curr; memberName = seg.result |}
+                        let pvalAccTok = { range = seg.range; result = accTok }
+                        mkAccToks pvalAccTok segs
+                    | [] -> curr
+                mkAccToks identTok segs
             | [] -> failwith "Should never happen: Information loss in sepBy1 parser."
 
     [<AutoOpen>]
@@ -68,7 +59,7 @@ module Parsing =
             let endExp = pstr Consts.endExp
             let inline ident () = many1Str2 letter (letter <|> digit)
             let propAccess = parse {
-                let! segments = withRange (ident ()) |> psepBy1 %"."
+                let! segments = ident () |> psepBy1 %"."
                 return MemberToken.createFromSegments segments
             }
             let body =

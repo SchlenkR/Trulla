@@ -68,10 +68,10 @@ and [<Struct>] Cursor =
       idx: int }
 
 and [<Struct>] ParserResult<'out> =
-    | POk of ok: ParserResultValue<'out>
+    | POk of ok: PVal<'out>
     | PError of error: ParseError
 
-and [<Struct>] ParserResultValue<'out> =
+and [<Struct>] PVal<'out> =
     { range: Range
       result: 'out }
 
@@ -87,11 +87,6 @@ type [<Struct>] DocPos =
     { idx: int
       ln: int
       col: int }
-
-type ForState<'a,'b>(id: 'a, appendItem: 'a -> 'a -> 'a) =
-    member val ShallStop = false with get, set
-    member _.Id = id
-    member _.AppendItem curr item = appendItem curr item
 
 [<AutoOpen>]
 module Inlining =
@@ -110,11 +105,6 @@ module Inlining =
     module Inline = type IfLambdaAttribute() = inherit System.Attribute()
 
     #endif
-
-module ForState =
-    let createForNothing () = ForState((), fun _ _ -> ())
-    let createForStringAppend () = ForState("", fun curr x -> curr + x)
-    let createForListAppend () = ForState([], fun curr x -> curr @ x)
 
 type Cursor with
     member c.CanGoto(idx: int) =
@@ -174,8 +164,8 @@ module Cursor =
             if not (inp.CanWalkFwd n)
             then PError.create inp.idx (sprintf "Expected %d more characters." n)
             else POk.create inp.idx inp.idx ()
-
-    let notAtEnd parserFunc = hasRemainingChars 1 parserFunc
+    let notAtEnd parserFunc = 
+        hasRemainingChars 1 parserFunc
 
 let pwhen pred p =
     mkParser <| fun inp state ->
@@ -185,16 +175,26 @@ let pwhen pred p =
 
 let mkParserWhen pred pf = pwhen pred <| mkParser pf
 
-let inline bind (f: 'a -> Parser<_,_>) (parser: Parser<_,_>) =
+let inline bind (f: PVal<'a> -> Parser<_,_>) (parser: Parser<_,_>) =
     mkParser <| fun inp state ->
         match getParser parser inp state with
         | PError error -> PError error
         | POk pRes ->
-            let fParser = getParser (f pRes.result)
+            let fParser = getParser (f pRes)
             fParser (inp.Goto(pRes.range.endIdx)) state
 
 let preturn value =
     mkParser <| fun inp state -> POk.create inp.idx inp.idx value
+
+let preturnError message =
+    mkParser <| fun inp state -> PError.create inp.idx message
+
+type ParserBuilder() =
+    member inline _.Bind(p, f) = bind f p
+    member _.Return(x) = preturn x
+    member _.ReturnFrom(p: Parser<_,_>) = p
+
+let parse = ParserBuilder()
 
 let pseq (s: _ seq) =
     let enum = s.GetEnumerator()
@@ -210,85 +210,6 @@ let inline run (text: string) (parser: Parser<_,_>) =
         let docPos = DocPos.create error.idx text
         Error {| pos = docPos; message = error.message |}
 
-type Break = Break
-
-[<AbstractClass>]
-type ParserBuilderBase() =
-    member inline _.Bind(p, f) = bind f p
-    member _.Return(x) = preturn x
-    member _.ReturnFrom(p: Parser<_,_>) = p
-    member _.YieldFrom(Break _) =
-        mkParser <| fun inp (state: ForState<_,_>) ->
-            do state.ShallStop <- true
-            POk.create inp.idx inp.idx state.Id
-    member _.Zero() =
-        mkParser <| fun inp (state: ForState<_,_>) ->
-            POk.create inp.idx inp.idx state.Id
-    member _.Combine(p1, fp2) = 
-        mkParser <| fun inp (state: ForState<_,_>) ->
-            let p2 = fp2 ()
-            match getParser p1 inp (state: ForState<_,_>) with
-            | POk p1Res ->
-                match getParser p2 (inp.Goto p1Res.range.endIdx) state with
-                | POk p2Res ->
-                    let res = state.AppendItem p1Res.result p2Res.result
-                    POk.createFromRange (Range.merge p1Res.range p2Res.range) res
-                | PError error -> PError error
-            | PError error -> PError error
-    member _.For(loopParser, body) =
-        mkParser <| fun inp (state: ForState<_,_>) ->
-            let rec iter currIdx currResult =
-                match getParser loopParser (inp.Goto currIdx) state with
-                | PError err -> POk.create inp.idx currIdx currResult
-                | POk loopRes ->
-                    let bodyP = body loopRes.result
-                    match getParser bodyP (inp.Goto loopRes.range.endIdx) state with
-                    | PError err -> PError err
-                    | POk bodyRes ->
-                        let currResult = state.AppendItem currResult bodyRes.result
-                        match state.ShallStop with
-                        | true -> POk.create inp.idx bodyRes.range.endIdx currResult
-                        | false -> iter bodyRes.range.endIdx currResult
-            iter inp.idx state.Id
-    member this.For(sequence: _ seq, body) =
-        this.For(pseq sequence, body)
-    member this.While(guard, body) =
-        let sequence = seq { while guard () do yield () }
-        this.For(pseq sequence, body)
-    member _.Delay(f) = f
-
-[<Sealed>]
-type ParserBuilderForStringAppend() =
-    inherit ParserBuilderBase()
-    member _.Yield(x) =
-        mkParser <| fun inp (state: ForState<_,_>) ->
-            POk.create inp.idx inp.idx x
-    member _.YieldFrom(p: Parser<_,_>) =
-        p
-    member _.Run(f) =
-        mkParser <| fun inp state ->
-            let state = ForState.createForStringAppend()
-            getParser (f ()) inp state
-
-[<Sealed>]
-type ParserBuilderForListAppend() =
-    inherit ParserBuilderBase()
-    member _.Yield(x) =
-        mkParser <| fun inp (state: ForState<_,_>) ->
-            POk.create inp.idx inp.idx [x]
-    member _.YieldFrom(p: Parser<_,_>) =
-        mkParser <| fun inp (state: ForState<_,_>) ->
-            match getParser p inp state with
-            | POk res -> POk.createFromRange res.range [res.result]
-            | PError err -> PError err
-    member _.Run(f) =
-        mkParser <| fun inp state ->
-            let state = ForState.createForListAppend()
-            getParser (f ()) inp state
-
-let parse = ParserBuilderForStringAppend()
-let parseItems = ParserBuilderForListAppend()
-
 // TODO: I guess that all the state stuff will turn out to be a quite unuseful,
 // or compared to the 
 
@@ -297,12 +218,6 @@ let map proj p =
         match getParser p inp state with
         | PError error -> PError error
         | POk pRes -> POk.createFromRange pRes.range (proj pRes.result)
-
-let mapRes proj p =
-    mkParser <| fun inp state ->
-        match getParser p inp state with
-        | PError error -> PError error
-        | POk pRes -> POk.createFromRange pRes.range (proj pRes)
 
 let pignore p =
     p |> map (fun _ -> ())
@@ -313,22 +228,15 @@ let pattempt p =
         | POk res -> POk.createFromRange res.range (Some res)
         | PError err -> PError err
 
-let pok p =
+let pisOk p = 
     mkParser <| fun inp state ->
         match getParser p inp state with
-        | POk res -> POk.createFromRange res.range (Some res)
-        | PError err -> POk.create inp.idx inp.idx None
+        | POk res -> POk.createFromRange res.range true
+        | PError err -> POk.create inp.idx inp.idx false
 
-let perr p =
-    mkParser <| fun inp state ->
-        match getParser p inp state with
-        | POk res -> POk.createFromRange res.range None
-        | PError err -> POk.create inp.idx inp.idx (Some err)
+let pisErr p = pisOk p |> map not
 
-let pisOk p = pok p |> map (fun x -> Option.isSome x)
-
-let pisErr p = pok p |> map (fun x -> Option.isSome x)
-
+// TODO: A strange thing is this
 let pnot p =
     mkParser <| fun inp state ->
         match getParser (pattempt p) inp state with
@@ -379,13 +287,22 @@ let ( .>. ) a b = andThen a b
 let ( .>> ) a b = andThen a b |> map fst
 let ( >>. ) a b = andThen a b |> map snd
 
-let inline ( >+> ) a b = parse {
-    let! pa = a
-    let! pb = b
-    pa + pb
-}
-
 let firstOf parsers = parsers |> List.reduce orThen
+
+let rec many (p: Parser<_,_>) =
+    parse {
+        let! x = p
+        let! xs = many p
+        return x :: xs.result
+    }
+
+let many1 (p: Parser<_,_>) =
+    parse {
+        let! res = many p
+        match res.result with
+        | [] -> return! preturnError "Expected at least one element."
+        | _ -> return res.result
+    }
 
 // TODO: sepBy
 // TODO: skipN
@@ -403,13 +320,7 @@ let blank<'s> = pstr<'s> " "
 
 /// Parse at least n or more blanks.
 let blanks n =
-    parse {
-        for x in 1 .. n do
-            let! c = blank
-            yield c
-        for x in blank do
-            yield x
-    }
+    ()
 
 let pstringUntil puntil =
     mkParser <| fun inp state ->
@@ -422,11 +333,8 @@ let pstringUntil puntil =
                 else iter (currIdx + 1)
         iter inp.idx
 
-let manyStr (p: Parser<_,_>) =
-    parse {
-        for x in p do
-            yield x
-    }
+let concat (p: Parser<_,_>) =
+    p |> map (fun x -> String.concat "" x)
 
 // TODO: make clear: Parsers that 
 
@@ -445,10 +353,10 @@ let withErrorMessage msg p =
 
 let many1Str (p: Parser<_,_>) = many1Str2 p p
 
-let pchar<'s> pred errMsg =
-    mkParserWhen notAtEnd <| fun inp (state: 's) ->
+let pchar<'s> predicate errMsg =
+    mkParserWhen Cursor.notAtEnd <| fun inp (state: 's) ->
         let c = inp.Rest.[0]
-        if pred c
+        if predicate c
         then POk.create inp.idx (inp.idx + 1) (string c)
         else PError.create inp.idx (errMsg c)
 
@@ -461,8 +369,8 @@ let digit<'s> =
 let pstrNotFollowedBy s suffix =
     parse {
         let! x = pstr s
-        do! pnot (pstr suffix)
-        return x
+        let! _ = pnot (pstr suffix)
+        return x.result
     }
 
 let psepBy psep (pelem: Parser<_,_>) =
@@ -470,7 +378,7 @@ let psepBy psep (pelem: Parser<_,_>) =
         for x in pelem do
             yield x
             let! sepOk = pisOk psep
-            if not sepOk then
+            if not sepOk.result then
                 yield! Break
     }
 
