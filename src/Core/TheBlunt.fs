@@ -212,12 +212,8 @@ let pseq (s: _ seq) =
         then POk.create inp.idx inp.idx enum.Current
         else PError.create inp.idx "No more elements in sequence."
 
-let inline run (text: string) (parser: Parser<_>) =
-    match getParser parser { idx = 0; original = text} with
-    | POk res -> Ok res.result
-    | PError error ->
-        let docPos = DocPos.create error.idx text
-        Error {| pos = docPos; message = error.message |}
+let inline run (text: string) parser =
+    getParser parser { idx = 0; original = text }
 
 let map proj p =
     mkParser <| fun inp ->

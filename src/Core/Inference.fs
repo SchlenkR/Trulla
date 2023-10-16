@@ -1,5 +1,7 @@
 ﻿namespace Trulla.Core
 
+open TheBlunt
+
 open Trulla.Core
 open Trulla.Core.Utils
 
@@ -28,6 +30,7 @@ type SolutionItem = TVar * Typ // TODO: should be FinalTyp?
 type Problem =
     | Unsolved of ProblemItem
     | Solved of SolutionItem
+    | Conflicting of TrullaError
 
 module KnownTypes =
     // TODO: reserve these keywords + parser tests
@@ -42,6 +45,7 @@ module Inference =
     type Unification =
         | Unified of Problem list
         | KeepOriginal
+        | Conflict of TrullaError
     
     // TODO: Prevent shadowing (why? maybe allow it...)
     let buildProblems (tree: TExp list) =
@@ -89,8 +93,6 @@ module Inference =
         constrainTree tree
 
     let solveProblems (problems: Problem list) (tvarToMemberExp: Map<TVar, MemberExp>) =
-        let mutable x = Map.empty
-
         let rec subst tvarToReplace withTyp inTyp =
             ////printfn $"Substing: {tvarToReplace} in {inTyp}"
             let withTyp =
@@ -128,14 +130,13 @@ module Inference =
                 if fn1 = fn2 
                     then unify ft1 ft2
                     else KeepOriginal
-            | _ ->
-                // TODO: Don't raise
-                { 
-                    ranges = [] // TODO
-                    message = sprintf "TODO: Can't unitfy types %s and %s" (t1.ToString()) (t2.ToString())
+            | t1, t2 ->
+                {
+                    // TODO: Correct range mapping when constructing new problem (tvarToMemberExp)
+                    range = Range.zero
+                    message = sprintf "Can't unitfy types %s and %s" (t1.ToString()) (t2.ToString())
                 }
-                |> TrullaException
-                |> raise
+                |> Conflict
         
         let substInProblems tvarToReplace withType (inProblems: ProblemItem list) newProblem =
             ////printfn "RUN substInProblems ..."
@@ -147,25 +148,32 @@ module Inference =
                         yield! unifiedProblems
                     | KeepOriginal ->
                         yield newProblem (ptvar, ptype)
+                    | Conflict err ->
+                        yield Conflicting err
                 else
                     yield newProblem (ptvar, ptype)
             ]
     
         let rec solve (problems: Problem list) =
             ////printfn "---------------------- SOLVE"
-            let solutions,problems =
-                problems |> List.partitionMap (
+            let solutions,problems,conflicts =
+                problems |> List.partitionMap3 (
                     function 
-                    | Solved x -> Choice1Of2 x
-                    | Unsolved x -> Choice2Of2 x)
-            match problems with
-            | [] -> solutions
-            | ((tvar, typ) as p) :: ps ->
-                solve [
-                    yield! substInProblems tvar typ ps Unsolved
-                    yield Solved p
-                    yield! substInProblems tvar typ solutions Solved
-                ]
-
-        try Ok (solve problems)
-        with TrullaException err -> Error [err]
+                    | Solved x -> Choice1Of3 x
+                    | Unsolved x -> Choice2Of3 x
+                    | Conflicting x -> Choice3Of3 x
+                )
+            match conflicts with
+            | [] ->
+                match problems with
+                | [] -> Ok solutions
+                | ((tvar, typ) as p) :: ps ->
+                    solve
+                        [
+                            yield! substInProblems tvar typ ps Unsolved
+                            yield Solved p
+                            yield! substInProblems tvar typ solutions Solved
+                        ]
+            | _ -> Error conflicts
+        
+        solve problems

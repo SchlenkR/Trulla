@@ -16,8 +16,6 @@ and MemberToken =
     | AccessToken of {| instanceExp: PVal<MemberToken>; memberName: string |}
     | IdentToken of string
 
-type ParseResult = Result<PVal<Token> list, TrullaError list>
-
 [<RequireQualifiedAccess>]
 module Parsing =
     module internal Consts =
@@ -100,16 +98,9 @@ module Parsing =
             pchoice 
                 [
                     templateExp
-                    manyChars1Until begin' |> mapPVal Token.Text
-                    many1Chars anyChar |> mapPVal Token.Text
+                    pstringUntil begin' |> map Token.Text
+                    anyChar |> map Token.Text
                 ]
         let ptemplate = many expOrText .>> eoi
 
-    let parseTemplate templateString =
-        match run ptemplate templateString with
-        | Success (tokenList,_,_) -> Result.Ok tokenList
-        | Failure (msg,error,_) ->
-            { ranges = [Position.ofFParsec 0L error.Position |> Position.toRange]
-              message = msg }
-            |> List.singleton
-            |> Result.Error
+    let parseTemplate templateString = run templateString ptemplate

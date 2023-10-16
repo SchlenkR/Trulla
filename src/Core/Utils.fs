@@ -1,22 +1,16 @@
 ﻿namespace Trulla.Core.Utils
 
-[<AutoOpen>]
-module Result =
-    type ResultBuilder() =
-        member _.Bind(m, f) = Result.bind f m
-        member _.Return(value) = Ok value
-    let result = ResultBuilder()
-
 module List =
-    let partitionMap (mapping: 'a -> Choice<'b,'c>) (source: list<'a>) =
-        let rec loop ((acc1, acc2) as acc) =
+    let partitionMap3 (mapping: 'a -> Choice<'b,'c,'d>) (source: list<'a>) =
+        let rec loop ((acc1, acc2, acc3) as acc) =
             function
             | [] -> acc
             | x::xs ->
                 match mapping x with
-                | Choice1Of2 x -> loop (x::acc1, acc2) xs
-                | Choice2Of2 x -> loop (acc1, x::acc2) xs
-        loop ([], []) (List.rev source)
+                | Choice1Of3 x -> loop (x::acc1, acc2, acc3) xs
+                | Choice2Of3 x -> loop (acc1, x::acc2, acc3) xs
+                | Choice3Of3 x -> loop (acc1, acc2, x::acc3) xs
+        loop ([], [], []) (List.rev source)
 
 module Reflection =
     open Microsoft.FSharp.Reflection
