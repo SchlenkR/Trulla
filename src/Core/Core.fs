@@ -1,9 +1,9 @@
 namespace Trulla.Core
 
-type [<Struct>] Range =
-    { startIdx: int
-      endIdx: int }
+open TheBlunt
 
-type TrullaError = { ranges: Range list; message: string }
+type TrullaError =
+    { ranges: Range list
+      message: string }
 
 exception TrullaException of TrullaError

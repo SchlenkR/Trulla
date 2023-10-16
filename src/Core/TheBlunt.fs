@@ -168,18 +168,22 @@ module DocPos =
         { idx = index; ln = line; col = column }
     let ofInput (pi: Cursor) = create pi.idx pi.original
 
-module Expect =
-    let ok expected res =
-        match res with
-        | Ok res ->
-            printfn "Result: %A" res
-            if res <> expected then
-                failwithf "Expected: %A, but got: %A" expected res
-        | Error err -> failwithf "Expected: %A, but got error: %A" expected err
-    let error res =
-        match res with
-        | Ok res -> failwithf "Expected to fail, but got: %A" res
-        | Error _ -> ()
+module Cursor =
+    let hasRemainingChars<'s> n =
+        fun (inp: Cursor) (state: 's) ->
+            if not (inp.CanWalkFwd n)
+            then PError.create inp.idx (sprintf "Expected %d more characters." n)
+            else POk.create inp.idx inp.idx ()
+
+    let notAtEnd parserFunc = hasRemainingChars 1 parserFunc
+
+let pwhen pred p =
+    mkParser <| fun inp state ->
+        match pred inp state with
+        | PError err -> PError.create inp.idx err.message
+        | POk _ -> getParser p inp state
+
+let mkParserWhen pred pf = pwhen pred <| mkParser pf
 
 let inline bind (f: 'a -> Parser<_,_>) (parser: Parser<_,_>) =
     mkParser <| fun inp state ->
@@ -192,26 +196,6 @@ let inline bind (f: 'a -> Parser<_,_>) (parser: Parser<_,_>) =
 let preturn value =
     mkParser <| fun inp state -> POk.create inp.idx inp.idx value
 
-let hasRemainingChars<'s> n =
-    fun (inp: Cursor) (state: 's) ->
-        if not (inp.CanWalkFwd n)
-        then PError.create inp.idx (sprintf "Expected %d more characters." n)
-        else POk.create inp.idx inp.idx ()
-
-let notAtEnd parserFunc = hasRemainingChars 1 parserFunc
-
-// assert idx didn't move backwards
-let hasConsumed lastIdx currIdx = lastIdx > currIdx
-let standsStill lastIdx currIdx = lastIdx = currIdx
-
-let pwhen pred p =
-    mkParser <| fun inp state ->
-        match pred inp state with
-        | PError err -> PError.create inp.idx err.message
-        | POk _ -> getParser p inp state
-
-let mkParserWhen pred pf = pwhen pred <| mkParser pf
-
 let pseq (s: _ seq) =
     let enum = s.GetEnumerator()
     mkParser <| fun inp state ->
@@ -220,8 +204,7 @@ let pseq (s: _ seq) =
         else PError.create inp.idx "No more elements in sequence."
 
 let inline run (text: string) (parser: Parser<_,_>) =
-    let state = ForState.createForNothing()
-    match getParser parser { idx = 0; original = text} state with
+    match getParser parser { idx = 0; original = text} None with
     | POk res -> Ok res.result
     | PError error ->
         let docPos = DocPos.create error.idx text
@@ -280,7 +263,8 @@ type ParserBuilderForStringAppend() =
     member _.Yield(x) =
         mkParser <| fun inp (state: ForState<_,_>) ->
             POk.create inp.idx inp.idx x
-    member _.YieldFrom(p: Parser<_,_>) = p
+    member _.YieldFrom(p: Parser<_,_>) =
+        p
     member _.Run(f) =
         mkParser <| fun inp state ->
             let state = ForState.createForStringAppend()
@@ -407,13 +391,13 @@ let firstOf parsers = parsers |> List.reduce orThen
 // TODO: skipN
 
 let anyChar<'s> =
-    mkParserWhen notAtEnd <| fun inp (state: 's) ->
+    mkParserWhen Cursor.notAtEnd <| fun inp (state: 's) ->
         POk.create inp.idx (inp.idx + 1) (inp.Rest.[0].ToString())
 
 // TODO: anyCharExcept(c,p)
 
 let eoi<'s> : Parser<_,'s> =
-    pwhen notAtEnd <| preturn ()
+    pwhen Cursor.notAtEnd <| preturn ()
 
 let blank<'s> = pstr<'s> " "
 
@@ -427,10 +411,10 @@ let blanks n =
             yield x
     }
 
-let untilStr untilP p =
+let pstringUntil puntil =
     mkParser <| fun inp state ->
         let rec iter currIdx =
-            match getParser (pattempt untilP) (inp.Goto currIdx) state with
+            match getParser (pattempt puntil) (inp.Goto currIdx) state with
             | POk _ -> POk.create inp.idx currIdx (inp.original.Substring(inp.idx, currIdx - inp.idx))
             | PError _ ->
                 if not (inp.CanGoto(currIdx + 1))
@@ -496,3 +480,14 @@ let psepBy1 psep (pelem: Parser<_,_>) =
         for x in psep >>. pelem do
             yield x
     }
+
+let pchoice parsers =
+    mkParser <| fun inp state ->
+        let rec iter parsers =
+            match parsers with
+            | [] -> PError.create inp.idx "No more parsers to try." // TODO: Better: Expected ... or ... or ...; collect "err"
+            | p::ps ->
+                match getParser p inp state with
+                | POk _ as res -> res
+                | PError err -> iter ps
+        iter parsers

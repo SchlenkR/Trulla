@@ -35,13 +35,9 @@ module Parsing =
         let else' = "else"
         let end' = "end"
 
-    module internal Range =
-        let ofBlunt (r: TheBlunt.Range) =
-            { startIdx = r.startIdx; endIdx = r.endIdx }
-
     module internal PVal =
         let ofBlunt (v: TheBlunt.ParserResultValue<_>) =
-            { range = Range.ofBlunt v.range; value = v.result }
+            { range = v.range; value = v.result }
         let create range value =
             { range = range; value = value }
     
@@ -51,7 +47,7 @@ module Parsing =
         mkParser <| fun inp state ->
             match getParser p inp state with
             | PError error -> PError error
-            | POk pRes -> POk { range = pRes.range; result = PVal.create (Range.ofBlunt pRes.range) pRes.result }
+            | POk pRes -> POk { range = pRes.range; result = PVal.create pRes.range pRes.result }
 
     module internal MemberToken =
         let createFromSegments (segments: PVal<string> list) =
@@ -70,39 +66,39 @@ module Parsing =
         let begin' = pstr Consts.beginExp .>> pnot (pstr "{")
         let tmplExp =
             let endExp = pstr Consts.endExp
-            let ident = many1Str2 letter (letter <|> digit) |> withRange
+            let inline ident () = many1Str2 letter (letter <|> digit)
             let propAccess = parse {
-                let! segments = ident |> psepBy1 %"."
+                let! segments = withRange (ident ()) |> psepBy1 %"."
                 return MemberToken.createFromSegments segments
             }
             let body =
                 let for' = parse {
-                    let! identExp = pstr Keywords.for' >>. blanks 1 >>. ident .>> blanks 1
+                    let! identExp = pstr Keywords.for' >>. blanks 1 >>. withRange (ident ()) .>> blanks 1
                     let! memberExp = pstr Keywords.in' >>. blanks 1 >>. propAccess
                     let! sepExp = 
-                        withPos(
-                            (blanks >>. pstr Keywords.sep >>. manyCharsUntil endExp |>> Some)
+                        withRange(
+                            (blanks 0 >>. pstr Keywords.sep >>. pstringUntil endExp |> map Some)
                             <|>
-                            (blanks |>> fun _ -> None)
+                            (blanks 0 |> map (fun _ -> None))
                         )
                     return
                         Token.For (identExp, memberExp, sepExp)
                         |> PVal.create [ identExp.range; memberExp.range; sepExp.range ]
                 }
                 let if' = 
-                    withPos (pstr Keywords.if' >>. blanks1 >>. propAccess)
-                    |>> fun x -> PVal.create [x.range] (Token.If x.value)
+                    withRange (pstr Keywords.if' >>. blanks 1 >>. propAccess)
+                    |>map (fun x -> PVal.create [x.range] (Token.If x.value))
                 //let elseIfExp = pstr Keywords.elseIf' >>. blanks1 >>. propAccess |>> ElseIf
                 let elseExp = 
-                    withPos (pstr Keywords.else')
-                    |>> fun x -> PVal.create [x.range] (Token.Else)
+                    withRange (pstr Keywords.else')
+                    |> map (fun x -> PVal.create [x.range] (Token.Else))
                 let end' = 
-                    withPos (pstr Keywords.end')
-                    |>> fun x -> PVal.create [x.range] (Token.End)
+                    withRange (pstr Keywords.end')
+                    |> map (fun x -> PVal.create [x.range] (Token.End))
                 let hole = 
-                    withPos propAccess
-                    |>> fun x -> PVal.create [x.range] (Token.Hole x.value)
-                choice [
+                    withRange propAccess
+                    |> map (fun x -> PVal.create [x.range] (Token.Hole x.value))
+                pchoice [
                     for'
                     if'
                     ////elseIfExp
@@ -110,14 +106,14 @@ module Parsing =
                     end'
                     hole
                     ]
-            begin' .>> blanks >>. body .>> blanks .>> endExp
+            begin' .>> blanks 0 >>. body .>> blanks 0 .>> endExp
         let expOrText =
-            choice [
+            pchoice [
                 tmplExp
-                withPos (manyChars1Until begin') |>> fun x -> PVal.create [x.range] (Token.Text x.value)
-                withPos (many1Chars anyChar) |>> fun x -> PVal.create [x.range] (Token.Text x.value)
+                withRange (manyChars1Until begin') |> map (fun x -> PVal.create [x.range] (Token.Text x.value))
+                withRange (many1Chars anyChar) |> map (fun x -> PVal.create [x.range] (Token.Text x.value))
                 ]
-        let ptemplate = many expOrText .>> eof
+        let ptemplate = many expOrText .>> eoi
 
     let parseTemplate templateString =
         match run ptemplate templateString with

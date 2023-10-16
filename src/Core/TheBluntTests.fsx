@@ -2,6 +2,18 @@
 #load "TheBlunt.fs"
 open TheBlunt
 
+module Expect =
+    let ok expected res =
+        match res with
+        | Ok res ->
+            printfn "Result: %A" res
+            if res <> expected then
+                failwithf "Expected: %A, but got: %A" expected res
+        | Error err -> failwithf "Expected: %A, but got error: %A" expected err
+    let error res =
+        match res with
+        | Ok res -> failwithf "Expected to fail, but got: %A" res
+        | Error _ -> ()
 
 
 blank |> run "   " |> Expect.ok " "
@@ -120,3 +132,32 @@ parse {
 }
 |> run ""
 |> Expect.ok "0123456789"
+
+// should compile: Transition between ForStates
+let forStateTransitionTests () =
+    let inline ident () = many1Str2 letter (letter <|> digit)
+    let propAccess = parse {
+        let! segments = ident () |> psepBy1 %"."
+        return segments
+    }
+    parse {
+        let! identExp = pstr "for" >>. blanks 1 >>. ident () .>> blanks 1
+        return identExp
+    }
+
+pchoice [
+    pstr "a"
+    pstr "b"
+    pstr "c"
+]
+|> run "cab"
+|> Expect.ok "c"
+
+pchoice [
+    pstr "a"
+    pstr "b"
+    pstr "c"
+]
+|> run "xyz"
+|> Expect.error
+
