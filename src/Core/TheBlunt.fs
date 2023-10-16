@@ -61,7 +61,7 @@ type StringExtensions =
 // -----------------------------------------------------------------------------------------------
 
 
-type ParserFunc<'value, 'state> = Cursor -> 'state -> ParserResult<'value>
+type ParserFunc<'value> = Cursor -> ParserResult<'value>
 
 and [<Struct>] Cursor =
     { original: string
@@ -92,16 +92,16 @@ type [<Struct>] DocPos =
 module Inlining =
     #if INLINE_IF_LAMBDA
 
-    type Parser<'value, 'state> = ParserFunction<'value, 'state>
-    let inline mkParser (parser: Parser<_,_>) = parser
-    let inline getParser (parser: Parser<_,_>) = parser
+    type Parser<'value> = ParserFunction<'value>
+    let inline mkParser (parser: Parser<_>) = parser
+    let inline getParser (parser: Parser<_>) = parser
     module Inline = type IfLambdaAttribute = FSharp.Core.InlineIfLambdaAttribute
 
     #else
 
-    type Parser<'value, 'state> = Parser of ParserFunc<'value, 'state>
+    type Parser<'value> = Parser of ParserFunc<'value>
     let inline mkParser parserFunction = Parser parserFunction
-    let inline getParser (parser: Parser<_,_>) = let (Parser p) = parser in p
+    let inline getParser (parser: Parser<_>) = let (Parser p) = parser in p
     module Inline = type IfLambdaAttribute() = inherit System.Attribute()
 
     #endif
@@ -125,7 +125,8 @@ type Cursor with
 module Range =
     let inline create startIdx endIdx = { startIdx = startIdx; endIdx = endIdx }
     let zero = { startIdx = 0; endIdx = 0 }
-    let inline merge r1 r2 = { startIdx = r1.startIdx; endIdx = r2.endIdx }
+    let inline add r1 r2 = { startIdx = r1.startIdx; endIdx = r2.endIdx }
+    let inline merge ranges = ranges |> List.reduce add
 
 module POk =
     let inline createFromRange range (result: 'a) : ParserResult<'a> =
@@ -136,6 +137,12 @@ module POk =
 module PError =
     let inline create (idx: int) (message: string) : ParserResult<'a> =
         PError { idx = idx; message = message }
+
+module PVal =
+    let map proj (pval: PVal<'a>) =
+        { range = pval.range; result = proj pval.result }
+    let ranges (pvals: PVal<'a> list) = 
+        pvals |> List.map (fun x -> x.range) |> Range.merge
 
 // TODO: Perf: The parser combinators could track that, instead of computing it from scratch.
 module DocPos =
@@ -159,8 +166,8 @@ module DocPos =
     let ofInput (pi: Cursor) = create pi.idx pi.original
 
 module Cursor =
-    let hasRemainingChars<'s> n =
-        fun (inp: Cursor) (state: 's) ->
+    let hasRemainingChars n =
+        fun (inp: Cursor) ->
             if not (inp.CanWalkFwd n)
             then PError.create inp.idx (sprintf "Expected %d more characters." n)
             else POk.create inp.idx inp.idx ()
@@ -168,69 +175,74 @@ module Cursor =
         hasRemainingChars 1 parserFunc
 
 let pwhen pred p =
-    mkParser <| fun inp state ->
-        match pred inp state with
+    mkParser <| fun inp ->
+        match pred inp with
         | PError err -> PError.create inp.idx err.message
-        | POk _ -> getParser p inp state
+        | POk _ -> getParser p inp
 
 let mkParserWhen pred pf = pwhen pred <| mkParser pf
 
-let inline bind (f: PVal<'a> -> Parser<_,_>) (parser: Parser<_,_>) =
-    mkParser <| fun inp state ->
-        match getParser parser inp state with
+let inline bind f parser =
+    mkParser <| fun inp ->
+        match getParser parser inp with
         | PError error -> PError error
         | POk pRes ->
             let fParser = getParser (f pRes)
-            fParser (inp.Goto(pRes.range.endIdx)) state
+            fParser (inp.Goto(pRes.range.endIdx))
 
-let preturn value =
-    mkParser <| fun inp state -> POk.create inp.idx inp.idx value
+// let preturn value =
+//     mkParser <| fun inp -> POk.create inp.idx inp.idx value
 
-let preturnError message =
-    mkParser <| fun inp state -> PError.create inp.idx message
+// let preturnError message =
+//     mkParser <| fun inp -> PError.create inp.idx message
 
 type ParserBuilder() =
     member inline _.Bind(p, f) = bind f p
-    member _.Return(x) = preturn x
-    member _.ReturnFrom(p: Parser<_,_>) = p
+    member _.Return(pval: PVal<_>) =
+        mkParser <| fun inp -> POk pval
+    member _.Return(err: ParseError) =
+        mkParser <| fun inp -> PError err
 
 let parse = ParserBuilder()
 
 let pseq (s: _ seq) =
     let enum = s.GetEnumerator()
-    mkParser <| fun inp state ->
+    mkParser <| fun inp ->
         if enum.MoveNext()
         then POk.create inp.idx inp.idx enum.Current
         else PError.create inp.idx "No more elements in sequence."
 
-let inline run (text: string) (parser: Parser<_,_>) =
-    match getParser parser { idx = 0; original = text} None with
+let inline run (text: string) (parser: Parser<_>) =
+    match getParser parser { idx = 0; original = text} with
     | POk res -> Ok res.result
     | PError error ->
         let docPos = DocPos.create error.idx text
         Error {| pos = docPos; message = error.message |}
 
-// TODO: I guess that all the state stuff will turn out to be a quite unuseful,
-// or compared to the 
-
 let map proj p =
-    mkParser <| fun inp state ->
-        match getParser p inp state with
+    mkParser <| fun inp ->
+        match getParser p inp with
         | PError error -> PError error
-        | POk pRes -> POk.createFromRange pRes.range (proj pRes.result)
+        | POk pres -> POk { range = pres.range; result = proj pres.result }
+
+let mapPVal proj p =
+    mkParser <| fun inp ->
+        match getParser p inp with
+        | PError error -> PError error
+        | POk pres -> POk { range = pres.range; result = proj pres }
 
 let pignore p =
     p |> map (fun _ -> ())
 
 let pattempt p =
-    mkParser <| fun inp state ->
-        match getParser p inp state with
+    mkParser <| fun inp ->
+        match getParser p inp with
         | POk res -> POk.createFromRange res.range (Some res)
         | PError err -> PError err
 
 let pisOk p = 
-    mkParser <| fun inp state ->
-        match getParser p inp state with
+    mkParser <| fun inp ->
+        match getParser p inp with
         | POk res -> POk.createFromRange res.range true
         | PError err -> POk.create inp.idx inp.idx false
 
@@ -238,24 +250,24 @@ let pisErr p = pisOk p |> map not
 
 // TODO: A strange thing is this
 let pnot p =
-    mkParser <| fun inp state ->
-        match getParser (pattempt p) inp state with
+    mkParser <| fun inp ->
+        match getParser (pattempt p) inp with
         | POk _ -> PError.create inp.idx "Unexpected." // TODO
         | PError _ -> POk.create inp.idx inp.idx ()
 
-let punit<'s> =
-    mkParser <| fun inp (state: 's) ->
+let punit =
+    mkParser <| fun inp ->
         POk.create inp.idx inp.idx ()
 
-let pstr<'s> (s: string) =
-    mkParser <| fun inp (state: 's) ->
+let pstr (s: string) =
+    mkParser <| fun inp ->
         if inp.StartsWith(s)
         then POk.create inp.idx (inp.idx + s.Length) s
         else PError.create inp.idx (sprintf "Expected: '%s'" s)
 let ( ~% ) = pstr
 
 let pgoto (idx: int) =
-    mkParser <| fun inp state ->
+    mkParser <| fun inp ->
         if inp.CanGoto(idx) then 
             POk.create inp.idx idx ()
         else
@@ -264,22 +276,22 @@ let pgoto (idx: int) =
             PError.create idx msg
 
 let orThen a b =
-    mkParser <| fun inp state ->
-        match getParser a inp state with
+    mkParser <| fun inp ->
+        match getParser a inp with
         | POk res -> POk res
-        | PError _ -> getParser b inp state
+        | PError _ -> getParser b inp
 let ( <|> ) a b = orThen a b
 
 let inline andThen a b =
-    mkParser <| fun inp state ->
-        match getParser a inp state with
+    mkParser <| fun inp ->
+        match getParser a inp with
         | POk ares ->
-            match getParser b (inp.Goto ares.range.endIdx) state with
+            match getParser b (inp.Goto ares.range.endIdx) with
             | POk bres -> POk.create inp.idx bres.range.endIdx (ares.result, bres.result)
             | PError error -> PError error
         | PError error -> PError error
 // type AndThen = AndThen with
-//     static member inline ($) (AndThen, x: (Parser<_,_> * Parser<_,_>)) =
+//     static member inline ($) (AndThen, x: (Parser<_> * Parser<_>)) =
 //         let a,b = x
 //         andThen a b
 // let inline ( <&> ) a b = (($) AndThen) (a, b)
@@ -289,43 +301,62 @@ let ( >>. ) a b = andThen a b |> map snd
 
 let firstOf parsers = parsers |> List.reduce orThen
 
-let rec many (p: Parser<_,_>) =
+let rec many (p: Parser<_>) =
     parse {
         let! x = p
         let! xs = many p
-        return x :: xs.result
+        return
+            {
+                range = Range.add x.range xs.range
+                result = x :: xs.result
+            }
     }
 
-let many1 (p: Parser<_,_>) =
+let many1 (p: Parser<_>) =
     parse {
         let! res = many p
         match res.result with
-        | [] -> return! preturnError "Expected at least one element."
-        | _ -> return res.result
+        | [] -> return { idx = res.range.startIdx; message = "Expected at least one element." }
+        | _ -> return res
     }
 
 // TODO: sepBy
 // TODO: skipN
 
-let anyChar<'s> =
-    mkParserWhen Cursor.notAtEnd <| fun inp (state: 's) ->
+let anyChar =
+    mkParserWhen Cursor.notAtEnd <| fun inp ->
         POk.create inp.idx (inp.idx + 1) (inp.Rest.[0].ToString())
+
+let noRange (p: Parser<PVal<'a>>) =
+    p |> map (fun pval -> pval.result)
+
+let noRanges (p: Parser<PVal<'a> list>) =
+    p |> map (fun pvals -> pvals |> List.map (fun x -> x.result))
+
+let pconcat (p: Parser<PVal<string> list>) =
+    p |> map (fun pvals -> 
+        {
+            range = PVal.ranges pvals
+            result = pvals |> List.map (fun x -> x.result) |> String.concat ""
+        }
+    )
 
 // TODO: anyCharExcept(c,p)
 
-let eoi<'s> : Parser<_,'s> =
-    pwhen Cursor.notAtEnd <| preturn ()
+let eoi =
+    mkParser <| fun inp ->
+        if inp.IsAtEnd
+        then POk.create inp.idx inp.idx ()
+        else PError.create inp.idx "Expected end of input."
 
-let blank<'s> = pstr<'s> " "
-
-/// Parse at least n or more blanks.
-let blanks n =
-    ()
+let blank = pstr " "
+let blanks = many blank |> pconcat |> noRange
+let blanks1 = many1 blank |> pconcat |> noRange
 
 let pstringUntil puntil =
-    mkParser <| fun inp state ->
+    mkParser <| fun inp ->
         let rec iter currIdx =
-            match getParser (pattempt puntil) (inp.Goto currIdx) state with
+            match getParser (pattempt puntil) (inp.Goto currIdx) with
             | POk _ -> POk.create inp.idx currIdx (inp.original.Substring(inp.idx, currIdx - inp.idx))
             | PError _ ->
                 if not (inp.CanGoto(currIdx + 1))
@@ -333,69 +364,60 @@ let pstringUntil puntil =
                 else iter (currIdx + 1)
         iter inp.idx
 
-let concat (p: Parser<_,_>) =
-    p |> map (fun x -> String.concat "" x)
+// TODO: make clear: Parsers that
 
-// TODO: make clear: Parsers that 
-
-let many1Str2 (p1: Parser<_,_>) (p2: Parser<_,_>) =
+let many1Str2 p1 p2 =
     parse {
-        yield! p1
-        for x in p2 do
-            yield x
+        let! r1 = p1
+        let! r2 = many p2 |> pconcat |> noRange
+        return
+            {
+                range = Range.add r1.range r2.range
+                result = r1.result + r2.result
+            }
     }
 
-let withErrorMessage msg p =
-    mkParser <| fun inp state ->
-        match getParser p inp state with
+let setErrorMessage msg p =
+    mkParser <| fun inp ->
+        match getParser p inp with
         | POk _ as res -> res
         | PError err -> PError { err with message = msg }
 
-let many1Str (p: Parser<_,_>) = many1Str2 p p
+let inline many1Str p = many1Str2 p p
 
-let pchar<'s> predicate errMsg =
-    mkParserWhen Cursor.notAtEnd <| fun inp (state: 's) ->
+let pchar predicate errMsg =
+    mkParserWhen Cursor.notAtEnd <| fun inp ->
         let c = inp.Rest.[0]
         if predicate c
         then POk.create inp.idx (inp.idx + 1) (string c)
         else PError.create inp.idx (errMsg c)
 
-let letter<'s> =
-    pchar<'s> (Char.IsLetter) (sprintf "Expected letter, but got '%c'.")
+let letter =
+    pchar (Char.IsLetter) (sprintf "Expected letter, but got '%c'.")
 
-let digit<'s> =
-    pchar<'s> (Char.IsDigit) (sprintf "Expected letter, but got '%c'.")
+let digit =
+    pchar (Char.IsDigit) (sprintf "Expected letter, but got '%c'.")
 
 let pstrNotFollowedBy s suffix =
     parse {
         let! x = pstr s
         let! _ = pnot (pstr suffix)
-        return x.result
+        return x
     }
 
-let psepBy psep (pelem: Parser<_,_>) =
-    parseItems {
-        for x in pelem do
-            yield x
-            let! sepOk = pisOk psep
-            if not sepOk.result then
-                yield! Break
-    }
+let psepBy psep (pelem: Parser<_>) =
+    many (pelem >>. psep)
 
-let psepBy1 psep (pelem: Parser<_,_>) =
-    parseItems {
-        yield! pelem
-        for x in psep >>. pelem do
-            yield x
-    }
+let psepBy1 psep (pelem: Parser<_>) =
+    many1 (pelem >>. psep)
 
 let pchoice parsers =
-    mkParser <| fun inp state ->
+    mkParser <| fun inp ->
         let rec iter parsers =
             match parsers with
             | [] -> PError.create inp.idx "No more parsers to try." // TODO: Better: Expected ... or ... or ...; collect "err"
             | p::ps ->
-                match getParser p inp state with
+                match getParser p inp with
                 | POk _ as res -> res
                 | PError err -> iter ps
         iter parsers

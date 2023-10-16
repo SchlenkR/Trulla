@@ -1,5 +1,7 @@
 ﻿namespace Trulla.Core
 
+open TheBlunt
+
 [<RequireQualifiedAccess>]
 type Token =
     | Text of string
@@ -31,11 +33,6 @@ module Parsing =
         let else' = "else"
         let end' = "end"
 
-    open TheBlunt
-
-    module PVal =
-        let map proj (p: PVal<'a>) = { range = p.range; result = proj p.result }
-
     module internal MemberToken =
         let createFromSegments (segments: PVal<string> list) =
             match segments with
@@ -55,54 +52,56 @@ module Parsing =
     module internal Internal =
 
         let begin' = pstr Consts.beginExp .>> pnot (pstr "{")
-        let tmplExp =
+        let templateExp =
             let endExp = pstr Consts.endExp
             let inline ident () = many1Str2 letter (letter <|> digit)
             let propAccess = parse {
                 let! segments = ident () |> psepBy1 %"."
-                return MemberToken.createFromSegments segments
+                return MemberToken.createFromSegments segments.result
             }
             let body =
                 let for' = parse {
-                    let! identExp = pstr Keywords.for' >>. blanks 1 >>. withRange (ident ()) .>> blanks 1
-                    let! memberExp = pstr Keywords.in' >>. blanks 1 >>. propAccess
+                    let! identExp = pstr Keywords.for' >>. blanks1 >>. ident () .>> blanks1
+                    let! memberExp = pstr Keywords.in' >>. blanks1 >>. propAccess
                     let! sepExp = 
-                        withRange(
-                            (blanks 0 >>. pstr Keywords.sep >>. pstringUntil endExp |> map Some)
-                            <|>
-                            (blanks 0 |> map (fun _ -> None))
-                        )
+                        (blanks >>. pstr Keywords.sep >>. pstringUntil endExp |> map Some)
+                        <|>
+                        (blanks |> map (fun _ -> None))
                     return
-                        Token.For (identExp, memberExp, sepExp)
-                        |> PVal.create [ identExp.range; memberExp.range; sepExp.range ]
+                        {
+                            range = Range.merge [ identExp.range; memberExp.range; sepExp.range ]
+                            result = Token.For (identExp, memberExp, sepExp)
+                        }
                 }
                 let if' = 
-                    withRange (pstr Keywords.if' >>. blanks 1 >>. propAccess)
-                    |>map (fun x -> PVal.create [x.range] (Token.If x.value))
+                    (pstr Keywords.if' >>. blanks1 >>. propAccess)
+                    |> mapPVal Token.If
                 //let elseIfExp = pstr Keywords.elseIf' >>. blanks1 >>. propAccess |>> ElseIf
                 let elseExp = 
-                    withRange (pstr Keywords.else')
-                    |> map (fun x -> PVal.create [x.range] (Token.Else))
+                    pstr Keywords.else'
+                    |> map (fun _ -> Token.Else)
                 let end' = 
-                    withRange (pstr Keywords.end')
-                    |> map (fun x -> PVal.create [x.range] (Token.End))
+                    pstr Keywords.end'
+                    |> map (fun _ -> Token.End)
                 let hole = 
-                    withRange propAccess
-                    |> map (fun x -> PVal.create [x.range] (Token.Hole x.value))
-                pchoice [
-                    for'
-                    if'
-                    ////elseIfExp
-                    elseExp
-                    end'
-                    hole
+                    propAccess
+                    |> mapPVal Token.Hole
+                pchoice
+                    [
+                        for'
+                        if'
+                        ////elseIfExp
+                        elseExp
+                        end'
+                        hole
                     ]
-            begin' .>> blanks 0 >>. body .>> blanks 0 .>> endExp
+            begin' .>> blanks >>. body .>> blanks .>> endExp
         let expOrText =
-            pchoice [
-                tmplExp
-                withRange (manyChars1Until begin') |> map (fun x -> PVal.create [x.range] (Token.Text x.value))
-                withRange (many1Chars anyChar) |> map (fun x -> PVal.create [x.range] (Token.Text x.value))
+            pchoice 
+                [
+                    templateExp
+                    manyChars1Until begin' |> mapPVal Token.Text
+                    many1Chars anyChar |> mapPVal Token.Text
                 ]
         let ptemplate = many expOrText .>> eoi
 
