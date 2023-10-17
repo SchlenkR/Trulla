@@ -309,18 +309,17 @@ let manyN minOccurances (p: Parser<_>) =
         let mutable run = true
         let mutable iterations = 0
         let res =
-            [
-                while run do
-                    match getParser p (inp.Goto(currIdx)) with
-                    | POk res ->
-                        yield res
-                        do currIdx <- res.range.endIdx
-                        do
-                            if inp.idx = currIdx
-                            then run <- false
-                            else iterations <- iterations + 1
-                    | PError _ ->
-                        do run <- false
+            [ while run do
+                match getParser p (inp.Goto(currIdx)) with
+                | POk res ->
+                    yield res
+                    do currIdx <- res.range.endIdx
+                    do
+                        if inp.idx = currIdx
+                        then run <- false
+                        else iterations <- iterations + 1
+                | PError _ ->
+                    do run <- false
             ]
         if iterations < minOccurances 
         then PError.create currIdx $"Expected {minOccurances} occurances, but got {iterations}."

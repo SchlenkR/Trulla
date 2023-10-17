@@ -18,16 +18,16 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="..\..\Core\AssemblyInfo.fs" Link="AssemblyInfo.fs" />
+    <Compile Include="..\..\CoreFiles\AssemblyInfo.fs" Link="AssemblyInfo.fs" />
     
-    <Compile Include="..\..\Core\TheBlunt.fs" Link="Core\TheBlunt.fs" />
-    <Compile Include="..\..\Core\Utils.fs" Link="Core\Utils.fs" />
-    <Compile Include="..\..\Core\Core.fs" Link="Core\Core.fs" />
-    <Compile Include="..\..\Core\Parsing.fs" Link="Core\Parsing.fs" />
-    <Compile Include="..\..\Core\Ast.fs" Link="Core\Ast.fs" />
-    <Compile Include="..\..\Core\Inference.fs" Link="Core\Inference.fs" />
-    <Compile Include="..\..\Core\Solver.fs" Link="Core\Solver.fs" />
-    <Compile Include="..\..\Core\ReflectionRenderer.fs" Link="Core\ReflectionRenderer.fs" />
+    <Compile Include="..\..\CoreFiles\TheBlunt.fs" Link="CoreFiles\TheBlunt.fs" />
+    <Compile Include="..\..\CoreFiles\Utils.fs" Link="CoreFiles\Utils.fs" />
+    <Compile Include="..\..\CoreFiles\Core.fs" Link="CoreFiles\Core.fs" />
+    <Compile Include="..\..\CoreFiles\Parsing.fs" Link="CoreFiles\Parsing.fs" />
+    <Compile Include="..\..\CoreFiles\Ast.fs" Link="CoreFiles\Ast.fs" />
+    <Compile Include="..\..\CoreFiles\Inference.fs" Link="CoreFiles\Inference.fs" />
+    <Compile Include="..\..\CoreFiles\Solver.fs" Link="CoreFiles\Solver.fs" />
+    <Compile Include="..\..\CoreFiles\ReflectionRenderer.fs" Link="CoreFiles\ReflectionRenderer.fs" />
 
     <Compile Include="TpRuntime.fs" />
     <Compile Include="TpRegistration.fs" />

@@ -1,6 +1,7 @@
 ﻿module Trulla.SourceGenerator.Renderer
 
 open System
+open TheBlunt
 open Trulla.Core
 open Trulla.Core.Utils
 open Trulla.SourceGenerator.Text
@@ -95,7 +96,7 @@ let renderTemplate (solution: Solution) (namespaceName: string) =
                     let idxIdent = $"idx_{indent}"
                     lni indent $"foreach (var ({idxIdent},{ident.value}) in {elems}.Select(({xIdent},{idxIdent}) => ({idxIdent},{xIdent}))) {{"
                     render (indent + 1) body
-                    let sep = sep.value |> Option.defaultValue ""
+                    let sep = sep.result |> Option.defaultValue ""
                     lni (indent + 1) $"""if ({idxIdent} < {elems}.Count - 1) {{"""
                     sbAppend (indent + 2) (toStringLiteral sep)
                     lni (indent + 1) "}"
