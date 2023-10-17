@@ -236,6 +236,12 @@ let pattempt p =
         | POk res -> POk.createFromRange res.range (Some res)
         | PError err -> PError err
 
+let ptry p =
+    mkParser <| fun inp ->
+        match getParser p inp with
+        | POk res -> POk.createFromRange res.range (Some res)
+        | PError err -> POk.createFromRange (Range.create inp.idx inp.idx) None
+
 let pisOk p = 
     mkParser <| fun inp ->
         match getParser p inp with
@@ -297,16 +303,30 @@ let ( >>. ) a b = andThen a b |> map snd
 
 let firstOf parsers = parsers |> List.reduce orThen
 
-let rec many (p: Parser<_>) =
-    parse {
-        let! x = p
-        let! xs = many p
-        return
-            {
-                range = Range.add x.range xs.range
-                result = x :: xs.result
-            }
-    }
+let manyN minOccurances (p: Parser<_>) =
+    mkParser <| fun inp ->
+        let mutable currIdx = inp.idx
+        let mutable run = true
+        let mutable iterations = 0
+        let res =
+            [
+                while run do
+                    match getParser p (inp.Goto(currIdx)) with
+                    | POk res ->
+                        yield res
+                        do currIdx <- res.range.endIdx
+                        do
+                            if inp.idx = currIdx
+                            then run <- false
+                            else iterations <- iterations + 1
+                    | PError _ ->
+                        do run <- false
+            ]
+        if iterations < minOccurances 
+        then PError.create currIdx $"Expected {minOccurances} occurances, but got {iterations}."
+        else POk.create inp.idx currIdx res
+
+let many p = manyN 0 p
 
 let many1 (p: Parser<_>) =
     parse {
@@ -323,19 +343,11 @@ let anyChar =
     mkParserWhen Cursor.notAtEnd <| fun inp ->
         POk.create inp.idx (inp.idx + 1) (inp.Rest.[0].ToString())
 
-let noRange (p: Parser<PVal<'a>>) =
-    p |> map (fun pval -> pval.result)
-
 let noRanges (p: Parser<PVal<'a> list>) =
     p |> map (fun pvals -> pvals |> List.map (fun x -> x.result))
 
 let pconcat (p: Parser<PVal<string> list>) =
-    p |> map (fun pvals -> 
-        {
-            range = PVal.ranges pvals
-            result = pvals |> List.map (fun x -> x.result) |> String.concat ""
-        }
-    )
+    p |> map (fun pvals -> pvals |> List.map (fun x -> x.result) |> String.concat "")
 
 // TODO: anyCharExcept(c,p)
 
@@ -346,8 +358,8 @@ let eoi =
         else PError.create inp.idx "Expected end of input."
 
 let blank = pstr " "
-let blanks = many blank |> pconcat |> noRange
-let blanks1 = many1 blank |> pconcat |> noRange
+let blanks = many blank |> pconcat
+let blanks1 = many1 blank |> pconcat
 
 let pstringUntil puntil =
     mkParser <| fun inp ->
@@ -365,7 +377,7 @@ let pstringUntil puntil =
 let many1Str2 p1 p2 =
     parse {
         let! r1 = p1
-        let! r2 = many p2 |> pconcat |> noRange
+        let! r2 = many p2 |> pconcat
         return
             {
                 range = Range.add r1.range r2.range
@@ -401,11 +413,16 @@ let pstrNotFollowedBy s suffix =
         return x
     }
 
-let psepBy psep (pelem: Parser<_>) =
-    many (pelem >>. psep)
-
 let psepBy1 psep (pelem: Parser<_>) =
-    many1 (pelem >>. psep)
+    parse {
+        let! x = pelem
+        let! xs = many (psep >>. pelem)
+        return 
+            {
+                range = Range.add x.range xs.range
+                result = x :: xs.result
+            }
+    }
 
 let pchoice parsers =
     mkParser <| fun inp ->
