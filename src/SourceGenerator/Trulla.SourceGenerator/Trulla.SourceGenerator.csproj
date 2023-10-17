@@ -38,7 +38,7 @@
       -->
 
     <!-- Package the FSharp.Core dependency alongside the generator assembly -->
-    <PackageReference Include="FSharp.Core" Version="5.0.1" PrivateAssets="all" GeneratePathProperty="true" />
+    <PackageReference Include="FSharp.Core" Version="6.0.7" PrivateAssets="all" GeneratePathProperty="true" />
     <None Include="$(PkgFSharp_Core)\lib\netstandard2.0\*.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
 
     <!-- Package the Trulla dependency alongside the generator assembly -->

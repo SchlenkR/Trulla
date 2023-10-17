@@ -1,8 +1,11 @@
 <Project>
 
   <PropertyGroup>
-    <Version>1.3.0</Version>
+    <Version>1.4.0-preview01</Version>
     <PackageReleaseNotes>
+      1.4.0
+      - Using TheBlunt instead of FParsec
+
       1.3.0
       - Added C# source generator
 
