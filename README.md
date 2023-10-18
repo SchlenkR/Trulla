@@ -5,8 +5,6 @@
 
 Trulla Templates is like Handlebars or Mustache templates, but statically typed and safe!
 
-> Status: Stable
-
 C# Source Generator: [![NuGet Badge](http://img.shields.io/nuget/v/Trulla.svg?style=flat)](https://www.nuget.org/packages/Trulla)
 
 F# Type Provider: [![NuGet Badge](http://img.shields.io/nuget/v/Trulla.SourceGenerator.svg?style=flat)](https://www.nuget.org/packages/Trulla.SourceGenerator)
