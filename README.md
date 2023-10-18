@@ -1,6 +1,9 @@
-# Trulla Templates
 
-...it's like Handlebars or Mustache templates, but statically typed!
+<p align="center">
+    <img src='./artwork/Original Logo.png' alt='logo' width='300' />
+</p>
+
+Trulla Templates is like Handlebars or Mustache templates, but statically typed and safe!
 
 > Status: Stable
 

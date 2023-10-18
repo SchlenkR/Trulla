@@ -30,14 +30,15 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Testing", "Testing", "{D96E
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Core", "Core", "{C2216056-6201-4F6B-9021-6DBE3662ABFD}"
 	ProjectSection(SolutionItems) = preProject
-		Core\AssemblyInfo.fs = Core\AssemblyInfo.fs
-		Core\Ast.fs = Core\Ast.fs
-		Core\Core.fs = Core\Core.fs
-		Core\Inference.fs = Core\Inference.fs
-		Core\Parsing.fs = Core\Parsing.fs
-		Core\ReflectionRenderer.fs = Core\ReflectionRenderer.fs
-		Core\Solver.fs = Core\Solver.fs
-		Core\Utils.fs = Core\Utils.fs
+		CoreFiles\AssemblyInfo.fs = CoreFiles\AssemblyInfo.fs
+		CoreFiles\Ast.fs = CoreFiles\Ast.fs
+		CoreFiles\Core.fs = CoreFiles\Core.fs
+		CoreFiles\Inference.fs = CoreFiles\Inference.fs
+		CoreFiles\Parsing.fs = CoreFiles\Parsing.fs
+		CoreFiles\ReflectionRenderer.fs = CoreFiles\ReflectionRenderer.fs
+		CoreFiles\Solver.fs = CoreFiles\Solver.fs
+		CoreFiles\Utils.fs = CoreFiles\Utils.fs
+		CoreFiles\TheBlunt.fs = CoreFiles\TheBlunt.fs
 	EndProjectSection
 EndProject
 Global

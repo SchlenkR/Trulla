@@ -1,8 +1,11 @@
 <Project>
 
   <PropertyGroup>
-    <Version>1.3.0</Version>
+    <Version>1.4.1</Version>
     <PackageReleaseNotes>
+      1.4.0
+      - Using TheBlunt instead of FParsec
+
       1.3.0
       - Added C# source generator
 
@@ -26,7 +29,7 @@
     <Copyright>Copyright 2023 Ronald Schlenker</Copyright>
     <PackageTags>f# c# mustache text templates handlebars</PackageTags>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-    <!--<PackageIcon>logo_small.png</PackageIcon>-->
+    <PackageIcon>nuget_logo.png</PackageIcon>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/RonaldSchlenker/Trulla</RepositoryUrl>

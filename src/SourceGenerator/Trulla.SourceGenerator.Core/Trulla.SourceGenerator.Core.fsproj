@@ -12,25 +12,26 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="..\..\Core\AssemblyInfo.fs" Link="AssemblyInfo.fs" />
-    <Compile Include="..\..\Core\Utils.fs" Link="Core\Utils.fs" />
-    <Compile Include="..\..\Core\Core.fs" Link="Core\Core.fs" />
-    <Compile Include="..\..\Core\Parsing.fs" Link="Core\Parsing.fs" />
-    <Compile Include="..\..\Core\Ast.fs" Link="Core\Ast.fs" />
-    <Compile Include="..\..\Core\Inference.fs" Link="Core\Inference.fs" />
-    <Compile Include="..\..\Core\Solver.fs" Link="Core\Solver.fs" />
+    <Compile Include="..\..\CoreFiles\AssemblyInfo.fs" Link="AssemblyInfo.fs" />
+    <Compile Include="..\..\CoreFiles\TheBlunt.fs" Link="CoreFiles\TheBlunt.fs" />
+    <Compile Include="..\..\CoreFiles\Utils.fs" Link="CoreFiles\Utils.fs" />
+    <Compile Include="..\..\CoreFiles\Core.fs" Link="CoreFiles\Core.fs" />
+    <Compile Include="..\..\CoreFiles\Parsing.fs" Link="CoreFiles\Parsing.fs" />
+    <Compile Include="..\..\CoreFiles\Ast.fs" Link="CoreFiles\Ast.fs" />
+    <Compile Include="..\..\CoreFiles\Inference.fs" Link="CoreFiles\Inference.fs" />
+    <Compile Include="..\..\CoreFiles\Solver.fs" Link="CoreFiles\Solver.fs" />
     <Compile Include="CodeGen\Text.fs" />
     <Compile Include="CodeGen\Renderer.fs" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="FParsec" Version="1.1.1" />
-    <PackageReference Include="FSharp.Core" Version="5.0.1" />
+    <PackageReference Include="FSharp.Core" Version="6.0.7" />
     <PackageReference Include="Microsoft.CodeAnalysis" Version="4.7.0" />
   </ItemGroup>
   
   <ItemGroup>
     <None Include="..\..\..\README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\..\artwork\nuget_logo.png" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>

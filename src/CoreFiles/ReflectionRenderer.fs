@@ -49,7 +49,7 @@ let renderTemplate (model: obj) (template: string) =
                     (getIdentBoundValue exp :?> IEnumerable).Cast<obj>()
                     |> Seq.indexed
                     |> Seq.toList
-                let sep = sep.value |> Option.defaultValue ""
+                let sep = sep.result |> Option.defaultValue ""
                 for i,x in objList do
                     let bindingContext = bindingContext |> Map.add ident.value x
                     do render bindingContext body

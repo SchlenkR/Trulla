@@ -1,5 +1,7 @@
 ﻿namespace Trulla.Core
 
+open TheBlunt
+
 open Trulla.Core
 open Trulla.Core.Utils
 
@@ -40,7 +42,8 @@ type Ast =
 [<RequireQualifiedAccess>]
 module Ast =
 
-    type Scope =
+    [<RequireQualifiedAccess>]
+    type private Scope =
         | IfOrElseScope of cond: TVal<MemberExp>
         | Other
     
@@ -49,7 +52,9 @@ module Ast =
     
     // TODO: meaningful error messages + location
     // TODO: Don't throw; return TemplateError results
-    let buildTree (tokens: PVal<Token> list) : Result<Ast, TrullaError list> =
+    let buildTree (tokens: PVal<Token> list) : Result<_,_> =
+        // TODO: This is far from what I thing it could be in terms of understandable code
+        
         let mutable tvarToMemberExp = Map.empty
 
         let newTVar =
@@ -65,7 +70,7 @@ module Ast =
                     let tvar = newTVar ()
                     do tvarToMemberExp <- tvarToMemberExp |> Map.add tvar exp
                     newTVal tvar exp
-                match pexp.value with
+                match pexp.result with
                 | IdentToken ident ->
                     newTValAndAdd (IdentExp ident)
                 | AccessToken accExp ->
@@ -76,25 +81,31 @@ module Ast =
         let mutable currTokIdx = 0
         let mutable openScopeStack = []
         let mutable elseBlockOpen = false
-        let rec toTree (bindingContext: BindingContext) =
-            
+        let rec toTree (bindingContext: BindingContext) : Result<_,_> =
             let mutable scopeClosed = false
             let mutable revTree = []
-            let addToken x = revTree <- x :: revTree
+            let mutable errors = []
+            
+            let addToken x = do revTree <- x :: revTree
 
             do while not scopeClosed && currTokIdx < tokens.Length do
                 let token = tokens.[currTokIdx]
                 currTokIdx <- currTokIdx + 1
 
-                let raiseTrullaEx message =
-                    { 
-                        ranges = [token.range]
-                        message = message
-                    }
-                    |> TrullaException
-                    |> raise
+                let addError message =
+                    do errors <-
+                        [
+                            yield! errors
+                            yield 
+                                {
+                                    range = token.range
+                                    message = message
+                                }
+                        ]
+                let addErrors newErrors =
+                    do errors <- [ yield! errors; yield! newErrors ]
 
-                match token.value with
+                match token.result with
                 | Token.Text x -> 
                     let x = Text x
                     do addToken x
@@ -105,35 +116,35 @@ module Ast =
                     let accExp = buildMemberExp bindingContext acc
                     let tvarIdent = newTVar()
                     do openScopeStack <- Scope.Other :: openScopeStack
-                    let x = 
-                        (
-                            createTVal ident.range tvarIdent bindingContext ident.value,
-                            accExp,
-                            sep,
-                            toTree (Map.add ident.value tvarIdent bindingContext)
-                        )
-                        |> For
-                    do addToken x
+                    match toTree (Map.add ident.result tvarIdent bindingContext) with
+                    | Ok subTree -> 
+                        let x = 
+                            (
+                                createTVal ident.range tvarIdent bindingContext ident.result,
+                                accExp,
+                                sep,
+                                subTree
+                            )
+                            |> For
+                        do addToken x
+                    | Error subErrors ->
+                        do addErrors subErrors
                 | Token.If acc ->
                     let cond = buildMemberExp bindingContext acc
                     do openScopeStack <- (Scope.IfOrElseScope cond) :: openScopeStack
-                    let x = 
-                        If (
-                            cond,
-                            toTree bindingContext)
-                    do addToken x
+                    match toTree bindingContext with
+                    | Ok subTree -> do addToken (If (cond, subTree))
+                    | Error subErrors -> do addErrors subErrors
                 | Token.Else ->
                     if elseBlockOpen then
                         do elseBlockOpen <- false
-                        let matchingIfCond =
-                            match openScopeStack with
-                            | (Scope.IfOrElseScope cond) :: _ -> cond
-                            | _ -> raiseTrullaEx "An else needs an if."
-                        let x = 
-                            Else (
-                                matchingIfCond,
-                                toTree bindingContext)
-                        do addToken x
+                        match openScopeStack with
+                        | (Scope.IfOrElseScope cond) :: _ ->
+                            match toTree bindingContext with
+                            | Ok subTree -> do addToken (Else (cond, subTree))
+                            | Error subErrors -> do errors <- [ yield! errors; yield! subErrors ]
+                        | _ ->
+                            do addError "An else needs an if."
                     else
                         do currTokIdx <- currTokIdx - 1
                         do elseBlockOpen <- true
@@ -141,20 +152,22 @@ module Ast =
                 | Token.End ->
                     match openScopeStack with
                     | [] -> 
-                        raiseTrullaEx "Closing a scope is not possible without having a scope open." 
+                        do addError "Closing a scope is not possible without having a scope open." 
                     | _::xs -> 
                         do openScopeStack <- xs
                         do scopeClosed <- true
-            revTree |> List.rev
 
-        try 
-            let tree = toTree Map.empty
+            match errors with
+            | [] -> revTree |> List.rev |> Ok
+            | _ -> Error errors
+
+        match toTree Map.empty with
+        | Ok tree ->
             if openScopeStack.Length > 0 then
                 // TODO: Range.zero is wrong
-                { ranges = [Range.Zero]; message = "TODO: Unclosed scope detected." }
+                { range = Range.zero; message = "TODO: Unclosed scope detected." }
                 |> List.singleton
                 |> Error
             else
                 Ok { tree = tree; tvarToMemberExp = tvarToMemberExp }
-        with TrullaException err ->
-            Error [err]
+        | Error errors -> Error errors

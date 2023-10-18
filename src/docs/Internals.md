@@ -2,7 +2,7 @@
 
 The implementation of the tempalte provider might be interesting, because it contains (in a simple form) the building blocks that are required for a programming language. It has:
 
-**A parser** [Parsing.fs](src/TypeProvider/Trulla/Parsing.fs) implemented with FParsec. The parser output is a sequence of tokens:
+**A parser** [Parsing.fs](src/TypeProvider/Trulla/Parsing.fs) implemented with TheBlunt. The parser output is a sequence of tokens:
 
 ```fsharp
 type Token =
