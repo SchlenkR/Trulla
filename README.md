@@ -5,10 +5,11 @@
 
 Trulla Templates is like Handlebars or Mustache templates, but statically typed and safe!
 
-C# Source Generator: [![NuGet Badge](http://img.shields.io/nuget/v/Trulla.svg?style=flat)](https://www.nuget.org/packages/Trulla)
+**C# Source Generator**: [![NuGet Badge](http://img.shields.io/nuget/v/Trulla.svg?style=flat)](https://www.nuget.org/packages/Trulla)
 
-F# Type Provider: [![NuGet Badge](http://img.shields.io/nuget/v/Trulla.SourceGenerator.svg?style=flat)](https://www.nuget.org/packages/Trulla.SourceGenerator)
+**F# Type Provider**: [![NuGet Badge](http://img.shields.io/nuget/v/Trulla.SourceGenerator.svg?style=flat)](https://www.nuget.org/packages/Trulla.SourceGenerator)
 
+**Node cli**: [![npm version](https://badge.fury.io/js/trulla-templates.svg)](https://badge.fury.io/js/trulla-templates)
 
 The Trulla Approcah
 ---
@@ -24,8 +25,20 @@ The Trulla Approcah
 Examples and Usage
 ---
 
-* C# usage via Source Generators: Go to the [C# Documentation](./src/docs/SourceGenerator.md)
-* F# usage via Type Providers: Go to the [F# Documentation](./src/docs/TypeProvider.md)
+**C# usage via Source Generators**
+
+Go to the [C# Documentation](./src/docs/SourceGenerator.md)
+
+**F# usage via Type Providers****
+
+Go to the [F# Documentation](./src/docs/TypeProvider.md)
+
+**Node via CLI**
+
+```bash
+npm install -g trulla-templates
+trulla -i <input_dir> -o <output_dir>
+```
 
 
 General Template Syntax
