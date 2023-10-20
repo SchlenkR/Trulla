@@ -1,4 +1,4 @@
-﻿module Trulla.SourceGenerator.Text
+﻿module Trulla.Core.Text
 
 open System.Text
 

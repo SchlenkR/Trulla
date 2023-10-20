@@ -15,8 +15,10 @@
     <Compile Include="..\Common\CoreFiles\Solver.fs" Link="CoreFiles\Solver.fs" />
     <!-- Do not include this file in Fable compilation;. It won't compile. -->
     <!-- <Compile Include="..\Common\CoreFiles\ReflectionRenderer.fs" Link="CoreFiles\ReflectionRenderer.fs" /> -->
+    <Compile Include="..\Common\CoreFiles\Text.fs" Link="CoreFiles\Text.fs" />
     
-    <Compile Include="trulla.fs" />
+    <Compile Include="CodeGen\Renderer.fs" />
+    <Compile Include="Trulla.fs" />
   </ItemGroup>
 
   <ItemGroup>

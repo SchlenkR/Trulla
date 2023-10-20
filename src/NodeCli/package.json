@@ -18,19 +18,18 @@
     "url": "https://github.com/RonaldSchlenker/Trulla.git"
   },
   "type": "module",
-  "main": "./lib/trulla.js",
+  "main": "./lib/Trulla.js",
   "files": [
     "./exe",
     "./lib",
     "README.md"
   ],
   "bin": {
-    "trulla": "./exe/trulla.js"
+    "trulla": "./exe/Trulla.js"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "npm run build && npm uninstall -g && npm install -g && trulla arg1 arg2",
     "build": "dotnet fable --outDir lib",
-    "start": "node lib/trulla"
-  },
-  "packageManager": "npm@8.19.3"
+    "dev": "npm run build && node ./exe/trulla.js"
+  }
 }

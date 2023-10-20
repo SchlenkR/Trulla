@@ -1,4 +1,4 @@
-﻿module Trulla.SourceGenerator.Renderer
+﻿module Trulla.NodeCli.Renderer
 
 open System
 open TheBlunt
@@ -49,7 +49,8 @@ let renderTemplate (solution: Solution) (namespaceName: string) =
     let doubleQuotLit = "\""
 
     let toStringLiteral (txt: string) =
-        let txt = Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(txt, false)
+        // TODO: Escape that let txt = Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(txt, false)
+        let txt = txt
         doubleQuotLit + txt + doubleQuotLit
 
     text {
@@ -121,3 +122,11 @@ let renderTemplate (solution: Solution) (namespaceName: string) =
 
         lni 0 "}"
     }
+
+let renderErrors(errors: TrullaError seq) =
+    let errorList = [ for error in errors do error.ToString() ]
+    $"""
+Errors in Trulla template:
+
+{String.concat "\n\n" errorList};
+"""
