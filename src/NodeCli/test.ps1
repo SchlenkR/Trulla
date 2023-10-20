@@ -1,4 +1,4 @@
 npm run build
 npm uninstall -g
 npm install -g
-trulla
+trulla arg1 arg2
