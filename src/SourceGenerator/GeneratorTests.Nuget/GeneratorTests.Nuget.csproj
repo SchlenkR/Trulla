@@ -13,7 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Trulla.SourceGenerator" Version="1.3.0-preview18" />
+    <PackageReference Include="Trulla.SourceGenerator" Version="1.4.2" />
   </ItemGroup>
 
 </Project>

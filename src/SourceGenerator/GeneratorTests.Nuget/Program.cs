@@ -13,5 +13,3 @@ var model =
     };
 
 Console.WriteLine(model.Render());
-
-Console.ReadLine();
