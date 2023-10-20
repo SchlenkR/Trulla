@@ -2,7 +2,12 @@
 
 [![npm version](https://badge.fury.io/js/trulla-templates.svg)](https://badge.fury.io/js/trulla-templates)
 
-Example and HowTo
+Example-Project
+---
+
+Here's the HowTo example: `./src/NodeCli/Example`
+
+Example: HowTo
 ---
 
 Install the package globally:
