@@ -28,7 +28,7 @@
     "trulla": "./exe/Trulla.js"
   },
   "scripts": {
-    "test": "npm run build && npm uninstall -g && npm install -g && trulla arg1 arg2",
+    "test": "npm run build && npm uninstall -g && npm install -g && trulla -i ../Tests/input -o ../Tests/output",
     "build": "dotnet fable --outDir lib",
     "dev": "npm run build && node ./exe/trulla.js"
   }

@@ -28,8 +28,8 @@ let makeTypeName (potentialRecordNames: RecordDef list) tvar =
 let rec toTypeName potentialRecordNames typ =
     match typ with
     | Mono KnownTypes.string -> "string"
-    | Mono KnownTypes.bool -> "bool"
-    | Poly (KnownTypes.sequence, pt) -> $"List<{toTypeName potentialRecordNames pt}>"
+    | Mono KnownTypes.bool -> "boolean"
+    | Poly (KnownTypes.sequence, pt) -> $"Array<{toTypeName potentialRecordNames pt}>"
     | Record tvar -> makeTypeName potentialRecordNames tvar
     // TODO: See comments in ModelInference / FinalTyp
     //| Var _ -> "obj"
@@ -43,25 +43,19 @@ let rec memberExpToIdent (exp: TVal<MemberExp>) =
         rootPrefix + ident
     | AccessExp acc -> (memberExpToIdent acc.instanceExp) + dotIntoMember + acc.memberName
 
-let renderTemplate (solution: Solution) (namespaceName: string) =
-    do namespaceName |> String.assertLetterDigitUnderscore "namespace"
-    
-    let doubleQuotLit = "\""
+let renderTemplate (solution: Solution) =
+    let doubleQuotLit = "`"
 
     let toStringLiteral (txt: string) =
         // TODO: Escape that let txt = Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(txt, false)
         let txt = txt
         doubleQuotLit + txt + doubleQuotLit
 
+    let newVar =
+        let mutable i = 0
+        fun () -> i <- i + 1; i
+
     text {
-        ln0 $"namespace {namespaceName};"
-        br
-        
-        ln0 "using System;"
-        ln0 "using System.Collections.Generic;"
-        ln0 "using System.Linq;"
-        br
-        
         // render records
         let records = solution.records
             // TODO: Why this?
@@ -70,19 +64,18 @@ let renderTemplate (solution: Solution) (namespaceName: string) =
             //else solution.records |> Map.add Root []
         for r in records do
             let indent = 0
-            lni indent $"public record {makeTypeName records r.id} {{"
+            lni indent $"type {makeTypeName records r.id} = {{"
             for field in r.fields do
-                lni (indent + 1) $"public required {toTypeName records field.typ} {field.name} {{ get; init; }}"
+                lni (indent + 1) $"readonly {field.name} : {toTypeName records field.typ}"
             lni indent "}"
             br
 
-        lni 0 $"public static class Rendering {{"
-        lni 1 $"public static string Render(this {makeTypeName solution.records Root} {rootIdentifier}) {{"
+        lni 0 $"export function render ({rootIdentifier}: {makeTypeName solution.records Root}) {{"
 
         let sbAppend indent (txt: string) = text {
-            lni indent $"""__sb.Append({txt});"""
+            lni indent $"""__s += {txt};"""
         }
-        lni 2 "var __sb = new System.Text.StringBuilder();"
+        lni 1 "let __s = '';"
 
         let rec render indent tree = text {
             for texp in tree do
@@ -93,12 +86,12 @@ let renderTemplate (solution: Solution) (namespaceName: string) =
                     sbAppend indent (memberExpToIdent hole)
                 | For (ident,exp,sep,body) ->
                     let elems = memberExpToIdent exp
-                    let xIdent = $"x_{indent}"
-                    let idxIdent = $"idx_{indent}"
-                    lni indent $"foreach (var ({idxIdent},{ident.value}) in {elems}.Select(({xIdent},{idxIdent}) => ({idxIdent},{xIdent}))) {{"
+                    let varI = $"i_{newVar()}"
+                    lni indent $"let {varI} = 0;"
+                    lni indent $"for (const {ident.value} of {elems}) {{"
                     render (indent + 1) body
                     let sep = sep.result |> Option.defaultValue ""
-                    lni (indent + 1) $"""if ({idxIdent} < {elems}.Count - 1) {{"""
+                    lni (indent + 1) $"""if ({varI} < {elems}.Count - 1) {{"""
                     sbAppend (indent + 2) (toStringLiteral sep)
                     lni (indent + 1) "}"
                     lni indent "}"
@@ -111,15 +104,10 @@ let renderTemplate (solution: Solution) (namespaceName: string) =
                     render (indent + 1) body
                     lni indent "}"
         }
-
-        //lni (indent + 2) "}"
         
-        render 2 solution.tree
+        render 1 solution.tree
         br
-        lni 2 "return __sb.ToString();"
-        
-        lni 1 "}"
-
+        lni 1 "return __s;"
         lni 0 "}"
     }
 
