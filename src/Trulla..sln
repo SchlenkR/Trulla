@@ -26,6 +26,8 @@ Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Tests", "TypeProvider\Tests
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Tests", "Common\Tests\Tests.fsproj", "{BE383A59-A01B-43A1-87D6-2DC8875F390C}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "NodeCli", "NodeCli\NodeCli.fsproj", "{1BC7A7CB-22C3-412E-8EA4-1F1E72A0E3D4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -60,6 +62,10 @@ Global
 		{BE383A59-A01B-43A1-87D6-2DC8875F390C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BE383A59-A01B-43A1-87D6-2DC8875F390C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BE383A59-A01B-43A1-87D6-2DC8875F390C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1BC7A7CB-22C3-412E-8EA4-1F1E72A0E3D4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1BC7A7CB-22C3-412E-8EA4-1F1E72A0E3D4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1BC7A7CB-22C3-412E-8EA4-1F1E72A0E3D4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1BC7A7CB-22C3-412E-8EA4-1F1E72A0E3D4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

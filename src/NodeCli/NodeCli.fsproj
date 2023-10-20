@@ -1,0 +1,27 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net6.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Common\CoreFiles\TheBlunt.fs" Link="CoreFiles\TheBlunt.fs" />
+    <Compile Include="..\Common\CoreFiles\Utils.fs" Link="CoreFiles\Utils.fs" />
+    <Compile Include="..\Common\CoreFiles\Core.fs" Link="CoreFiles\Core.fs" />
+    <Compile Include="..\Common\CoreFiles\Parsing.fs" Link="CoreFiles\Parsing.fs" />
+    <Compile Include="..\Common\CoreFiles\Ast.fs" Link="CoreFiles\Ast.fs" />
+    <Compile Include="..\Common\CoreFiles\Inference.fs" Link="CoreFiles\Inference.fs" />
+    <Compile Include="..\Common\CoreFiles\Solver.fs" Link="CoreFiles\Solver.fs" />
+    <!-- Do not include this file in Fable compilation;. It won't compile. -->
+    <!-- <Compile Include="..\Common\CoreFiles\ReflectionRenderer.fs" Link="CoreFiles\ReflectionRenderer.fs" /> -->
+    
+    <Compile Include="trulla.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Fable.Core" Version="4.1.1" />
+    <PackageReference Include="Fable.Node" Version="1.2.0" />
+  </ItemGroup>
+
+</Project>

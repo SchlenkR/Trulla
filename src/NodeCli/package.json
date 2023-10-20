@@ -1,0 +1,36 @@
+{
+  "name": "trulla",
+  "version": "1.0.2",
+  "homepage": "https://github.com/RonaldSchlenker/Trulla",
+  "description": "Trulla Templates is like Handlebars or Mustache templates, but statically typed and safe!",
+  "keywords": [
+    "templates",
+    "mustache",
+    "handlebars"
+  ],
+  "author": "Ronald Schlenker",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/RonaldSchlenker/Trulla/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RonaldSchlenker/Trulla.git"
+  },
+  "type": "module",
+  "main": "./lib/trulla.js",
+  "files": [
+    "./exe",
+    "./lib",
+    "README.md"
+  ],
+  "bin": {
+    "trulla": "./exe/trulla.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "dotnet fable --outDir lib",
+    "start": "node lib/trulla"
+  },
+  "packageManager": "npm@8.19.3"
+}

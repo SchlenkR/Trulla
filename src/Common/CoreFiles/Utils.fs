@@ -12,13 +12,6 @@ module List =
                 | Choice3Of3 x -> loop (acc1, acc2, x::acc3) xs
         loop ([], [], []) (List.rev source)
 
-module Reflection =
-    open Microsoft.FSharp.Reflection
-
-    /// Returns the case name of the object with union type 'a.
-    let getUnionCaseName (x:'a) =
-        match FSharpValue.GetUnionFields(x, typeof<'a>) with case, _ -> case.Name
-
 module Map =
     let find key errorContext map =
         map
