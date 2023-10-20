@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <GenerateProgramFile>false</GenerateProgramFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\CoreFiles\TheBlunt.fs" Link="CoreFiles\TheBlunt.fs" />
+    <Compile Include="..\CoreFiles\Utils.fs" Link="CoreFiles\Utils.fs" />
+    <Compile Include="..\CoreFiles\Core.fs" Link="CoreFiles\Core.fs" />
+    <Compile Include="..\CoreFiles\Parsing.fs" Link="CoreFiles\Parsing.fs" />
+    <Compile Include="..\CoreFiles\Ast.fs" Link="CoreFiles\Ast.fs" />
+    <Compile Include="..\CoreFiles\Inference.fs" Link="CoreFiles\Inference.fs" />
+    <Compile Include="..\CoreFiles\Solver.fs" Link="CoreFiles\Solver.fs" />
+    <Compile Include="..\CoreFiles\ReflectionRenderer.fs" Link="CoreFiles\ReflectionRenderer.fs" />
+    <Compile Include="..\TestHelper.fs" Link="TestHelper.fs" />
+    <Compile Include="RenderExamples.fs" />
+    <Compile Include="Errors.fs" />
+    <Compile Include="Program.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FsUnit" Version="5.0.1" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.1.0" />
+    <PackageReference Include="NUnit" Version="3.13.3" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.2.1" />
+    <PackageReference Include="coverlet.collector" Version="3.1.0" />
+  </ItemGroup>
+
+</Project>

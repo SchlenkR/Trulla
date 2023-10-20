@@ -3,6 +3,7 @@
 open System
 open Trulla.DesignTime.Internal
 open NUnit.Framework
+open Trulla.Tests.TestHelper
 
 module Helper =
 
@@ -44,13 +45,13 @@ module Helper =
 
 
 let [<TestCase>] ``Constant``() =
-    Helper.createRootTypeDef RenderExamples.Constant.template
+    Helper.createRootTypeDef Templates.Constant
     ()
 
 let [<TestCase>] ``Issue 8``() =
-    let res = Helper.createRootTypeDef RenderExamples.``Issue 8``.template
+    let res = Helper.createRootTypeDef Templates.``Issue 8``
     ()
 
 let [<TestCase>] ``Issue 8_1``() =
-    let res = Helper.createRootTypeDef RenderExamples.``Issue 8_1``.template
+    let res = Helper.createRootTypeDef Templates.``Issue 8_1``
     ()
