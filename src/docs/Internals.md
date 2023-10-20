@@ -1,4 +1,4 @@
-# Trulla: How it works internalls
+# Trulla: How it works internally
 
 The implementation of the tempalte provider might be interesting, because it contains (in a simple form) the building blocks that are required for a programming language. It has:
 

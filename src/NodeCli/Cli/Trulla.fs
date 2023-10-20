@@ -38,14 +38,32 @@ let rec getAllFiles dir =
             else yield x
     ]
 
+let trullaFileEnding = ".trulla"
+
 let templates =
     getAllFiles ctx.inDir
-    |> List.filter (fun f -> f.EndsWith(".trulla"))
+    |> List.filter (fun f -> f.EndsWith(trullaFileEnding))
 
 printfn $"Templates found: {templates.Length}"
 
+let rec createDirectoryRecursive dirPath =
+    let dir = path.dirname(dirPath)
+    if not (fs.existsSync(U2.Case1 dir)) then
+        createDirectoryRecursive dir
+
+    if not (fs.existsSync(U2.Case1 dirPath)) then
+        fs.mkdirSync(dirPath)
+
 for inFilePath in templates do
-    let outFilePath = path.join(ctx.outDir, path.basename(inFilePath) + ".ts")
-    printfn $"Rendering template: {inFilePath} -> {outFilePath}"
+    let outFileName =
+        let inFilePath = inFilePath.Substring(0, inFilePath.Length - trullaFileEnding.Length)
+        let inFilePath = inFilePath + ".ts"
+        let inFilePath = inFilePath.Substring(ctx.inDir.Length)
+        path.join(ctx.outDir, inFilePath)
+    let outFilePath = path.dirname(outFileName)
+    
+    printfn $"Rendering template: {inFilePath} -> {outFileName}"
     let templateContent = fs.readFileSync(inFilePath).ToString() |> renderTemplate
-    do fs.writeFileSync(outFilePath, templateContent)
+    
+    do createDirectoryRecursive outFilePath
+    do fs.writeFileSync(outFileName, templateContent)

@@ -1,6 +1,6 @@
 # Trulla Templates
 
-[![NuGet Badge](http://img.shields.io/nuget/v/Trulla.svg?style=flat)](https://www.nuget.org/packages/Trulla)
+[![NuGet Badge](http://img.shields.io/nuget/v/Trulla.SourceGenerator.svg?style=flat)](https://www.nuget.org/packages/Trulla.SourceGenerator)
 
 ```fsharp
 #r "nuget: Trulla"

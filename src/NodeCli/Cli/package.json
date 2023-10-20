@@ -1,6 +1,6 @@
 {
   "name": "trulla-templates",
-  "version": "1.0.0",
+  "version": "1.0.4",
   "homepage": "https://github.com/RonaldSchlenker/Trulla",
   "description": "Trulla Templates is like Handlebars or Mustache templates, but statically typed and safe!",
   "keywords": [
@@ -22,14 +22,15 @@
   "files": [
     "./exe",
     "./lib",
-    "../../../README.md"
+    "README.md"
   ],
   "bin": {
     "trulla": "./exe/Trulla.js"
   },
   "scripts": {
     "test": "npm run build && npm uninstall -g && npm install -g && trulla -i ../Tests/input -o ../Tests/output",
-    "build": "dotnet fable --outDir lib",
-    "dev": "npm run build && node ./exe/trulla.js"
+    "build": "cp ../../../README.md README.md && dotnet fable --outDir lib",
+    "dev": "npm run build && node ./exe/trulla.js",
+    "prepublish": "npm run build"
   }
 }

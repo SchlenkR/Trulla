@@ -1,6 +1,6 @@
 # Trulla Templates for C#
 
-C# Source Generator: [![NuGet Badge](http://img.shields.io/nuget/v/Trulla.svg?style=flat)](https://www.nuget.org/packages/Trulla)
+[![NuGet Badge](http://img.shields.io/nuget/v/Trulla.svg?style=flat)](https://www.nuget.org/packages/Trulla)
 
 Example and HowTo
 ---
