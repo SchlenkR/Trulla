@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <Compile Include="..\..\Common\TestHelper.fs" Link="TestHelper.fs" />
+    <Compile Include="SourceGeneratorTestHelper.fs" />
     <Compile Include="CSharpCodeGen.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>

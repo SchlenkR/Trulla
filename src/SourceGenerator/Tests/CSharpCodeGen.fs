@@ -1,13 +1,9 @@
 ﻿module Trulla.SourceGenerator.Tests.CSharpCodeGen
 
-open FsUnit
 open NUnit.Framework
 
-module ``Demo`` =
-    let template = "T"
-    let model = obj()
-    let [<TestCase>] test() =
-        let template = """
+let [<TestCase>] ``Demo`` () =
+    """
 Hello {{user.name}}, how are you?
 
 Your Orders
@@ -17,12 +13,17 @@ Your Orders
 ID: {{order.id}}
 ({{if order.isActive}}active{{else}}inactive{{end}})
 {{end}}
-            """
-        
-        let solution = Trulla.Core.Solver.solve template
-        match solution with
-        | Error errors -> failwithf "Template error: %A" errors
-        | Ok solution -> 
-            let csharpCode = Trulla.SourceGenerator.Renderer.renderTemplate solution "TestNamespace"
-            do printfn "%s" csharpCode
-            ()
+        """
+        |> TestHelper.testTemplate
+
+
+let [<TestCase>] ``Merge Records`` () =
+    """
+{{for order in orders|---}}
+{{order.id}}
+{{end}}
+{{for order in orders|---}}
+{{order.name}}
+{{end}}
+        """
+        |> TestHelper.testTemplate
