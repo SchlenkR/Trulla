@@ -91,7 +91,7 @@ let renderTemplate (solution: Solution) =
                     lni indent $"for (const {ident.value} of {elems}) {{"
                     render (indent + 1) body
                     let sep = sep.result |> Option.defaultValue ""
-                    lni (indent + 1) $"""if ({varI} < {elems}.Count - 1) {{"""
+                    lni (indent + 1) $"""if ({varI} < {elems}.length - 1) {{"""
                     sbAppend (indent + 2) (toStringLiteral sep)
                     lni (indent + 1) "}"
                     lni indent "}"

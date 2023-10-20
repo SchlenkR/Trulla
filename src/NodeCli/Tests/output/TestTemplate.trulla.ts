@@ -37,7 +37,7 @@ ID: `;
         }
         __s += `)
 `;
-        if (i_1 < model.orders.Count - 1) {
+        if (i_1 < model.orders.length - 1) {
             __s += `---`;
         }
     }
