@@ -5,11 +5,11 @@
 
 Trulla Templates is like Handlebars or Mustache templates, but statically typed and safe!
 
-**C# Source Generator**: [![NuGet Badge](http://img.shields.io/nuget/v/Trulla.svg?style=flat)](https://www.nuget.org/packages/Trulla)
+[![NuGet Badge](http://img.shields.io/nuget/v/Trulla.svg?style=flat)](https://www.nuget.org/packages/Trulla) - **C# Source Generator**
 
-**F# Type Provider**: [![NuGet Badge](http://img.shields.io/nuget/v/Trulla.SourceGenerator.svg?style=flat)](https://www.nuget.org/packages/Trulla.SourceGenerator)
+[![NuGet Badge](http://img.shields.io/nuget/v/Trulla.SourceGenerator.svg?style=flat)](https://www.nuget.org/packages/Trulla.SourceGenerator) - **F# Type Provider**
 
-**Node cli**: [![npm version](https://img.shields.io/npm/v/trulla-templates.svg?style=flat)](https://badge.fury.io/js/trulla-templates)
+[![npm version](https://img.shields.io/npm/v/trulla-templates.svg?style=flat)](https://badge.fury.io/js/trulla-templates) - **Node CLI**
 
 The Trulla Approcah
 ---
