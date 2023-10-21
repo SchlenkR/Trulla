@@ -9,7 +9,7 @@ Trulla Templates is like Handlebars or Mustache templates, but statically typed 
 
 **F# Type Provider**: [![NuGet Badge](http://img.shields.io/nuget/v/Trulla.SourceGenerator.svg?style=flat)](https://www.nuget.org/packages/Trulla.SourceGenerator)
 
-**Node cli**: [![npm version](https://badge.fury.io/js/trulla-templates.svg)](https://badge.fury.io/js/trulla-templates)
+**Node cli**: [![npm version](https://img.shields.io/npm/v/trulla-templates.svg?style=flat)](https://badge.fury.io/js/trulla-templates)
 
 The Trulla Approcah
 ---
