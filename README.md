@@ -1,3 +1,13 @@
+<div align="center">
+   <h2>🎁 <strong>Win a PXL-Clock - Watch How on YouTube</strong> 🎁</h2>
+   <a href="https://youtu.be/q5-QTpEMGdU"><img src="https://img.youtube.com/vi/q5-QTpEMGdU/0.jpg" alt="Watch the PXL-JAM video" style="width: 60%;"></a>
+   <p>YouTube</p>
+</div>
+
+The PXL PAM 2024 is a fun and engaging way to come together and have a joyful time!
+Watch the video or check out our [PXL-JAM repo](https://github.com/CuminAndPotato/PXL-JAM/)!
+
+---
 
 <p align="center">
     <img src='./artwork/Original Logo.png' alt='logo' width='300' />
