@@ -3,17 +3,11 @@ module TheBlunt
 open System
 open System.Runtime.CompilerServices
 
-type Str =
-    #if !FABLE_COMPILER && NETSTANDARD2_1_OR_GREATER
-    System.ReadOnlySpan<char>
-    #else
-    System.String
-    #endif
+type Str = System.ReadOnlySpan<char>
 
 [<Extension>]
 type StringExtensions =
 
-    #if !FABLE_COMPILER && NETSTANDARD2_1_OR_GREATER
     [<Extension>] 
     static member inline StringEquals(s: Str, compareWith: string) = 
         s.SequenceEqual(compareWith.AsSpan())
@@ -23,12 +17,11 @@ type StringExtensions =
     [<Extension>]
     static member inline StringEquals(s: string, compareWith: Str)  =
         s.AsSpan().SequenceEqual(compareWith)
-    #endif
+
     [<Extension>]
     static member inline StringEquals(s: string, compareWith: string) = 
         String.Equals(s, compareWith)
 
-    #if !FABLE_COMPILER && NETSTANDARD2_1_OR_GREATER
     [<Extension>]
     static member StringStartsWithAt(this: Str, other: Str, idx: int) =
         idx + other.Length <= this.Length
@@ -39,21 +32,10 @@ type StringExtensions =
     [<Extension>]
     static member StringStartsWithAt(this: string, other: string, idx: int) =
         this.AsSpan().StringStartsWithAt(other.AsSpan(), idx)
-    #else
-    [<Extension>]
-    static member StringStartsWithAt(this: string, other: string, idx: int) =
-        this.Substring(idx).StartsWith(other)
-    #endif
 
-    #if !FABLE_COMPILER && NETSTANDARD2_1_OR_GREATER
     [<Extension>]
     static member Slice(this: string, start: int) =
         this.AsSpan().Slice(start)
-    #else
-    [<Extension>]
-    static member Slice(this: string, start: int) =
-        this.Substring(start)
-    #endif
 
 
 // -----------------------------------------------------------------------------------------------

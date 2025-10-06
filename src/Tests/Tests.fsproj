@@ -1,15 +1,13 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
-    <IsPackable>false</IsPackable>
-    <GenerateProgramFile>false</GenerateProgramFile>
+    <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="..\..\Common\TestHelper.fs" Link="TestHelper.fs" />
-    <Compile Include="SourceGeneratorTestHelper.fs" />
-    <Compile Include="CSharpCodeGen.fs" />
+    <Compile Include="TestHelper.fs" />
+    <Compile Include="RenderExamples.fs" />
+    <Compile Include="Errors.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
@@ -22,7 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Trulla.SourceGenerator.Core\Trulla.SourceGenerator.Core.fsproj" />
+    <ProjectReference Include="..\Trulla\Trulla.fsproj" />
   </ItemGroup>
 
 </Project>

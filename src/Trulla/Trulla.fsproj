@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFrameworks>net8.0</TargetFrameworks>
+    <LangVersion>preview</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="TheBlunt.fs" />
+    <Compile Include="Utils.fs" />
+    <Compile Include="Core.fs" />
+    <Compile Include="Parsing.fs" />
+    <Compile Include="Ast.fs" />
+    <Compile Include="Inference.fs" />
+    <Compile Include="Solver.fs" />
+    <Compile Include="ReflectionRenderer.fs" />
+  </ItemGroup>
+
+</Project>
