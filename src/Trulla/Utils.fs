@@ -17,11 +17,3 @@ module Map =
         map
         |> Map.tryFind key
         |> Option.defaultWith (fun () -> failwithf "Key not found: %A (context: %A)" key errorContext)
-
-module String =
-    let assertLetterDigitUnderscore (contextualMeaning) (s: string) =
-        if 
-            s.ToCharArray()
-            |> Seq.exists (fun c -> not (System.Char.IsLetterOrDigit c || c = '_')) 
-        then
-            failwithf "The %s value '%s' is not a valid namespace value." contextualMeaning s

@@ -8,7 +8,6 @@
     <Compile Include="TestHelper.fs" />
     <Compile Include="RenderExamples.fs" />
     <Compile Include="Errors.fs" />
-    <Compile Include="Program.fs" />
   </ItemGroup>
 
   <ItemGroup>

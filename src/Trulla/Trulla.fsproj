@@ -10,7 +10,7 @@
     <Compile Include="TheBlunt.fs" />
     <Compile Include="Utils.fs" />
     <Compile Include="Core.fs" />
-    <Compile Include="Parsing.fs" />
+    <Compile Include="TemplateParsing.fs" />
     <Compile Include="Ast.fs" />
     <Compile Include="Inference.fs" />
     <Compile Include="Solver.fs" />

@@ -17,12 +17,12 @@ and MemberToken =
     | IdentToken of string
 
 [<RequireQualifiedAccess>]
-module Parsing =
-    module internal Consts =
+module TemplateParser =
+    module Consts =
         let beginExp = "{{"
         let endExp = "}}"
 
-    module internal Keywords =
+    module Keywords =
         let for' = "for"
         let in' = "in"
         let sep = "|"
@@ -31,7 +31,7 @@ module Parsing =
         let else' = "else"
         let end' = "end"
 
-    module internal MemberToken =
+    module MemberToken =
         let createFromSegments (segments: PVal<string> list) =
             match segments with
             | seg1 :: segs ->
@@ -46,8 +46,7 @@ module Parsing =
                 mkAccToks identTok segs
             | [] -> failwith "Should never happen: Information loss in sepBy1 parser."
 
-    [<AutoOpen>]
-    module internal Internal =
+    module Internal =
 
         let begin' = pstr Consts.beginExp .>> pnot (pstr "{")
         let templateExp =
@@ -103,4 +102,4 @@ module Parsing =
                 ]
         let ptemplate = many expOrText .>> eoi
 
-    let parseTemplate templateString = run templateString ptemplate
+    let parseTemplate templateString = run templateString Internal.ptemplate

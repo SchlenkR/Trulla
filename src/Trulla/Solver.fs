@@ -82,5 +82,5 @@ module Solver =
                     |> Ok
 
     let solve template =
-        let parseResult = Parsing.parseTemplate template
+        let parseResult = TemplateParser.parseTemplate template
         solveParseResult parseResult

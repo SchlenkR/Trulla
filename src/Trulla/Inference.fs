@@ -21,7 +21,11 @@ type Typ =
 //    | FField of Field
 //    | FRecord of TVar
 
-and Field = { name: string; typ: Typ }
+and Field =
+    {
+        name: string
+        typ: Typ
+    }
 
 type ProblemItem = TVar * Typ
 
