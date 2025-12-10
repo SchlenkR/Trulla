@@ -18,6 +18,7 @@ and MemberToken =
 
 [<RequireQualifiedAccess>]
 module TemplateParser =
+
     module Consts =
         let beginExp = "{{"
         let endExp = "}}"
